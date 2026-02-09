@@ -39,14 +39,6 @@
     <RuntimeIdentifiers>osx-x64;osx-arm64;win-x64;linux-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
-  <!-- MSIX/Microsoft Store packaging configuration -->
-  <PropertyGroup Condition="'$(BuildMsix)' == 'true'">
-    <WindowsPackageType>MSIX</WindowsPackageType>
-    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
-    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
-    <AppxBundle>Never</AppxBundle>
-    <AppxPackageDir>$(MSBuildProjectDirectory)\..\..\dist\msix\</AppxPackageDir>
-  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PrivStack.Sdk\PrivStack.Sdk.csproj" />

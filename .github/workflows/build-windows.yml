@@ -94,7 +94,7 @@ jobs:
       - name: Publish .NET desktop
         shell: pwsh
         run: |
-          $outputDir = "dist/msix/publish"
+          $outputDir = "dist/windows/publish"
           New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
           dotnet publish desktop/PrivStack.Desktop/PrivStack.Desktop.csproj `
             -c ${{ inputs.configuration }} `
@@ -114,8 +114,8 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.APP_VERSION }}"
-          $sourceDir = "${{ github.workspace }}/dist/msix/publish"
-          $outputDir = "${{ github.workspace }}/dist/msix"
+          $sourceDir = "${{ github.workspace }}/dist/windows/publish"
+          $outputDir = "${{ github.workspace }}/dist/windows"
 
           # Write Inno Setup script inline
           $issContent = @"
@@ -201,7 +201,7 @@ jobs:
           endpoint: https://eus.codesigning.azure.net/
           trusted-signing-account-name: privstack
           certificate-profile-name: privstack-signing
-          files-folder: dist/msix
+          files-folder: dist/windows
           files-folder-filter: exe
           file-digest: SHA256
 
@@ -214,7 +214,7 @@ jobs:
           PRIVSTACK_API_URL: https://privstack.io
         run: |
           VERSION="${{ steps.version.outputs.APP_VERSION }}"
-          EXE_PATH="dist/msix/PrivStack-${VERSION}-Setup.exe"
+          EXE_PATH="dist/windows/PrivStack-${VERSION}-Setup.exe"
 
           if [ ! -f "$EXE_PATH" ]; then
             echo "ERROR: EXE not found at $EXE_PATH"
@@ -250,6 +250,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PrivStack-Windows-x64-${{ steps.version.outputs.APP_VERSION }}
-          path: dist/msix/PrivStack-${{ steps.version.outputs.APP_VERSION }}-Setup.exe
+          path: dist/windows/PrivStack-${{ steps.version.outputs.APP_VERSION }}-Setup.exe
           retention-days: 30
           if-no-files-found: warn
