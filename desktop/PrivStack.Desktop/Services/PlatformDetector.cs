@@ -40,16 +40,7 @@ public static class PlatformDetector
 
         if (OperatingSystem.IsLinux())
         {
-            // AppImage sets APPIMAGE env var and typically runs from /tmp/.mount_*
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APPIMAGE")))
-                return "appimage";
-
-            // deb installs go to /usr paths
-            if (processPath.StartsWith("/usr/", StringComparison.Ordinal))
-                return "deb";
-
-            // Fallback — treat as AppImage if we can't determine
-            return "appimage";
+            return "deb";
         }
 
         if (OperatingSystem.IsMacOS())
