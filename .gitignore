@@ -39,8 +39,8 @@ target/
 # WASM
 *.wasm
 
-# Built plugin artifacts (dotnet publish output)
-plugins/
+# Built plugin artifacts (dotnet publish output from --with-plugins)
+/plugins/
 
 # Isolated test data directory (--with-plugins)
 test-data/
