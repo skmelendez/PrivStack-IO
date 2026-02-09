@@ -7,7 +7,7 @@ license.workspace = true
 
 [dependencies]
 # Wasm runtime
-wasmtime = { version = "33", features = ["component-model"] }
+wasmtime = { version = "36", features = ["component-model"] }
 wasmtime-wasi = "33"
 
 # WIT bindings generation
