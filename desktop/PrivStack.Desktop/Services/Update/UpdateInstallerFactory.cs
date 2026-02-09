@@ -11,11 +11,10 @@ public static class UpdateInstallerFactory
 
         return format switch
         {
-            "appimage" => new LinuxAppImageInstaller(),
             "deb" => new LinuxDebInstaller(),
             "exe" or "msix" => new WindowsExeInstaller(),
             "dmg" => new MacOsDmgInstaller(),
-            _ => new LinuxAppImageInstaller() // Safe fallback
+            _ => new LinuxDebInstaller()
         };
     }
 }
