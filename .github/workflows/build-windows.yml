@@ -177,24 +177,17 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install Azure Signing CLI extension
-        run: az extension add --name artifact-signing --allow-preview true
-
       - name: Sign EXE installer
-        shell: pwsh
-        run: |
-          $exePath = "dist/msix/PrivStack-${{ steps.version.outputs.APP_VERSION }}-Setup.exe"
-          if (Test-Path $exePath) {
-            az artifact-signing sign `
-              --account-name privstack `
-              --certificate-profile-name privstack-signing `
-              --resource-group privstack `
-              --files $exePath
-            Write-Host "Signed: $exePath"
-          } else {
-            Write-Error "EXE not found at $exePath"
-            exit 1
-          }
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          endpoint: https://eus.codesigning.azure.net/
+          signing-account-name: privstack
+          certificate-profile-name: privstack-signing
+          files-folder: dist/msix
+          files-folder-filter: exe
+          file-digest: SHA256
 
       # ── Deploy to PrivStack registry ──────────────────────────
       - name: Deploy EXE to registry
