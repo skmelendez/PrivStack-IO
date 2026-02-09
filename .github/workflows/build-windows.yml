@@ -18,7 +18,7 @@ on:
         type: boolean
 
 permissions:
-  id-token: write   # Required for Azure OIDC login
+  id-token: write
   contents: read
 
 env:
@@ -30,17 +30,8 @@ jobs:
     runs-on: windows-latest
     steps:
       # ── Checkout ──────────────────────────────────────────────
-      - name: Checkout PrivStack-IO
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: PrivStack-IO
-
-      - name: Checkout supporting-files
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository_owner }}/PrivStack
-          sparse-checkout: supporting-files/scripts
-          path: PrivStack-support
 
       # ── Setup toolchains ──────────────────────────────────────
       - name: Setup .NET
@@ -57,39 +48,126 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: PrivStack-IO/core -> PrivStack-IO/core/target
+          workspaces: core -> core/target
 
-      # ── Install Inno Setup ────────────────────────────────────
-      - name: Install Inno Setup
-        run: |
-          choco install innosetup -y --no-progress
-        shell: cmd
-
-      # ── Get app version from .csproj ──────────────────────────
+      # ── Extract version from .csproj ──────────────────────────
       - name: Extract version
         id: version
         shell: pwsh
         run: |
-          $csproj = "PrivStack-IO/desktop/PrivStack.Desktop/PrivStack.Desktop.csproj"
-          [xml]$xml = Get-Content $csproj
+          [xml]$xml = Get-Content "desktop/PrivStack.Desktop/PrivStack.Desktop.csproj"
           $version = $xml.Project.PropertyGroup.Version | Where-Object { $_ }
           Write-Host "Version: $version"
           "APP_VERSION=$version" >> $env:GITHUB_OUTPUT
 
-      # ── Build using build-msix.ps1 ───────────────────────────
-      - name: Build Windows packages
+      # ── Build Rust core (MSVC) ────────────────────────────────
+      - name: Build Rust core
+        working-directory: core
+        run: cargo build --release --target x86_64-pc-windows-msvc -p privstack-ffi
+
+      - name: Copy native DLL to expected location
         shell: pwsh
         run: |
-          # build-msix.ps1 expects repo root structure
-          # Copy the script to where it can find PrivStack-IO as a sibling
-          $scriptSrc = "PrivStack-support/supporting-files/scripts"
-          $scriptDest = "supporting-files/scripts"
-          New-Item -ItemType Directory -Path $scriptDest -Force | Out-Null
-          Copy-Item "$scriptSrc/*" $scriptDest -Recurse -Force
+          $src = "core/target/x86_64-pc-windows-msvc/release/privstack_ffi.dll"
+          $dest = "core/target/release"
+          New-Item -ItemType Directory -Path $dest -Force | Out-Null
+          Copy-Item $src "$dest/privstack_ffi.dll" -Force
+          Write-Host "Copied privstack_ffi.dll to $dest"
 
-          & "$scriptDest/build-msix.ps1" `
-            -Version "${{ steps.version.outputs.APP_VERSION }}" `
-            -Configuration "${{ inputs.configuration }}"
+      # ── Build .NET desktop ────────────────────────────────────
+      - name: Publish .NET desktop
+        shell: pwsh
+        run: |
+          $outputDir = "dist/msix/publish"
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+          dotnet publish desktop/PrivStack.Desktop/PrivStack.Desktop.csproj `
+            -c ${{ inputs.configuration }} `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=false `
+            -p:PublishReadyToRun=true `
+            -o $outputDir
+
+      # ── Install Inno Setup ────────────────────────────────────
+      - name: Install Inno Setup
+        shell: cmd
+        run: choco install innosetup -y --no-progress
+
+      # ── Create EXE installer ──────────────────────────────────
+      - name: Create EXE installer
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.APP_VERSION }}"
+          $sourceDir = "${{ github.workspace }}/dist/msix/publish"
+          $outputDir = "${{ github.workspace }}/dist/msix"
+
+          # Write Inno Setup script inline
+          $issContent = @"
+          #define AppVersion "$version"
+          #define SourceDir "$sourceDir"
+          #define OutputDir "$outputDir"
+
+          [Setup]
+          AppId={{A8F4B2C1-5D3E-4F6A-9B8C-7D2E1F0A3B5C}
+          AppName=PrivStack
+          AppVersion={#AppVersion}
+          AppVerName=PrivStack {#AppVersion}
+          AppPublisher=PrivStack
+          AppPublisherURL=https://privstack.io
+          AppSupportURL=https://privstack.io/support
+          AppUpdatesURL=https://privstack.io/download
+          DefaultDirName={autopf}\PrivStack
+          DefaultGroupName=PrivStack
+          AllowNoIcons=yes
+          PrivilegesRequired=lowest
+          PrivilegesRequiredOverridesAllowed=dialog
+          OutputDir={#OutputDir}
+          OutputBaseFilename=PrivStack-{#AppVersion}-Setup
+          Compression=lzma2/ultra64
+          SolidCompression=yes
+          WizardStyle=modern
+          ArchitecturesAllowed=x64compatible
+          ArchitecturesInstallIn64BitMode=x64compatible
+          UninstallDisplayIcon={app}\PrivStack.Desktop.exe
+          DisableProgramGroupPage=yes
+          DisableWelcomePage=no
+
+          [Languages]
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+
+          [Tasks]
+          Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+
+          [Files]
+          Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,AppxManifest.xml"
+
+          [Icons]
+          Name: "{group}\PrivStack"; Filename: "{app}\PrivStack.Desktop.exe"
+          Name: "{group}\{cm:UninstallProgram,PrivStack}"; Filename: "{uninstallexe}"
+          Name: "{autodesktop}\PrivStack"; Filename: "{app}\PrivStack.Desktop.exe"; Tasks: desktopicon
+
+          [Run]
+          Filename: "{app}\PrivStack.Desktop.exe"; Description: "{cm:LaunchProgram,PrivStack}"; Flags: nowait postinstall skipifsilent
+          "@
+
+          $issPath = "${{ github.workspace }}/installer.iss"
+          $issContent | Out-File -FilePath $issPath -Encoding UTF8
+
+          # Find Inno Setup compiler
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe"
+          }
+
+          Write-Host "Running Inno Setup..."
+          & $iscc $issPath
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+
+          $exePath = "$outputDir/PrivStack-$version-Setup.exe"
+          if (Test-Path $exePath) {
+            $size = [math]::Round((Get-Item $exePath).Length / 1MB, 1)
+            Write-Host "EXE installer created: ${size}MB"
+          }
 
       # ── Sign with Azure Artifact Signing ──────────────────────
       - name: Azure login (OIDC)
@@ -105,31 +183,17 @@ jobs:
       - name: Sign EXE installer
         shell: pwsh
         run: |
-          $exePath = "PrivStack-IO/dist/msix/PrivStack-${{ steps.version.outputs.APP_VERSION }}-Setup.exe"
+          $exePath = "dist/msix/PrivStack-${{ steps.version.outputs.APP_VERSION }}-Setup.exe"
           if (Test-Path $exePath) {
             az artifact-signing sign `
               --account-name privstack `
               --certificate-profile-name privstack-signing `
               --resource-group privstack `
               --files $exePath
-            Write-Host "Signed: $exePath" -ForegroundColor Green
+            Write-Host "Signed: $exePath"
           } else {
-            Write-Host "WARNING: EXE installer not found at $exePath" -ForegroundColor Yellow
-          }
-
-      - name: Sign MSIX package
-        shell: pwsh
-        run: |
-          $msixPath = "PrivStack-IO/dist/msix/PrivStack-${{ steps.version.outputs.APP_VERSION }}.msix"
-          if (Test-Path $msixPath) {
-            az artifact-signing sign `
-              --account-name privstack `
-              --certificate-profile-name privstack-signing `
-              --resource-group privstack `
-              --files $msixPath
-            Write-Host "Signed: $msixPath" -ForegroundColor Green
-          } else {
-            Write-Host "WARNING: MSIX not found at $msixPath" -ForegroundColor Yellow
+            Write-Error "EXE not found at $exePath"
+            exit 1
           }
 
       # ── Deploy to PrivStack registry ──────────────────────────
@@ -141,7 +205,7 @@ jobs:
           PRIVSTACK_API_URL: https://privstack.io
         run: |
           VERSION="${{ steps.version.outputs.APP_VERSION }}"
-          EXE_PATH="PrivStack-IO/dist/msix/PrivStack-${VERSION}-Setup.exe"
+          EXE_PATH="dist/msix/PrivStack-${VERSION}-Setup.exe"
 
           if [ ! -f "$EXE_PATH" ]; then
             echo "ERROR: EXE not found at $EXE_PATH"
@@ -172,19 +236,11 @@ jobs:
             exit 1
           fi
 
-      # ── Upload artifacts to GitHub (backup) ───────────────────
+      # ── Upload artifact to GitHub (backup) ────────────────────
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PrivStack-Windows-x64-EXE-${{ steps.version.outputs.APP_VERSION }}
-          path: PrivStack-IO/dist/msix/PrivStack-${{ steps.version.outputs.APP_VERSION }}-Setup.exe
-          retention-days: 30
-          if-no-files-found: warn
-
-      - name: Upload MSIX artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PrivStack-Windows-x64-MSIX-${{ steps.version.outputs.APP_VERSION }}
-          path: PrivStack-IO/dist/msix/PrivStack-${{ steps.version.outputs.APP_VERSION }}.msix
+          name: PrivStack-Windows-x64-${{ steps.version.outputs.APP_VERSION }}
+          path: dist/msix/PrivStack-${{ steps.version.outputs.APP_VERSION }}-Setup.exe
           retention-days: 30
           if-no-files-found: warn
