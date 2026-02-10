@@ -398,9 +398,16 @@ fn init_core(path: &str) -> PrivStackError {
     } else {
         Path::new(path).with_extension("vault.duckdb")
     };
+    eprintln!("[FFI] Opening vault DB: {}", vault_db_path.display());
     let vault_manager = match VaultManager::open(&vault_db_path) {
-        Ok(vm) => Arc::new(vm),
-        Err(_) => return PrivStackError::StorageError,
+        Ok(vm) => {
+            eprintln!("[FFI] Vault DB opened OK");
+            Arc::new(vm)
+        }
+        Err(e) => {
+            eprintln!("[FFI] FAILED to open vault DB: {e:?}");
+            return PrivStackError::StorageError;
+        }
     };
 
     // Create blob store with vault-backed encryption
@@ -409,12 +416,19 @@ fn init_core(path: &str) -> PrivStackError {
     } else {
         Path::new(path).with_extension("blobs.duckdb")
     };
+    eprintln!("[FFI] Opening blob store: {}", blob_db_path.display());
     let blob_store = match BlobStore::open_with_encryptor(
         &blob_db_path,
         vault_manager.clone() as Arc<dyn privstack_crypto::DataEncryptor>,
     ) {
-        Ok(bs) => bs,
-        Err(_) => return PrivStackError::StorageError,
+        Ok(bs) => {
+            eprintln!("[FFI] Blob store opened OK");
+            bs
+        }
+        Err(e) => {
+            eprintln!("[FFI] FAILED to open blob store: {e:?}");
+            return PrivStackError::StorageError;
+        }
     };
 
     // Create generic entity store with vault-backed encryption
@@ -423,12 +437,19 @@ fn init_core(path: &str) -> PrivStackError {
     } else {
         Path::new(path).with_extension("entities.duckdb")
     };
+    eprintln!("[FFI] Opening entity store: {}", entity_path.display());
     let entity_store = match EntityStore::open_with_encryptor(
         &entity_path,
         vault_manager.clone() as Arc<dyn privstack_crypto::DataEncryptor>,
     ) {
-        Ok(s) => s,
-        Err(_) => return PrivStackError::StorageError,
+        Ok(s) => {
+            eprintln!("[FFI] Entity store opened OK");
+            s
+        }
+        Err(e) => {
+            eprintln!("[FFI] FAILED to open entity store: {e:?}");
+            return PrivStackError::StorageError;
+        }
     };
 
     // Event store for sync replication
@@ -437,9 +458,16 @@ fn init_core(path: &str) -> PrivStackError {
     } else {
         Path::new(path).with_extension("events.duckdb")
     };
+    eprintln!("[FFI] Opening event store: {}", events_path.display());
     let event_store = match EventStore::open(&events_path) {
-        Ok(s) => s,
-        Err(_) => return PrivStackError::StorageError,
+        Ok(s) => {
+            eprintln!("[FFI] Event store opened OK");
+            s
+        }
+        Err(e) => {
+            eprintln!("[FFI] FAILED to open event store: {e:?}");
+            return PrivStackError::StorageError;
+        }
     };
 
     let entity_store = Arc::new(entity_store);
@@ -501,9 +529,16 @@ where
     } else {
         Path::new(path).with_extension("vault.duckdb")
     };
+    eprintln!("[FFI] Opening vault DB: {}", vault_db_path.display());
     let vault_manager = match VaultManager::open(&vault_db_path) {
-        Ok(vm) => Arc::new(vm),
-        Err(_) => return PrivStackError::StorageError,
+        Ok(vm) => {
+            eprintln!("[FFI] Vault DB opened OK");
+            Arc::new(vm)
+        }
+        Err(e) => {
+            eprintln!("[FFI] FAILED to open vault DB: {e:?}");
+            return PrivStackError::StorageError;
+        }
     };
 
     // Create blob store with vault-backed encryption
@@ -512,12 +547,19 @@ where
     } else {
         Path::new(path).with_extension("blobs.duckdb")
     };
+    eprintln!("[FFI] Opening blob store: {}", blob_db_path.display());
     let blob_store = match BlobStore::open_with_encryptor(
         &blob_db_path,
         vault_manager.clone() as Arc<dyn privstack_crypto::DataEncryptor>,
     ) {
-        Ok(bs) => bs,
-        Err(_) => return PrivStackError::StorageError,
+        Ok(bs) => {
+            eprintln!("[FFI] Blob store opened OK");
+            bs
+        }
+        Err(e) => {
+            eprintln!("[FFI] FAILED to open blob store: {e:?}");
+            return PrivStackError::StorageError;
+        }
     };
 
     // Create generic entity store with vault-backed encryption
@@ -526,12 +568,19 @@ where
     } else {
         Path::new(path).with_extension("entities.duckdb")
     };
+    eprintln!("[FFI] Opening entity store: {}", entity_path.display());
     let entity_store = match EntityStore::open_with_encryptor(
         &entity_path,
         vault_manager.clone() as Arc<dyn privstack_crypto::DataEncryptor>,
     ) {
-        Ok(s) => s,
-        Err(_) => return PrivStackError::StorageError,
+        Ok(s) => {
+            eprintln!("[FFI] Entity store opened OK");
+            s
+        }
+        Err(e) => {
+            eprintln!("[FFI] FAILED to open entity store: {e:?}");
+            return PrivStackError::StorageError;
+        }
     };
 
     // Event store for sync replication
@@ -540,9 +589,16 @@ where
     } else {
         Path::new(path).with_extension("events.duckdb")
     };
+    eprintln!("[FFI] Opening event store: {}", events_path.display());
     let event_store = match EventStore::open(&events_path) {
-        Ok(s) => s,
-        Err(_) => return PrivStackError::StorageError,
+        Ok(s) => {
+            eprintln!("[FFI] Event store opened OK");
+            s
+        }
+        Err(e) => {
+            eprintln!("[FFI] FAILED to open event store: {e:?}");
+            return PrivStackError::StorageError;
+        }
     };
 
     let entity_store = Arc::new(entity_store);
@@ -3700,6 +3756,18 @@ fn execute_generic(handle: &PrivStackHandle, req: &SdkRequest) -> SdkResponse {
             } else {
                 (override_created.unwrap_or(now), handle.peer_id.to_string())
             };
+
+            // Inject local_only flag into data if parameter is set
+            let mut data = data;
+            let is_local_only = req.parameters.as_ref()
+                .and_then(|p| p.get("local_only"))
+                .map(|v| v == "true")
+                .unwrap_or(false);
+            if is_local_only {
+                if let Some(obj) = data.as_object_mut() {
+                    obj.insert("local_only".into(), serde_json::Value::Bool(true));
+                }
+            }
 
             let mut entity = Entity {
                 id,

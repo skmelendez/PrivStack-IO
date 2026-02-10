@@ -60,17 +60,188 @@ public sealed class PrivStackService : IPrivStackNative
         ThrowIfDisposed();
 
         _log.Information("Initializing PrivStack native library with db: {DbPath}", dbPath);
-        _log.Debug("Native library version: {Version}", Version);
+        _log.Information("Native library version: {Version}", Version);
 
+        // Pre-flight storage diagnostics
+        LogStorageDiagnostics(dbPath);
+
+        _log.Information("Calling native init_core...");
         var result = NativeLibrary.Init(dbPath);
         if (result != PrivStackError.Ok)
         {
-            _log.Error("Failed to initialize PrivStack native library: {Result}", result);
+            _log.Error("=== NATIVE INIT FAILED: {Result} ({ResultInt}) ===",
+                result, (int)result);
+            _log.Error("Base path: {DbPath}", dbPath);
+
+            // Post-mortem: check if WAL files appeared during the failed init
+            LogPostMortemDiagnostics(dbPath);
+
+            // Flush logs immediately so they're captured even if app crashes
+            Serilog.Log.CloseAndFlush();
+            Services.Log.Initialize(); // Re-open logger after flush
+
             throw new PrivStackException($"Failed to initialize PrivStack: {result}", result);
         }
 
         _initialized = true;
         _log.Information("PrivStack native library initialized successfully");
+    }
+
+    /// <summary>
+    /// Logs detailed file-level diagnostics before calling init_core.
+    /// </summary>
+    private static void LogStorageDiagnostics(string dbPath)
+    {
+        try
+        {
+            // The Rust side uses Path::with_extension, so "data.duckdb" becomes "data.vault.duckdb" etc.
+            var basePath = dbPath.EndsWith(".duckdb", StringComparison.OrdinalIgnoreCase)
+                ? dbPath[..^".duckdb".Length]
+                : dbPath;
+            var dbDir = Path.GetDirectoryName(dbPath) ?? ".";
+
+            _log.Information("[StorageDiag] === Pre-flight check ===");
+            _log.Information("[StorageDiag] Base path: {Path}", basePath);
+            _log.Information("[StorageDiag] Directory: {Dir} (exists={Exists})",
+                dbDir, Directory.Exists(dbDir));
+
+            // Check each database file
+            string[] suffixes = ["vault.duckdb", "blobs.duckdb", "entities.duckdb", "events.duckdb"];
+            foreach (var suffix in suffixes)
+            {
+                var filePath = $"{basePath}.{suffix}";
+                CheckDatabaseFile(filePath);
+            }
+
+            // Check peer_id
+            var peerIdPath = $"{basePath}.peer_id";
+            _log.Information("[StorageDiag] peer_id exists: {Exists}", File.Exists(peerIdPath));
+
+            // List everything in directory
+            if (Directory.Exists(dbDir))
+            {
+                var files = Directory.GetFiles(dbDir);
+                _log.Information("[StorageDiag] Directory has {Count} files: [{Files}]",
+                    files.Length,
+                    string.Join(", ", files.Select(Path.GetFileName)));
+            }
+
+            // Check write access
+            try
+            {
+                var testPath = Path.Combine(dbDir, $".write_test_{Guid.NewGuid():N}");
+                File.WriteAllText(testPath, "x");
+                File.Delete(testPath);
+                _log.Information("[StorageDiag] Directory is writable: true");
+            }
+            catch (Exception ex)
+            {
+                _log.Error("[StorageDiag] Directory is writable: FALSE — {Error}", ex.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "[StorageDiag] Failed to run pre-flight diagnostics");
+        }
+    }
+
+    private static void CheckDatabaseFile(string filePath)
+    {
+        var name = Path.GetFileName(filePath);
+        var walPath = $"{filePath}.wal";
+
+        if (!File.Exists(filePath))
+        {
+            _log.Warning("[StorageDiag] {File}: MISSING", name);
+            return;
+        }
+
+        var info = new FileInfo(filePath);
+        _log.Information("[StorageDiag] {File}: size={Size} bytes, modified={Modified}, readonly={ReadOnly}",
+            name, info.Length, info.LastWriteTimeUtc.ToString("yyyy-MM-dd HH:mm:ss"), info.IsReadOnly);
+
+        // Check DuckDB header magic
+        try
+        {
+            using var fs = File.OpenRead(filePath);
+            var header = new byte[64];
+            var bytesRead = fs.Read(header, 0, 64);
+            if (bytesRead >= 16)
+            {
+                // Bytes 8-11 should be "DUCK"
+                var magic = System.Text.Encoding.ASCII.GetString(header, 8, 4);
+                // Version string is at offset 0x34
+                var versionBytes = header[0x34..Math.Min(0x40, bytesRead)];
+                var version = System.Text.Encoding.ASCII.GetString(versionBytes).TrimEnd('\0');
+                _log.Information("[StorageDiag] {File}: magic={Magic}, version={Version}",
+                    name, magic, version);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error("[StorageDiag] {File}: failed to read header — {Error}", name, ex.Message);
+        }
+
+        // Check for WAL file
+        if (File.Exists(walPath))
+        {
+            var walInfo = new FileInfo(walPath);
+            _log.Warning("[StorageDiag] {File}: WAL FILE EXISTS! size={Size} bytes",
+                Path.GetFileName(walPath), walInfo.Length);
+        }
+
+        // Try exclusive open to check for locks
+        try
+        {
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            _log.Information("[StorageDiag] {File}: exclusive lock OK (no other process holding it)", name);
+        }
+        catch (IOException ex)
+        {
+            _log.Error("[StorageDiag] {File}: CANNOT GET EXCLUSIVE LOCK — {Error}", name, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// After init_core fails, check what state the files are in.
+    /// </summary>
+    private static void LogPostMortemDiagnostics(string dbPath)
+    {
+        try
+        {
+            var basePath = dbPath.EndsWith(".duckdb", StringComparison.OrdinalIgnoreCase)
+                ? dbPath[..^".duckdb".Length]
+                : dbPath;
+            var dbDir = Path.GetDirectoryName(dbPath) ?? ".";
+
+            _log.Error("[StorageDiag] === Post-mortem after init failure ===");
+
+            // Check for WAL files that appeared during the failed init
+            string[] suffixes = ["vault.duckdb", "blobs.duckdb", "entities.duckdb", "events.duckdb"];
+            foreach (var suffix in suffixes)
+            {
+                var walPath = $"{basePath}.{suffix}.wal";
+                if (File.Exists(walPath))
+                {
+                    var walInfo = new FileInfo(walPath);
+                    _log.Error("[StorageDiag] {WalFile}: appeared during init! size={Size} bytes",
+                        Path.GetFileName(walPath), walInfo.Length);
+                }
+            }
+
+            // Re-list directory to see if anything changed
+            if (Directory.Exists(dbDir))
+            {
+                var files = Directory.GetFiles(dbDir);
+                _log.Error("[StorageDiag] Directory now has {Count} files: [{Files}]",
+                    files.Length,
+                    string.Join(", ", files.Select(Path.GetFileName)));
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "[StorageDiag] Post-mortem diagnostics failed");
+        }
     }
 
     /// <summary>

@@ -30,6 +30,7 @@ public record ThemeOption(AppTheme Theme, string DisplayName, string? CustomThem
 /// </summary>
 public record WhisperModelOption(string Id, string DisplayName, string SizeText);
 
+
 /// <summary>
 /// Represents a font family option for accessibility.
 /// </summary>
@@ -637,6 +638,17 @@ public partial class SettingsViewModel : ViewModelBase
     private bool _speechToTextEnabled = true;
 
     /// <summary>
+    /// Available audio input devices.
+    /// </summary>
+    public ObservableCollection<AudioInputDevice> AudioInputDevices { get; } = [];
+
+    /// <summary>
+    /// The currently selected audio input device. Null means system default.
+    /// </summary>
+    [ObservableProperty]
+    private AudioInputDevice? _selectedAudioInputDevice;
+
+    /// <summary>
     /// Warning message shown when speech-to-text is enabled but model not downloaded.
     /// </summary>
     public string? SpeechWarningMessage
@@ -1050,6 +1062,10 @@ public partial class SettingsViewModel : ViewModelBase
         SpeechToTextEnabled = settings.SpeechToTextEnabled;
         var modelId = settings.WhisperModelSize ?? "base.en";
         SelectedWhisperModel = WhisperModels.FirstOrDefault(m => m.Id == modelId) ?? WhisperModels[1]; // Default to base.en
+
+        // Audio input device
+        AudioRecorderService.Instance.SelectedDeviceId = settings.AudioInputDevice;
+        RefreshAudioDevices();
     }
 
     partial void OnUserDisplayNameChanged(string value)
@@ -1135,6 +1151,38 @@ public partial class SettingsViewModel : ViewModelBase
         // Refresh warning message
         OnPropertyChanged(nameof(SpeechWarningMessage));
         OnPropertyChanged(nameof(HasSpeechWarning));
+
+        if (value)
+            RefreshAudioDevices();
+    }
+
+    partial void OnSelectedAudioInputDeviceChanged(AudioInputDevice? value)
+    {
+        var deviceId = value?.Id;
+        _settingsService.Settings.AudioInputDevice = deviceId;
+        AudioRecorderService.Instance.SelectedDeviceId = deviceId;
+        _settingsService.SaveDebounced();
+    }
+
+    [RelayCommand]
+    private void RefreshAudioDevices()
+    {
+        AudioInputDevices.Clear();
+
+        var devices = AudioRecorderService.Instance.GetAvailableDevices();
+        foreach (var device in devices)
+            AudioInputDevices.Add(device);
+
+        // Restore saved selection
+        var savedId = _settingsService.Settings.AudioInputDevice;
+        if (savedId != null)
+        {
+            SelectedAudioInputDevice = AudioInputDevices.FirstOrDefault(d => d.Id == savedId);
+        }
+        else
+        {
+            SelectedAudioInputDevice = AudioInputDevices.FirstOrDefault();
+        }
     }
 
     partial void OnSelectedWhisperModelChanged(WhisperModelOption? value)

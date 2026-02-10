@@ -16,11 +16,16 @@ public sealed class WindowsExeInstaller : IUpdateInstaller
         {
             Logger.Information("Launching Windows installer: {Path}", filePath);
 
-            // Launch the downloaded installer with silent flag
+            // Pass the current install directory so Inno Setup updates in-place
+            var currentDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+
+            // Inno Setup uses /VERYSILENT (not /S which is NSIS convention)
+            // /DIR= ensures the update installs to the same location
+            // /CLOSEAPPLICATIONS lets Inno Setup close the running app if needed
             Process.Start(new ProcessStartInfo
             {
                 FileName = filePath,
-                Arguments = "/S",
+                Arguments = $"/VERYSILENT /DIR=\"{currentDir}\" /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
                 UseShellExecute = true
             });
 
@@ -37,7 +42,9 @@ public sealed class WindowsExeInstaller : IUpdateInstaller
 
     public Task ApplyOnExitAsync(string filePath)
     {
-        var stagingPath = Path.Combine(DataPaths.BaseDir, "updates", "pending-exe");
+        var updatesDir = Path.Combine(DataPaths.BaseDir, "updates");
+        Directory.CreateDirectory(updatesDir);
+        var stagingPath = Path.Combine(updatesDir, "pending-exe");
         File.WriteAllText(stagingPath, filePath);
         Logger.Information("Staged Windows update for next launch: {Path}", filePath);
         return Task.CompletedTask;

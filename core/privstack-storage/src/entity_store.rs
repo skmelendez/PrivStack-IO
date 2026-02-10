@@ -120,9 +120,9 @@ impl EntityStore {
             r#"
             INSERT OR REPLACE INTO entities (
                 id, entity_type, data_json, title, body, tags,
-                is_trashed, is_favorite,
+                is_trashed, is_favorite, local_only,
                 created_at, modified_at, created_by, search_text
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             params![
                 entity.id,
@@ -133,6 +133,7 @@ impl EntityStore {
                 tags_str.as_deref(),
                 entity.data.pointer("/is_trashed").and_then(|v| v.as_bool()).unwrap_or(false),
                 entity.data.pointer("/is_favorite").and_then(|v| v.as_bool()).unwrap_or(false),
+                entity.data.pointer("/local_only").and_then(|v| v.as_bool()).unwrap_or(false),
                 entity.created_at,
                 entity.modified_at,
                 entity.created_by,
@@ -153,9 +154,9 @@ impl EntityStore {
             r#"
             INSERT OR REPLACE INTO entities (
                 id, entity_type, data_json,
-                is_trashed, is_favorite,
+                is_trashed, is_favorite, local_only,
                 created_at, modified_at, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             params![
                 entity.id,
@@ -163,6 +164,7 @@ impl EntityStore {
                 data_json,
                 entity.data.pointer("/is_trashed").and_then(|v| v.as_bool()).unwrap_or(false),
                 entity.data.pointer("/is_favorite").and_then(|v| v.as_bool()).unwrap_or(false),
+                entity.data.pointer("/local_only").and_then(|v| v.as_bool()).unwrap_or(false),
                 entity.created_at,
                 entity.modified_at,
                 entity.created_by,
@@ -430,6 +432,7 @@ impl EntityStore {
             "SELECT e.id FROM entities e \
              LEFT JOIN sync_ledger sl ON e.id = sl.entity_id AND sl.peer_id = ? \
              WHERE e.is_trashed = FALSE \
+               AND e.local_only = FALSE \
                AND (sl.entity_id IS NULL OR e.modified_at > sl.synced_at) \
              ORDER BY e.modified_at ASC"
         )?;
@@ -965,6 +968,30 @@ fn base64_decode(input: &str) -> Result<Vec<u8>, String> {
 // -- Schema --
 
 fn initialize_entity_schema(conn: &Connection) -> StorageResult<()> {
+    // Migration: add local_only column to existing entities table BEFORE the main
+    // batch, because CREATE TABLE IF NOT EXISTS won't add new columns to an existing
+    // table, but the batch references local_only in a CREATE INDEX statement.
+    let entities_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM information_schema.tables WHERE table_name = 'entities'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if entities_exists {
+        let has_local_only = conn
+            .execute("SELECT local_only FROM entities LIMIT 0", [])
+            .is_ok();
+        if !has_local_only {
+            let _ = conn.execute_batch(
+                r#"
+                ALTER TABLE entities ADD COLUMN local_only BOOLEAN DEFAULT FALSE;
+                "#,
+            );
+        }
+    }
+
     conn.execute_batch(
         r#"
         CREATE TABLE IF NOT EXISTS entities (
@@ -976,6 +1003,7 @@ fn initialize_entity_schema(conn: &Connection) -> StorageResult<()> {
             tags VARCHAR[],
             is_trashed BOOLEAN DEFAULT FALSE,
             is_favorite BOOLEAN DEFAULT FALSE,
+            local_only BOOLEAN DEFAULT FALSE,
             created_at BIGINT NOT NULL,
             modified_at BIGINT NOT NULL,
             created_by VARCHAR NOT NULL,
@@ -985,6 +1013,7 @@ fn initialize_entity_schema(conn: &Connection) -> StorageResult<()> {
         CREATE INDEX IF NOT EXISTS idx_entities_modified ON entities(modified_at DESC);
         CREATE INDEX IF NOT EXISTS idx_entities_trashed ON entities(is_trashed);
         CREATE INDEX IF NOT EXISTS idx_entities_favorite ON entities(is_favorite);
+        CREATE INDEX IF NOT EXISTS idx_entities_local_only ON entities(local_only);
 
         CREATE TABLE IF NOT EXISTS entity_links (
             source_type VARCHAR NOT NULL,

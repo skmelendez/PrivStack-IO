@@ -157,6 +157,9 @@ public class AppSettings
     [JsonPropertyName("whisper_model_size")]
     public string WhisperModelSize { get; set; } = "base.en";
 
+    [JsonPropertyName("audio_input_device")]
+    public string? AudioInputDevice { get; set; }
+
     // Sync settings
     [JsonPropertyName("sync_device_name")]
     public string? SyncDeviceName { get; set; }

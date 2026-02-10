@@ -113,12 +113,102 @@ public partial class App : Application
 
             var dir = Path.GetDirectoryName(dbPath)!;
             Directory.CreateDirectory(dir);
+
+            // Diagnostic logging for storage state before init
+            LogStorageDiagnostics(dbPath);
+
             Services.GetRequiredService<IPrivStackRuntime>().Initialize(dbPath);
             Log.Information("Native service initialized successfully");
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to initialize native service");
+            Serilog.Log.CloseAndFlush();
+        }
+    }
+
+    /// <summary>
+    /// Logs detailed diagnostics about DuckDB file state before initialization.
+    /// </summary>
+    private static void LogStorageDiagnostics(string dbPath)
+    {
+        try
+        {
+            var basePath = Path.ChangeExtension(dbPath, null); // strip .duckdb
+            var dbDir = Path.GetDirectoryName(dbPath)!;
+
+            string[] suffixes = ["vault.duckdb", "blobs.duckdb", "entities.duckdb", "events.duckdb"];
+
+            Log.Information("[StorageDiag] Base path: {BasePath}", basePath);
+            Log.Information("[StorageDiag] Directory exists: {Exists}, writable: {Writable}",
+                Directory.Exists(dbDir),
+                IsDirectoryWritable(dbDir));
+
+            foreach (var suffix in suffixes)
+            {
+                var filePath = $"{basePath}.{suffix}";
+                var walPath = $"{filePath}.wal";
+
+                if (File.Exists(filePath))
+                {
+                    var info = new FileInfo(filePath);
+                    Log.Information("[StorageDiag] {File}: size={Size}, modified={Modified}",
+                        Path.GetFileName(filePath),
+                        info.Length,
+                        info.LastWriteTimeUtc.ToString("o"));
+                    if (info.IsReadOnly)
+                        Log.Warning("[StorageDiag] {File}: IS READ-ONLY!", Path.GetFileName(filePath));
+                }
+                else
+                {
+                    Log.Warning("[StorageDiag] {File}: DOES NOT EXIST", Path.GetFileName(filePath));
+                }
+
+                if (File.Exists(walPath))
+                {
+                    var walInfo = new FileInfo(walPath);
+                    Log.Warning("[StorageDiag] {WalFile}: WAL EXISTS! size={Size}",
+                        Path.GetFileName(walPath),
+                        walInfo.Length);
+                }
+            }
+
+            // Check peer_id
+            var peerIdPath = $"{basePath}.peer_id";
+            if (File.Exists(peerIdPath))
+            {
+                var peerId = File.ReadAllText(peerIdPath).Trim();
+                Log.Information("[StorageDiag] peer_id: {PeerId}", peerId);
+            }
+            else
+            {
+                Log.Warning("[StorageDiag] peer_id file DOES NOT EXIST");
+            }
+
+            // List all files in directory for completeness
+            var allFiles = Directory.GetFiles(dbDir);
+            Log.Information("[StorageDiag] Directory contains {Count} files: {Files}",
+                allFiles.Length,
+                string.Join(", ", allFiles.Select(Path.GetFileName)));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[StorageDiag] Failed to collect storage diagnostics");
+        }
+    }
+
+    private static bool IsDirectoryWritable(string path)
+    {
+        try
+        {
+            var testFile = Path.Combine(path, $".privstack_write_test_{Guid.NewGuid():N}");
+            File.WriteAllText(testFile, "test");
+            File.Delete(testFile);
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
