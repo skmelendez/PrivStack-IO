@@ -27,6 +27,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     [ObservableProperty] private bool _hideInactiveNodes;
     [ObservableProperty] private OrphanFilterMode _orphanMode = OrphanFilterMode.Show;
     [ObservableProperty] private int _minLinkCount;
+    [ObservableProperty] private int _maxNodes = 200;
     [ObservableProperty] private string _searchText = string.Empty;
 
     // Sidebar collapsed state
@@ -57,6 +58,8 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     [ObservableProperty] private bool _isExperimentalPanelOpen;
     [ObservableProperty] private int _nodeCount;
     [ObservableProperty] private int _edgeCount;
+    [ObservableProperty] private int _totalFilteredCount;
+    [ObservableProperty] private bool _isNodeLimitActive;
 
     // Timeline
     [ObservableProperty] private bool _timelineEnabled;
@@ -123,6 +126,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             _showOrphanedTags = _settings.Get("show_orphaned_tags", true);
             _orphanMode = (OrphanFilterMode)_settings.Get("orphan_mode", (int)OrphanFilterMode.Show);
             _minLinkCount = _settings.Get("min_link_count", 0);
+            _maxNodes = _settings.Get("max_nodes", 200);
             _highlightDepth = _settings.Get("highlight_depth", 2);
             _hideInactiveNodes = _settings.Get("hide_inactive_nodes", false);
             _localDepth = _settings.Get("local_depth", 1);
@@ -209,6 +213,18 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             finalNodes[kv.Key] = kv.Value;
         }
 
+        // Apply max node limit — keep most-connected nodes (preserves graph skeleton)
+        var preCapCount = finalNodes.Count;
+        if (MaxNodes > 0 && finalNodes.Count > MaxNodes)
+        {
+            var topNodes = finalNodes
+                .OrderByDescending(kv => filteredLinkCounts.GetValueOrDefault(kv.Key, 0))
+                .ThenByDescending(kv => kv.Value.ModifiedAt)
+                .Take(MaxNodes)
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+            finalNodes = topNodes;
+        }
+
         var finalEdges = filteredEdges.Where(e => finalNodes.ContainsKey(e.SourceId) && finalNodes.ContainsKey(e.TargetId)).ToList();
 
         var filteredGraph = new GraphData();
@@ -219,6 +235,8 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
         GraphData = filteredGraph;
         NodeCount = GraphData.NodeCount;
         EdgeCount = GraphData.EdgeCount;
+        TotalFilteredCount = preCapCount;
+        IsNodeLimitActive = preCapCount > MaxNodes;
     }
 
     private bool MatchesBasicFilters(GraphNode node, HashSet<NodeType> includeNodeTypes)
@@ -241,7 +259,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     [RelayCommand] private void DecreaseDepth() { if (LocalDepth > 1) { LocalDepth--; if (IsLocalView) _ = LoadGraphAsync(); } }
     [RelayCommand] private void ToggleIncludeTag(string tag) { if (IncludeTags.Contains(tag)) IncludeTags.Remove(tag); else IncludeTags.Add(tag); OnPropertyChanged(nameof(IncludeTags)); _ = LoadGraphAsync(); }
     [RelayCommand] private void ToggleExcludeTag(string tag) { if (ExcludeTags.Contains(tag)) ExcludeTags.Remove(tag); else ExcludeTags.Add(tag); OnPropertyChanged(nameof(ExcludeTags)); _ = LoadGraphAsync(); }
-    [RelayCommand] private void ClearFilters() { SearchText = string.Empty; IncludeTags.Clear(); ExcludeTags.Clear(); MinLinkCount = 0; OrphanMode = OrphanFilterMode.Show; ShowNotes = ShowTasks = ShowContacts = ShowEvents = ShowJournal = ShowTags = true; OnPropertyChanged(nameof(IncludeTags)); OnPropertyChanged(nameof(ExcludeTags)); _ = LoadGraphAsync(); }
+    [RelayCommand] private void ClearFilters() { SearchText = string.Empty; IncludeTags.Clear(); ExcludeTags.Clear(); MinLinkCount = 0; MaxNodes = 200; OrphanMode = OrphanFilterMode.Show; ShowNotes = ShowTasks = ShowContacts = ShowEvents = ShowJournal = ShowTags = true; OnPropertyChanged(nameof(IncludeTags)); OnPropertyChanged(nameof(ExcludeTags)); _ = LoadGraphAsync(); }
     [RelayCommand] private void ReheatSimulation() => RequestReheat?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void ToggleExperimentalPanel() => IsExperimentalPanelOpen = !IsExperimentalPanelOpen;
     [RelayCommand] private void SetVisualizationMode(GraphVisualizationMode mode) { if (VisualizationMode != mode) { VisualizationMode = mode; VisualizationModeChanged?.Invoke(this, mode); } }
@@ -272,6 +290,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
 
     partial void OnSearchTextChanged(string value) { if (!_isInitializing) ApplyFilters(); }
     partial void OnMinLinkCountChanged(int value) { Save("min_link_count", value); _ = LoadGraphAsync(); }
+    partial void OnMaxNodesChanged(int value) { Save("max_nodes", value); if (!_isInitializing) ApplyFilters(); }
     partial void OnOrphanModeChanged(OrphanFilterMode value) { Save("orphan_mode", (int)value); OnPropertyChanged(nameof(IsOrphanHide)); OnPropertyChanged(nameof(IsOrphanShow)); OnPropertyChanged(nameof(IsOrphanOnly)); if (!_isInitializing) _ = LoadGraphAsync(); }
     partial void OnShowNotesChanged(bool value) { Save("show_notes", value); if (!_isInitializing) _ = LoadGraphAsync(); }
     partial void OnShowTasksChanged(bool value) { Save("show_tasks", value); if (!_isInitializing) _ = LoadGraphAsync(); }

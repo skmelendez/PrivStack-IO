@@ -163,6 +163,15 @@
                                 <Slider Value="{Binding MinLinkCount}" Minimum="0" Maximum="20"
                                         TickFrequency="1" IsSnapToTickEnabled="True"/>
                             </StackPanel>
+                            <StackPanel Spacing="2">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Max Nodes" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding MaxNodes}"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                </Grid>
+                                <Slider Value="{Binding MaxNodes}" Minimum="50" Maximum="2500"
+                                        TickFrequency="50" IsSnapToTickEnabled="True"/>
+                            </StackPanel>
                         </StackPanel>
 
                         <Border Height="1" Background="{DynamicResource ThemeBorderSubtleBrush}" Margin="0,2"/>
@@ -286,10 +295,17 @@
                     BorderThickness="0,1,0,0"
                     BorderBrush="{DynamicResource ThemeBorderBrush}">
                 <StackPanel Orientation="Horizontal" Spacing="16">
-                    <TextBlock Opacity="0.6" VerticalAlignment="Center" FontSize="{DynamicResource ThemeFontSizeXsSm}">
-                        <Run Text="Nodes:"/>
-                        <Run Text="{Binding NodeCount}"/>
-                    </TextBlock>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Opacity="0.6" VerticalAlignment="Center" FontSize="{DynamicResource ThemeFontSizeXsSm}">
+                            <Run Text="Nodes:"/>
+                            <Run Text="{Binding NodeCount}"/>
+                        </TextBlock>
+                        <TextBlock Opacity="0.6" VerticalAlignment="Center" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   IsVisible="{Binding IsNodeLimitActive}">
+                            <Run Text=" of"/>
+                            <Run Text="{Binding TotalFilteredCount}"/>
+                        </TextBlock>
+                    </StackPanel>
                     <TextBlock Opacity="0.6" VerticalAlignment="Center" FontSize="{DynamicResource ThemeFontSizeXsSm}">
                         <Run Text="Edges:"/>
                         <Run Text="{Binding EdgeCount}"/>
