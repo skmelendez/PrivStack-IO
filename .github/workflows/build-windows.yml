@@ -27,7 +27,7 @@ env:
 
 jobs:
   build-sign-deploy:
-    runs-on: windows-latest
+    runs-on: windows-latest-large
     steps:
       # ── Checkout ──────────────────────────────────────────────
       - name: Checkout
@@ -45,10 +45,16 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
           targets: x86_64-pc-windows-msvc
 
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
+      - name: Restore Rust cache
+        id: rust-cache
+        uses: actions/cache/restore@v4
         with:
-          workspaces: core -> target
+          path: |
+            ~\.cargo\registry
+            ~\.cargo\git
+            core\target
+          key: rust-${{ runner.os }}-${{ hashFiles('core/Cargo.lock') }}
+          restore-keys: rust-${{ runner.os }}-
 
       # ── Extract version from .csproj ──────────────────────────
       - name: Extract version
@@ -64,6 +70,16 @@ jobs:
       - name: Build Rust core
         working-directory: core
         run: cargo build --release --target x86_64-pc-windows-msvc -p privstack-ffi
+
+      - name: Save Rust cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~\.cargo\registry
+            ~\.cargo\git
+            core\target
+          key: rust-${{ runner.os }}-${{ hashFiles('core/Cargo.lock') }}
 
       - name: Copy native DLL to expected location
         shell: pwsh
@@ -183,7 +199,7 @@ jobs:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
           endpoint: https://eus.codesigning.azure.net/
-          signing-account-name: privstack
+          trusted-signing-account-name: privstack
           certificate-profile-name: privstack-signing
           files-folder: dist/msix
           files-folder-filter: exe
