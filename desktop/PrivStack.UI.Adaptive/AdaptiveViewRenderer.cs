@@ -125,8 +125,13 @@ public sealed class AdaptiveViewRenderer : UserControl
         // Clear the graph control reference
         _activeGraphControl = null;
 
-        // Clear tracked page list titles
+        // Clear tracked page list titles and icons
         _pageListTitles.Clear();
+        _pageListIcons.Clear();
+
+        // Clear block metadata and table filter state
+        _blockMeta.Clear();
+        _tableFilterState.Clear();
 
         // Clear the content to show loading state
         Content = null;
@@ -150,8 +155,13 @@ public sealed class AdaptiveViewRenderer : UserControl
         // Clear the graph control reference
         _activeGraphControl = null;
 
-        // Clear tracked page list titles
+        // Clear tracked page list titles and icons
         _pageListTitles.Clear();
+        _pageListIcons.Clear();
+
+        // Clear block metadata and table filter state
+        _blockMeta.Clear();
+        _tableFilterState.Clear();
 
         // Reset partial refresh flag - new page should do full render
         UsePartialRefresh = false;
