@@ -48,6 +48,33 @@ public partial class WasmPluginView : UserControl
         WireUp();
     }
 
+    protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+
+        // Unsubscribe all event handlers to prevent rooting this view
+        var renderer = MainRenderer;
+        if (renderer != null)
+        {
+            if (_refreshHandler != null)
+                renderer.ViewStateRefreshRequested -= _refreshHandler;
+            if (_paletteHandler != null)
+                renderer.PaletteRequested -= _paletteHandler;
+        }
+
+        if (_viewStateChangingHandler != null && DataContext is WasmViewModelProxy vm)
+            vm.ViewStateChanging -= _viewStateChangingHandler;
+
+        if (_pluginCommandHandler != null && _cachedMainVm != null)
+            _cachedMainVm.CommandPaletteVM.PluginCommandRequested -= _pluginCommandHandler;
+
+        _refreshHandler = null;
+        _paletteHandler = null;
+        _pluginCommandHandler = null;
+        _viewStateChangingHandler = null;
+        _cachedMainVm = null;
+    }
+
     /// <summary>
     /// Prepares for navigation. Previously cleared shadow state here, but that caused
     /// timing issues (the posted action ran after navigation completed and cleared the
