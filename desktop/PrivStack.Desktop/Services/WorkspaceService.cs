@@ -137,6 +137,9 @@ public sealed partial class WorkspaceService : IWorkspaceService
         _registry = _registry with { ActiveWorkspaceId = workspaceId };
         SaveRegistry();
 
+        // Clear prefetch cache before workspace switch to avoid stale data
+        App.Services.GetService<ViewStatePrefetchService>()?.Clear();
+
         // Guard SDK calls during the Shutdown → Initialize window
         var sdkHost = App.Services.GetRequiredService<SdkHost>();
         var service = App.Services.GetRequiredService<Native.IPrivStackRuntime>();
