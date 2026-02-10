@@ -265,10 +265,28 @@ public sealed class NeuronGraphControl : Control
         base.OnAttachedToVisualTree(e);
         if (Application.Current is { } app)
             app.ActualThemeVariantChanged += OnThemeVariantChanged;
+
+        // Resume the physics timer if we have data from a previous session
+        // (e.g. re-attached after a tab switch with view caching).
+        if (_engine != null && _graphData != null)
+        {
+            _engine.Reheat(0.3);
+            if (_timer == null)
+            {
+                _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                _timer.Tick += OnTick;
+            }
+            if (!_timer.IsEnabled)
+                _timer.Start();
+        }
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        // Stop the physics timer to avoid a 60fps tick while the control is
+        // off-screen.  Data and engine are kept alive so the graph can resume
+        // instantly when re-attached (common with view caching).
+        _timer?.Stop();
         if (Application.Current is { } app)
             app.ActualThemeVariantChanged -= OnThemeVariantChanged;
         base.OnDetachedFromVisualTree(e);

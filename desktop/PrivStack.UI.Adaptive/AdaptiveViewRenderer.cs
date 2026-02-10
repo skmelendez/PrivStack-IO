@@ -168,6 +168,55 @@ public sealed class AdaptiveViewRenderer : UserControl
     }
 
     /// <summary>
+    /// Explicitly tears down the old control tree and caches when switching
+    /// between Wasm plugins. Called by WasmPluginView.WireUp() on DataContext
+    /// change so the previous plugin's heavy control tree is freed immediately
+    /// instead of waiting for GC.
+    ///
+    /// Does NOT touch _syncTimer or _shadowState — those are handled by the
+    /// normal render path in OnViewStateChanged / RenderBlockEditor.
+    /// </summary>
+    public void ResetForPluginSwitch()
+    {
+        _log.Information("ResetForPluginSwitch: tearing down current state, Content={HasContent}, PluginId={PluginId}",
+            Content != null, PluginId);
+
+        // Flush any pending editor text changes so nothing is lost
+        FlushAllEditors();
+
+        // Stop the deferred refresh timer (prevents stale Tick firing into new plugin)
+        _deferredRefreshTimer?.Stop();
+        _deferredRefreshTimer = null;
+
+        // Detach page drag artifacts
+        if (_pageDragOverlay?.Parent is Panel ovp)
+            ovp.Children.Remove(_pageDragOverlay);
+        if (_pageDropIndicator?.Parent is Panel pip)
+            pip.Children.Remove(_pageDropIndicator);
+        _pageDragOverlay = null;
+        _pageDropIndicator = null;
+        _pageListPanel = null;
+        if (_isPageDragging)
+            CleanUpPageDrag();
+
+        // Clear all internal caches
+        _activeGraphControl = null;
+        _pageListTitles.Clear();
+        _pageListIcons.Clear();
+        _blockMeta.Clear();
+        _tableFilterState.Clear();
+        _headerViewToggleHost = null;
+        _pendingGraphHydration = null;
+        _blockPanel = null;
+        _saveStatusText = null;
+
+        // Drop the old control tree so it can be collected
+        Content = null;
+
+        UsePartialRefresh = false;
+    }
+
+    /// <summary>
     /// Plugin ID for routing user interactions back as commands.
     /// </summary>
     public string? PluginId
@@ -332,6 +381,21 @@ public sealed class AdaptiveViewRenderer : UserControl
             SendCommandSilent("save_page", "{}");
         }
         _shadowState.Clear();
+
+        // Stop the deferred refresh timer — a running DispatcherTimer roots the
+        // renderer via its Tick handler closure, preventing GC.
+        _deferredRefreshTimer?.Stop();
+        _deferredRefreshTimer = null;
+
+        // Clear internal caches to release object graphs
+        _activeGraphControl = null;
+        _pageListTitles.Clear();
+        _pageListIcons.Clear();
+        _blockMeta.Clear();
+        _tableFilterState.Clear();
+
+        Content = null;
+
         base.OnDetachedFromVisualTree(e);
     }
 

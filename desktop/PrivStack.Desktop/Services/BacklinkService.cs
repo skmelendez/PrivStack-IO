@@ -530,11 +530,18 @@ public sealed class BacklinkService
         _forwardLinks = forwardLinks;
         _reverseIndex = reverseIndex;
 
+        var contentCount = entityContents.Count;
+
+        // Release temporary content strings — they can be large and are no longer needed
+        // once the link indices have been built.
+        entityContents.Clear();
+        entityExplicitLinks.Clear();
+
         _log.Information("BacklinkService: index built — {EntityCount} entities, {ContentCount} with content, " +
             "{LinksFound} wiki-links found, {LinksResolved} resolved, " +
             "{ExplicitFound} explicit links found, {ExplicitResolved} resolved, " +
             "{BacklinkCount} backlink targets, {ForwardCount} forward sources",
-            entityMap.Count, entityContents.Count, totalLinksFound, totalLinksResolved,
+            entityMap.Count, contentCount, totalLinksFound, totalLinksResolved,
             explicitLinksFound, explicitLinksResolved,
             reverseIndex.Count, forwardLinks.Count);
     }

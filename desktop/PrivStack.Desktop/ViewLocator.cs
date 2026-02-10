@@ -1,16 +1,21 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using PrivStack.Desktop.ViewModels;
+using Serilog;
 
 namespace PrivStack.Desktop;
 
 /// <summary>
 /// Given a view model, returns the corresponding view if possible.
 /// Convention: "FooViewModel" → "FooView" (same namespace/assembly).
-/// No adapter unwrapping needed — plugins return Sdk.ViewModelBase directly.
+///
+/// Views are cached per ViewModel type so that switching tabs reuses the
+/// existing view instance instead of creating a new one every time.
+/// This prevents memory from growing linearly with each tab switch.
 /// </summary>
 [RequiresUnreferencedCode(
     "Default implementation of ViewLocator involves reflection which may be trimmed away.",
@@ -18,19 +23,35 @@ namespace PrivStack.Desktop;
 public class ViewLocator : IDataTemplate
 {
     private static readonly ConcurrentDictionary<string, Type?> _typeCache = new();
+    private readonly Dictionary<Type, Control> _viewCache = new();
 
     public Control? Build(object? param)
     {
         if (param is null)
             return null;
 
+        var vmType = param.GetType();
+
+        // Return cached view if we already built one for this VM type.
+        if (_viewCache.TryGetValue(vmType, out var cached))
+        {
+            Log.Information("[ViewLocator] CACHE HIT for {VmType} — ManagedHeap={Heap}MB, WorkingSet={WS}MB",
+                vmType.Name,
+                GC.GetTotalMemory(false) / 1024 / 1024,
+                System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
+            return cached;
+        }
+
+        Log.Information("[ViewLocator] CACHE MISS — creating view for {VmType}", vmType.Name);
+
         // Special case: Wasm plugin proxy → generic renderer
         if (param is PrivStack.Desktop.Services.Plugin.WasmViewModelProxy)
         {
-            return new Views.WasmPluginView();
+            var wasmView = new Views.WasmPluginView();
+            _viewCache[vmType] = wasmView;
+            return wasmView;
         }
 
-        var vmType = param.GetType();
         var viewName = vmType.FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
 
         var viewType = _typeCache.GetOrAdd(viewName, name =>
@@ -62,7 +83,9 @@ public class ViewLocator : IDataTemplate
 
         if (viewType != null)
         {
-            return (Control)Activator.CreateInstance(viewType)!;
+            var view = (Control)Activator.CreateInstance(viewType)!;
+            _viewCache[vmType] = view;
+            return view;
         }
 
         return new TextBlock { Text = "Not Found: " + viewName };
