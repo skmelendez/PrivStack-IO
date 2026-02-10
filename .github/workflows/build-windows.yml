@@ -147,6 +147,8 @@ jobs:
           UninstallDisplayIcon={app}\PrivStack.Desktop.exe
           DisableProgramGroupPage=yes
           DisableWelcomePage=no
+          CloseApplications=yes
+          RestartApplications=yes
 
           [Languages]
           Name: "english"; MessagesFile: "compiler:Default.isl"
