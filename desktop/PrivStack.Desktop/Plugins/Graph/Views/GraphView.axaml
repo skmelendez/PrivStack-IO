@@ -1,0 +1,300 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PrivStack.Desktop.Plugins.Graph.ViewModels"
+             xmlns:models="using:PrivStack.Desktop.Plugins.Graph.Models"
+             xmlns:converters="using:PrivStack.Desktop.Plugins.Graph.Converters"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+             x:Class="PrivStack.Desktop.Plugins.Graph.Views.GraphView"
+             x:DataType="vm:GraphViewModel">
+
+    <UserControl.Styles>
+        <!-- Make Expanders stretch full width and style the header -->
+        <Style Selector="Expander">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Expander /template/ ToggleButton#PART_toggle">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Full-bleed graph canvas (spans all rows, renders behind glass UI) -->
+        <Border x:Name="GraphCanvasHost" Grid.Row="0" Grid.RowSpan="3" ClipToBounds="True"/>
+
+        <!-- Loading overlay -->
+        <StackPanel Grid.Row="0" Grid.RowSpan="3"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    IsVisible="{Binding IsLoading}">
+            <ProgressBar IsIndeterminate="True" Width="200"/>
+            <TextBlock Text="Loading graph..." Margin="0,8,0,0"
+                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+        </StackPanel>
+
+        <!-- Empty state -->
+        <TextBlock x:Name="EmptyStateText" Grid.Row="0" Grid.RowSpan="3"
+                   Text="No graph data" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   FontSize="{DynamicResource ThemeFontSize2Xl}" Opacity="0.3"
+                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                   IsVisible="False"/>
+
+        <!-- Glass Command Bar -->
+        <Border Grid.Row="0"
+                    Background="{DynamicResource ThemeSurfaceGlassBrush}"
+                    BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,8,16,6">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+                    <!-- Row 0: Title always visible. Search + actions overlaid in Normal/Wide only -->
+                    <Grid Grid.Row="0" MinHeight="32">
+                        <TextBlock Text="Graph"
+                                   HorizontalAlignment="Left" VerticalAlignment="Center"
+                                   FontWeight="Bold"
+                                   FontSize="{DynamicResource ThemeFontSizeLgXl}"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+
+                        <!-- Normal/Wide: Center search (overlaid) -->
+                        <TextBox Watermark="Search Graph"
+                                 Text="{Binding SearchText, Mode=TwoWay}"
+                                 MinWidth="200" MaxWidth="300"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 IsVisible="{DynamicResource ThemeIsNotCompactMode}"
+                                 Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                 BorderThickness="0" Padding="12,8" CornerRadius="6"/>
+
+                        <!-- Normal/Wide: Right actions (overlaid) -->
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Center" Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="6" Padding="2"
+                                IsVisible="{DynamicResource ThemeIsNotCompactMode}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="10,6"
+                                        FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                <Button Content="Reheat" Command="{Binding ReheatSimulationCommand}" Padding="10,6"
+                                        FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Row 1: Compact-only search (full width) -->
+                    <TextBox Grid.Row="1" Watermark="Search Graph"
+                             Text="{Binding SearchText, Mode=TwoWay}"
+                             IsVisible="{DynamicResource ThemeIsCompactMode}"
+                             HorizontalAlignment="Stretch" Margin="0,6,0,0"
+                             Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                             Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                             BorderThickness="0" Padding="12,8" CornerRadius="6"/>
+
+                    <!-- Row 2: Compact-only action buttons -->
+                    <Border Grid.Row="2" Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="6" Padding="2"
+                            Margin="0,6,0,0" HorizontalAlignment="Left"
+                            IsVisible="{DynamicResource ThemeIsCompactMode}">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="10,6"
+                                    FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                            <Button Content="Reheat" Command="{Binding ReheatSimulationCommand}" Padding="10,6"
+                                    FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Row 3: Subtitle -->
+                    <TextBlock Grid.Row="3" Text="Your second brain, visualized"
+                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                               Margin="0,2,0,0"/>
+                </Grid>
+            </Border>
+
+            <!-- Glass Sidebar (floats over canvas) -->
+            <Border Grid.Row="1"
+                    HorizontalAlignment="Left"
+                    Width="{Binding IsGraphSidebarCollapsed, Converter={x:Static converters:BoolToWidthConverter.Instance}}"
+                    Background="{DynamicResource ThemeSurfaceGlassBrush}"
+                    BorderThickness="0,0,1,0"
+                    BorderBrush="{DynamicResource ThemeBorderBrush}">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Collapse Button -->
+                    <Border Grid.Row="0" Padding="8,8,8,4">
+                        <Button Command="{Binding ToggleGraphSidebarCommand}"
+                                HorizontalAlignment="Left"
+                                Background="Transparent"
+                                Padding="8"
+                                CornerRadius="4"
+                                ToolTip.Tip="{Binding IsGraphSidebarCollapsed, Converter={x:Static converters:BoolToStringConverter.Instance}, ConverterParameter='Expand sidebar,Collapse sidebar'}">
+                            <PathIcon Width="16" Height="16"
+                                      Data="{Binding IsGraphSidebarCollapsed, Converter={x:Static converters:BoolToPathIconConverter.Instance}, ConverterParameter='M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z,M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z'}"/>
+                        </Button>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" Padding="8,4" IsVisible="{Binding !IsGraphSidebarCollapsed}">
+                    <StackPanel Spacing="8">
+
+                        <!-- VIEW group -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="VIEW" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5" Margin="0,0,0,2"/>
+                            <StackPanel IsVisible="{Binding IsLocalView}" Spacing="2">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Local Depth" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding LocalDepth}"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                </Grid>
+                                <Slider Value="{Binding LocalDepth}" Minimum="1" Maximum="5"
+                                        TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Active Depth" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HighlightDepth}"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                </Grid>
+                                <Slider Value="{Binding HighlightDepth}" Minimum="1" Maximum="5"
+                                        TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                <CheckBox Content="Hide inactive" IsChecked="{Binding HideInactiveNodes}"
+                                          FontSize="{DynamicResource ThemeFontSizeXs}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Min Links" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding MinLinkCount}"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                </Grid>
+                                <Slider Value="{Binding MinLinkCount}" Minimum="0" Maximum="20"
+                                        TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{DynamicResource ThemeBorderSubtleBrush}" Margin="0,2"/>
+
+                        <!-- Node Types -->
+                        <Expander IsExpanded="True" Padding="0" HorizontalAlignment="Stretch">
+                            <Expander.Header>
+                                <TextBlock Text="NODE TYPES" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5"
+                                           HorizontalAlignment="Stretch"/>
+                            </Expander.Header>
+                            <StackPanel Spacing="4" Margin="8,4">
+                                <CheckBox Content="Notes" IsChecked="{Binding ShowNotes}"/>
+                                <CheckBox Content="Tasks" IsChecked="{Binding ShowTasks}"/>
+                                <CheckBox Content="Contacts" IsChecked="{Binding ShowContacts}"/>
+                                <CheckBox Content="Events" IsChecked="{Binding ShowEvents}"/>
+                                <CheckBox Content="Journal" IsChecked="{Binding ShowJournal}"/>
+                                <CheckBox Content="Tags" IsChecked="{Binding ShowTags}"/>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Orphans -->
+                        <Expander IsExpanded="False" Padding="0" HorizontalAlignment="Stretch">
+                            <Expander.Header>
+                                <TextBlock Text="ORPHANS" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5"
+                                           HorizontalAlignment="Stretch"/>
+                            </Expander.Header>
+                            <StackPanel Spacing="4" Margin="8,4">
+                                <RadioButton Content="Hide" IsChecked="{Binding IsOrphanHide}"/>
+                                <RadioButton Content="Show" IsChecked="{Binding IsOrphanShow}"/>
+                                <RadioButton Content="Only" IsChecked="{Binding IsOrphanOnly}"/>
+                                <CheckBox Content="Orphaned Tags" IsChecked="{Binding ShowOrphanedTags}"/>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Timeline -->
+                        <Expander IsExpanded="False" Padding="0" HorizontalAlignment="Stretch">
+                            <Expander.Header>
+                                <TextBlock Text="TIMELINE" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5"
+                                           HorizontalAlignment="Stretch"/>
+                            </Expander.Header>
+                            <StackPanel Spacing="4" Margin="8,4">
+                                <CheckBox Content="Timeline Filter" IsChecked="{Binding TimelineEnabled}"/>
+                                <StackPanel IsVisible="{Binding TimelineEnabled}" Spacing="4">
+                                    <TextBlock Text="{Binding TimelineStartLabel}" FontSize="{DynamicResource ThemeFontSizeXsSm}" Opacity="0.7"/>
+                                    <Slider Value="{Binding TimelineLowerValue}" Minimum="0" Maximum="100"/>
+                                    <Slider Value="{Binding TimelineUpperValue}" Minimum="0" Maximum="100"/>
+                                    <TextBlock Text="{Binding TimelineEndLabel}" FontSize="{DynamicResource ThemeFontSizeXsSm}" Opacity="0.7"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Physics -->
+                        <Expander IsExpanded="False" Padding="0" HorizontalAlignment="Stretch">
+                            <Expander.Header>
+                                <TextBlock Text="PHYSICS" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5"
+                                           HorizontalAlignment="Stretch"/>
+                            </Expander.Header>
+                            <StackPanel Spacing="8" Margin="8,4">
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Node Spacing" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding NodeSpacingDistance, StringFormat='{}{0:F0}px'}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding NodeSpacingSlider}" Minimum="0" Maximum="100"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Repulsion" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding RepulsionStrength, StringFormat='{}{0:F0}'}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding RepulsionSlider}" Minimum="0" Maximum="100"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Link Distance" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding LinkDistance, StringFormat='{}{0:F0}'}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding LinkDistanceSlider}" Minimum="0" Maximum="100"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Link Strength" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding LinkStrength, StringFormat='{}{0:F2}'}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding LinkStrengthSlider}" Minimum="0" Maximum="100"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Collision" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding CollisionStrength, StringFormat='{}{0:F2}'}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding CollisionSlider}" Minimum="0" Maximum="100"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Center Gravity" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding CenterStrength, StringFormat='{}{0:F3}'}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding CenterSlider}" Minimum="0" Maximum="100"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
+
+                        <Border Height="1" Background="{DynamicResource ThemeBorderSubtleBrush}" Margin="0,2"/>
+                        <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}" Padding="12,8" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- Glass Footer -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource ThemeSurfaceGlassBrush}"
+                    Padding="16,6"
+                    BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource ThemeBorderBrush}">
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <TextBlock Opacity="0.6" VerticalAlignment="Center" FontSize="{DynamicResource ThemeFontSizeXsSm}">
+                        <Run Text="Nodes:"/>
+                        <Run Text="{Binding NodeCount}"/>
+                    </TextBlock>
+                    <TextBlock Opacity="0.6" VerticalAlignment="Center" FontSize="{DynamicResource ThemeFontSizeXsSm}">
+                        <Run Text="Edges:"/>
+                        <Run Text="{Binding EdgeCount}"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+    </Grid>
+</UserControl>
