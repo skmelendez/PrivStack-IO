@@ -38,7 +38,7 @@ rand = "0.8"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "process"] }
-tempfile = "3.14"
+tempfile = "3.25"
 wiremock = "0.6.5"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serial_test = "3"
