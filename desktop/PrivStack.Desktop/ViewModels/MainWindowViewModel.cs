@@ -829,6 +829,39 @@ public partial class MainWindowViewModel : ViewModelBase
 
         await plugin.OnNavigatedToAsync();
 
+        // Aggressively reclaim memory from the previous tab's stale objects.
+        // Also run DuckDB maintenance (WAL checkpoint + vacuum) to release native buffers.
+        // Run on a background thread to avoid blocking the UI.
+        _ = Task.Run(async () =>
+        {
+            // Compacting GC decommits unused memory pages back to the OS,
+            // reducing WorkingSet rather than just freeing managed heap.
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+
+            try
+            {
+                var sdk = App.Services.GetService<IPrivStackSdk>();
+                if (sdk != null)
+                {
+                    await sdk.RunDatabaseMaintenance();
+                    Serilog.Log.Information("[TabSwitch] DbMaintenance completed | Heap={Heap}MB | WS={WS}MB",
+                        GC.GetTotalMemory(false) / 1024 / 1024,
+                        System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
+                }
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Debug(ex, "[TabSwitch] DbMaintenance failed (non-critical)");
+            }
+        });
+
+        Serilog.Log.Information("[TabSwitch] → {Tab} | Heap={Heap}MB | WS={WS}MB",
+            tabName,
+            GC.GetTotalMemory(forceFullCollection: false) / 1024 / 1024,
+            System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
+
         StatusMessage = "Ready";
     }
 

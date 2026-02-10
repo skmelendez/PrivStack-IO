@@ -23,6 +23,7 @@ public partial class WasmPluginView : UserControl
     private Action<string, string>? _paletteHandler;
     private Action<string, string, string>? _pluginCommandHandler;
     private Action<bool>? _viewStateChangingHandler;
+    private WasmViewModelProxy? _previousVm;
     private MainWindowViewModel? _cachedMainVm;
 
     public WasmPluginView()
@@ -60,10 +61,30 @@ public partial class WasmPluginView : UserControl
                 renderer.ViewStateRefreshRequested -= _refreshHandler;
             if (_paletteHandler != null)
                 renderer.PaletteRequested -= _paletteHandler;
+
+            // Clear all delegate properties to break closure reference chains.
+            // Closures capture vm, this, services etc. and can delay GC of large object graphs.
+            renderer.CommandSender = null;
+            renderer.ViewStateProvider = null;
+            renderer.RawViewDataProvider = null;
+            renderer.SettingsReader = null;
+            renderer.SettingsWriter = null;
+            renderer.NetworkFetcher = null;
+            renderer.ImageFilePicker = null;
+            renderer.GeneralFilePicker = null;
+            renderer.SdkRouter = null;
+            renderer.PermissionChecker = null;
+            renderer.PermissionPrompter = null;
+            renderer.ToastNotifier = null;
+            renderer.LinkableItemSearcher = null;
+            renderer.InternalLinkActivated = null;
+            renderer.PrefetchRequested = null;
+            renderer.PrefetchCancelled = null;
         }
 
-        if (_viewStateChangingHandler != null && DataContext is WasmViewModelProxy vm)
-            vm.ViewStateChanging -= _viewStateChangingHandler;
+        // Unsubscribe from the tracked previous VM, not current DataContext
+        if (_viewStateChangingHandler != null && _previousVm != null)
+            _previousVm.ViewStateChanging -= _viewStateChangingHandler;
 
         if (_pluginCommandHandler != null && _cachedMainVm != null)
             _cachedMainVm.CommandPaletteVM.PluginCommandRequested -= _pluginCommandHandler;
@@ -72,6 +93,7 @@ public partial class WasmPluginView : UserControl
         _paletteHandler = null;
         _pluginCommandHandler = null;
         _viewStateChangingHandler = null;
+        _previousVm = null;
         _cachedMainVm = null;
     }
 
@@ -103,10 +125,18 @@ public partial class WasmPluginView : UserControl
         if (renderer == null || DataContext is not WasmViewModelProxy vm)
             return;
 
+        // If switching to a different plugin VM, tear down the old control tree
+        // and caches immediately so memory is freed rather than waiting for GC.
+        if (_previousVm != null && _previousVm != vm)
+        {
+            renderer.ResetForPluginSwitch();
+        }
+
         // Wire up partial refresh notification - this allows the renderer to prepare
-        // for a partial update when navigating within the same plugin
-        if (_viewStateChangingHandler != null)
-            vm.ViewStateChanging -= _viewStateChangingHandler;
+        // for a partial update when navigating within the same plugin.
+        // Unsubscribe from the PREVIOUS vm (not the new one) to avoid accumulating handlers.
+        if (_viewStateChangingHandler != null && _previousVm != null)
+            _previousVm.ViewStateChanging -= _viewStateChangingHandler;
 
         _viewStateChangingHandler = (usePartialRefresh) =>
         {
@@ -116,6 +146,7 @@ public partial class WasmPluginView : UserControl
             }
         };
         vm.ViewStateChanging += _viewStateChangingHandler;
+        _previousVm = vm;
 
         renderer.CommandSender = (pluginId, commandName, argsJson) =>
         {
