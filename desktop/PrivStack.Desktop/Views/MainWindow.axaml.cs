@@ -380,6 +380,13 @@ public partial class MainWindow : Window
                 return;
             }
 
+            if (vm.SettingsVM.ThemeEditor.IsOpen)
+            {
+                vm.SettingsVM.ThemeEditor.CancelCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+
             if (vm.IsUserMenuOpen)
             {
                 vm.CloseUserMenuCommand.Execute(null);

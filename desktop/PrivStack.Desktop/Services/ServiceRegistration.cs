@@ -57,6 +57,7 @@ public static class ServiceRegistration
         services.AddSingleton<IUpdateService, RegistryUpdateService>();
 
         // Services without interfaces (used directly)
+        services.AddSingleton<CustomThemeStore>();
         services.AddSingleton<WhisperService>();
         services.AddSingleton<WhisperModelManager>();
         services.AddSingleton<ViewStatePrefetchService>();

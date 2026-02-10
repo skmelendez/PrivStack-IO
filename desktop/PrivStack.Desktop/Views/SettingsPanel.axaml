@@ -34,16 +34,24 @@
                     <StackPanel Spacing="6">
                         <TextBlock Text="Theme" FontSize="{DynamicResource ThemeFontSizeSm}"
                                    Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                        <ComboBox ItemsSource="{Binding AvailableThemes}"
-                                  SelectedItem="{Binding SelectedTheme}"
-                                  HorizontalAlignment="Stretch"
-                                  Padding="12,8">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ThemeOption">
-                                    <TextBlock Text="{Binding DisplayName}"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <Grid ColumnDefinitions="*,8,Auto">
+                            <ComboBox Grid.Column="0"
+                                      ItemsSource="{Binding AvailableThemes}"
+                                      SelectedItem="{Binding SelectedTheme}"
+                                      HorizontalAlignment="Stretch"
+                                      Padding="12,8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ThemeOption">
+                                        <TextBlock Text="{Binding DisplayName}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="2"
+                                    Content="Customize"
+                                    Command="{Binding OpenThemeEditorCommand}"
+                                    Padding="12,8"
+                                    VerticalAlignment="Stretch"/>
+                        </Grid>
                     </StackPanel>
                 </StackPanel>
             </Border>

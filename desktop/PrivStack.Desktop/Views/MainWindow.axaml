@@ -482,6 +482,9 @@
         <!-- Manage Plugins Dialog Overlay -->
         <views:ManagePluginsDialog DataContext="{Binding SettingsVM}" ZIndex="1001"/>
 
+        <!-- Theme Editor Dialog Overlay -->
+        <views:ThemeEditorDialog DataContext="{Binding SettingsVM.ThemeEditor}" ZIndex="1001"/>
+
         <!-- Property Template Manager Dialog Overlay -->
         <views:PropertyTemplateDialog DataContext="{Binding InfoPanelVM.TemplateDialog}" ZIndex="1001"/>
 

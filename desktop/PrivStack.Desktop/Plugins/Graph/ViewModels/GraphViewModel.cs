@@ -284,6 +284,12 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             }
         }
     }
+    public void OnNodeDeselected()
+    {
+        SelectedNodeId = null;
+        _infoPanelService?.ClearActiveItem();
+    }
+
     public void OnNodeDoubleClicked(string nodeId) { /* Navigation handled by host app */ }
 
     private void Save<T>(string key, T value) { if (!_isInitializing) _settings?.Set(key, value); }

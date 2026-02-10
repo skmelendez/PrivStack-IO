@@ -18,8 +18,12 @@ namespace PrivStack.Desktop.ViewModels;
 
 /// <summary>
 /// Represents a theme option for display in the UI.
+/// Custom themes use CustomThemeId; built-in themes use Theme.
 /// </summary>
-public record ThemeOption(AppTheme Theme, string DisplayName);
+public record ThemeOption(AppTheme Theme, string DisplayName, string? CustomThemeId = null)
+{
+    public bool IsCustom => CustomThemeId != null;
+}
 
 /// <summary>
 /// Represents a Whisper model option for speech-to-text.
@@ -204,6 +208,9 @@ public partial class SettingsViewModel : ViewModelBase
     private Avalonia.Threading.DispatcherTimer? _metricsRefreshTimer;
 
     private readonly ISystemNotificationService _notificationService;
+    private readonly CustomThemeStore _customThemeStore;
+
+    public ThemeEditorViewModel ThemeEditor { get; }
 
     public SettingsViewModel(
         IAppSettingsService settingsService,
@@ -215,7 +222,8 @@ public partial class SettingsViewModel : ViewModelBase
         IDialogService dialogService,
         IAuthService authService,
         SeedDataService seedDataService,
-        ISystemNotificationService notificationService)
+        ISystemNotificationService notificationService,
+        CustomThemeStore customThemeStore)
     {
         _settingsService = settingsService;
         _backupService = backupService;
@@ -227,6 +235,11 @@ public partial class SettingsViewModel : ViewModelBase
         _authService = authService;
         _seedDataService = seedDataService;
         _notificationService = notificationService;
+        _customThemeStore = customThemeStore;
+
+        ThemeEditor = new ThemeEditorViewModel(themeService, customThemeStore, settingsService);
+        ThemeEditor.EditorClosed += OnThemeEditorClosed;
+
         LoadPluginItems();
         LoadSettings();
     }
@@ -721,7 +734,7 @@ public partial class SettingsViewModel : ViewModelBase
     public string DownloadProgressText => $"{DownloadProgress:F0}%";
 
     /// <summary>
-    /// All available themes for selection.
+    /// All available themes for selection (built-in + custom).
     /// </summary>
     public ObservableCollection<ThemeOption> AvailableThemes { get; } =
     [
@@ -733,6 +746,60 @@ public partial class SettingsViewModel : ViewModelBase
         new(AppTheme.Slate, "Slate"),
         new(AppTheme.Ember, "Ember"),
     ];
+
+    /// <summary>
+    /// Opens the theme editor dialog for the current theme.
+    /// </summary>
+    [RelayCommand]
+    private void OpenThemeEditor()
+    {
+        ThemeEditor.OpenForCurrentTheme();
+    }
+
+    private void OnThemeEditorClosed(bool saved)
+    {
+        if (saved)
+        {
+            RefreshAvailableThemes();
+        }
+    }
+
+    /// <summary>
+    /// Refreshes the available themes list to include custom themes.
+    /// </summary>
+    public void RefreshAvailableThemes()
+    {
+        // Preserve selection
+        var currentId = _themeService.CurrentCustomThemeId;
+
+        // Remove existing custom themes
+        for (int i = AvailableThemes.Count - 1; i >= 0; i--)
+        {
+            if (AvailableThemes[i].IsCustom)
+                AvailableThemes.RemoveAt(i);
+        }
+
+        // Add custom themes from store
+        var customThemes = _customThemeStore.LoadAll();
+        foreach (var ct in customThemes.OrderBy(t => t.Name))
+        {
+            var basedOn = Enum.TryParse<AppTheme>(ct.BasedOn, out var parsed) ? parsed : AppTheme.Dark;
+            AvailableThemes.Add(new ThemeOption(basedOn, ct.Name, ct.Id));
+        }
+
+        // Restore selection
+        if (currentId != null)
+        {
+            SelectedTheme = AvailableThemes.FirstOrDefault(t => t.CustomThemeId == currentId)
+                          ?? AvailableThemes[0];
+        }
+        else
+        {
+            var currentTheme = _themeService.CurrentTheme;
+            SelectedTheme = AvailableThemes.FirstOrDefault(t => !t.IsCustom && t.Theme == currentTheme)
+                          ?? AvailableThemes[0];
+        }
+    }
 
     /// <summary>
     /// Gets the status text for experimental plugins toggle.
@@ -956,9 +1023,8 @@ public partial class SettingsViewModel : ViewModelBase
 
         MaxBackups = settings.MaxBackups;
 
-        // Set selected theme from current ThemeService state
-        var currentTheme = _themeService.CurrentTheme;
-        SelectedTheme = AvailableThemes.FirstOrDefault(t => t.Theme == currentTheme) ?? AvailableThemes[0];
+        // Load custom themes into the list, then select current
+        RefreshAvailableThemes();
 
         // Set selected lockout option
         var lockoutMinutes = settings.SensitiveLockoutMinutes;
@@ -994,7 +1060,18 @@ public partial class SettingsViewModel : ViewModelBase
 
     partial void OnSelectedThemeChanged(ThemeOption? value)
     {
-        if (value != null)
+        if (value == null) return;
+
+        if (value.IsCustom)
+        {
+            var customTheme = _customThemeStore.Load(value.CustomThemeId!);
+            if (customTheme != null)
+            {
+                _themeService.ApplyCustomTheme(customTheme);
+                _themeService.SaveThemePreference($"custom:{customTheme.Id}");
+            }
+        }
+        else
         {
             _themeService.CurrentTheme = value.Theme;
         }

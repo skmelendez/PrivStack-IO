@@ -47,7 +47,7 @@ public sealed class DashboardPlugin : PluginBase<DashboardViewModel>
 
     public override async Task OnNavigatedToAsync(CancellationToken cancellationToken = default)
     {
-        if (ViewModel != null)
+        if (ViewModel is { HasLoadedOnce: false })
         {
             await ViewModel.RefreshAsync();
         }

@@ -73,6 +73,11 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isOffline;
 
+    /// <summary>
+    /// True after the first successful refresh. Prevents automatic network calls on every tab switch.
+    /// </summary>
+    public bool HasLoadedOnce { get; private set; }
+
     [ObservableProperty]
     private string? _statusMessage;
 
@@ -247,6 +252,8 @@ public partial class DashboardViewModel : ViewModelBase
             }
 
             await LoadSystemMetricsAsync();
+
+            HasLoadedOnce = true;
         }
         catch (Exception ex)
         {

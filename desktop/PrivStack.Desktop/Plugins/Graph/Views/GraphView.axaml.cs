@@ -105,12 +105,18 @@ public partial class GraphView : UserControl
         _graphControl = new NeuronGraphControl();
         _graphControl.EnableHighlightMode = true;
         _graphControl.NodeClicked += OnNodeClicked;
+        _graphControl.NodeDeselected += OnNodeDeselected;
         host.Child = _graphControl;
     }
 
     private void OnNodeClicked(string nodeId)
     {
         _vm?.OnNodeClicked(nodeId);
+    }
+
+    private void OnNodeDeselected()
+    {
+        _vm?.OnNodeDeselected();
     }
 
     private void OnRequestReheat(object? sender, EventArgs e)

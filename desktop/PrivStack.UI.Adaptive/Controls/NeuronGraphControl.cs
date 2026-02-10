@@ -137,6 +137,11 @@ public sealed class NeuronGraphControl : Control
     public event Action<string>? NodeClicked;
 
     /// <summary>
+    /// Fired when the active node is deselected (ESC key or click on empty space).
+    /// </summary>
+    public event Action? NodeDeselected;
+
+    /// <summary>
     /// Fired when the pointer enters a node. Passes the node ID.
     /// Use for prefetch on hover.
     /// </summary>
@@ -300,6 +305,7 @@ public sealed class NeuronGraphControl : Control
     /// </summary>
     public void StartWithData(GraphData data)
     {
+        Focusable = true;
         Stop();
         _viewInitialized = false;
         _zoom = 1.0;
@@ -942,6 +948,7 @@ public sealed class NeuronGraphControl : Control
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
+        Focus();
         var pos = e.GetPosition(this);
         var props = e.GetCurrentPoint(this).Properties;
 
@@ -987,6 +994,16 @@ public sealed class NeuronGraphControl : Control
 
         if (_isPanning)
         {
+            // If the pointer barely moved, treat as a click on empty space → deselect
+            var pos = e.GetPosition(this);
+            var dx = pos.X - _panStart.X;
+            var dy = pos.Y - _panStart.Y;
+            if (dx * dx + dy * dy < 9 && _highlightedNodeId != null)
+            {
+                HighlightedNodeId = null;
+                NodeDeselected?.Invoke();
+            }
+
             _isPanning = false;
             Cursor = Cursor.Default;
             e.Handled = true;
@@ -1043,6 +1060,18 @@ public sealed class NeuronGraphControl : Control
             }
 
             _draggedNodeId = null;
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        if (e.Key == Key.Escape && _highlightedNodeId != null)
+        {
+            HighlightedNodeId = null;
+            NodeDeselected?.Invoke();
             e.Handled = true;
         }
     }

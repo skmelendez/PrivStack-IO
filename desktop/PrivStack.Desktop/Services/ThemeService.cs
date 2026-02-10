@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Styling;
+using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Sdk;
 using Serilog;
@@ -34,6 +35,7 @@ public class ThemeService : IThemeService
     private static readonly ILogger _log = Log.ForContext<ThemeService>();
 
     private AppTheme _currentTheme = AppTheme.Dark;
+    private string? _currentCustomThemeId;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -49,18 +51,23 @@ public class ThemeService : IThemeService
         get => _currentTheme;
         set
         {
-            if (_currentTheme != value)
+            if (_currentTheme != value || _currentCustomThemeId != null)
             {
+                _currentCustomThemeId = null;
                 _currentTheme = value;
                 ApplyTheme(value);
-                SaveThemePreference(value);
+                SaveThemePreference(value.ToString());
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentTheme)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsDarkTheme)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsLightTheme)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsHighContrastTheme)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentCustomThemeId)));
             }
         }
     }
+
+    /// <inheritdoc/>
+    public string? CurrentCustomThemeId => _currentCustomThemeId;
 
     /// <summary>
     /// Gets whether the current theme is Dark.
@@ -93,8 +100,213 @@ public class ThemeService : IThemeService
     /// </summary>
     public void Initialize()
     {
+        // If we loaded a custom theme preference, try to apply it
+        if (_currentCustomThemeId != null)
+        {
+            var store = new CustomThemeStore();
+            var customTheme = store.Load(_currentCustomThemeId);
+            if (customTheme != null)
+            {
+                ApplyCustomTheme(customTheme);
+                _log.Information("Theme service initialized with custom theme {Id}", _currentCustomThemeId);
+                return;
+            }
+            // Custom theme file missing, fall back to Dark
+            _log.Warning("Custom theme {Id} not found, falling back to Dark", _currentCustomThemeId);
+            _currentCustomThemeId = null;
+            _currentTheme = AppTheme.Dark;
+            SaveThemePreference("Dark");
+        }
+
         ApplyTheme(_currentTheme);
         _log.Information("Theme service initialized with {Theme} theme", _currentTheme);
+    }
+
+    /// <inheritdoc/>
+    public Dictionary<string, string> GetBuiltInThemeColors(AppTheme theme)
+    {
+        var colors = new Dictionary<string, string>();
+        var themeUri = GetThemeUri(theme);
+        var themeDictionary = LoadResourceDictionary(themeUri);
+        if (themeDictionary == null) return colors;
+
+        foreach (var kvp in themeDictionary)
+        {
+            if (kvp.Key is string key && kvp.Value is Color color)
+            {
+                colors[key] = $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
+            }
+        }
+
+        return colors;
+    }
+
+    /// <inheritdoc/>
+    public void ApplyCustomTheme(CustomThemeDefinition theme)
+    {
+        var app = Application.Current;
+        if (app == null) return;
+
+        try
+        {
+            // Determine the base theme for layout constants
+            var baseTheme = AppTheme.Dark;
+            if (!string.IsNullOrEmpty(theme.BasedOn) && Enum.TryParse<AppTheme>(theme.BasedOn, out var parsed))
+                baseTheme = parsed;
+
+            // Load the base theme (gets layout constants, font sizes, etc.)
+            var themeUri = GetThemeUri(baseTheme);
+            var themeDictionary = LoadResourceDictionary(themeUri);
+            if (themeDictionary == null) return;
+
+            // Apply all base theme resources
+            var appResources = app.Resources;
+            foreach (var kvp in themeDictionary)
+            {
+                if (kvp.Key is string key)
+                    appResources[key] = kvp.Value;
+            }
+
+            // Override with custom colors
+            foreach (var (key, hex) in theme.Colors)
+            {
+                ApplyColorOverrideInternal(appResources, key, hex);
+            }
+
+            // Set the theme variant
+            app.RequestedThemeVariant = theme.IsLightVariant ? ThemeVariant.Light : ThemeVariant.Dark;
+
+            _currentTheme = baseTheme;
+            _currentCustomThemeId = theme.Id;
+
+            _responsiveLayoutService.ReapplyLayout();
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentTheme)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentCustomThemeId)));
+
+            _log.Information("Applied custom theme {Id} ({Name})", theme.Id, theme.Name);
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Failed to apply custom theme {Id}", theme.Id);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void ApplyColorOverride(string key, string hex)
+    {
+        var app = Application.Current;
+        if (app == null) return;
+
+        ApplyColorOverrideInternal(app.Resources, key, hex);
+    }
+
+    /// <inheritdoc/>
+    public void SaveThemePreference(string themeString)
+    {
+        var settings = _appSettings.Settings;
+        settings.Theme = themeString;
+        _appSettings.Save();
+        _log.Debug("Saved theme preference: {Theme}", themeString);
+    }
+
+    /// <inheritdoc/>
+    public Dictionary<string, object> SnapshotCurrentColors()
+    {
+        var snapshot = new Dictionary<string, object>();
+        var app = Application.Current;
+        if (app == null) return snapshot;
+
+        foreach (var key in ThemeColorKeys.AllKeys)
+        {
+            if (app.Resources.TryGetResource(key, null, out var colorVal) && colorVal != null)
+                snapshot[key] = colorVal;
+
+            var brushKey = key + "Brush";
+            if (app.Resources.TryGetResource(brushKey, null, out var brushVal) && brushVal != null)
+                snapshot[brushKey] = brushVal;
+        }
+
+        // Also snapshot aliased brushes
+        string[] aliasedBrushKeys =
+        [
+            "ThemeLinkBrush",
+            "ThemeNavBackgroundBrush", "ThemeNavBorderBrush", "ThemeNavBorderSubtleBrush",
+            "ThemeNavTextBrush", "ThemeNavTextHoverBrush", "ThemeNavHoverBrush", "ThemeNavSelectedBrush",
+            "ThemeTableHeaderBrush", "ThemeCodeBlockBrush", "ThemeCodeBlockGutterBrush"
+        ];
+
+        foreach (var key in aliasedBrushKeys)
+        {
+            if (app.Resources.TryGetResource(key, null, out var val) && val != null)
+                snapshot[key] = val;
+        }
+
+        return snapshot;
+    }
+
+    /// <inheritdoc/>
+    public void RestoreSnapshot(Dictionary<string, object> snapshot)
+    {
+        var app = Application.Current;
+        if (app == null) return;
+
+        foreach (var (key, value) in snapshot)
+        {
+            app.Resources[key] = value;
+        }
+
+        _responsiveLayoutService.ReapplyLayout();
+    }
+
+    private static void ApplyColorOverrideInternal(IResourceDictionary resources, string key, string hex)
+    {
+        try
+        {
+            var color = Color.Parse(hex);
+            resources[key] = color;
+
+            // Update the corresponding brush
+            var brushKey = key + "Brush";
+            resources[brushKey] = new SolidColorBrush(color);
+
+            // Handle aliased brushes that point to the same color
+            switch (key)
+            {
+                case "ThemePrimary":
+                    resources["ThemeLinkBrush"] = new SolidColorBrush(color);
+                    break;
+                case "ThemeSurface":
+                    resources["ThemeNavBackgroundBrush"] = new SolidColorBrush(color);
+                    break;
+                case "ThemeBorder":
+                    resources["ThemeNavBorderBrush"] = new SolidColorBrush(color);
+                    break;
+                case "ThemeBorderSubtle":
+                    resources["ThemeNavBorderSubtleBrush"] = new SolidColorBrush(color);
+                    break;
+                case "ThemeTextMuted":
+                    resources["ThemeNavTextBrush"] = new SolidColorBrush(color);
+                    break;
+                case "ThemeTextPrimary":
+                    resources["ThemeNavTextHoverBrush"] = new SolidColorBrush(color);
+                    break;
+                case "ThemeHover":
+                    resources["ThemeNavHoverBrush"] = new SolidColorBrush(color);
+                    resources["ThemeTableHeaderBrush"] = new SolidColorBrush(color);
+                    break;
+                case "ThemeSelected":
+                    resources["ThemeNavSelectedBrush"] = new SolidColorBrush(color);
+                    break;
+                case "ThemeBackground":
+                    resources["ThemeCodeBlockBrush"] = new SolidColorBrush(color);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warning("Failed to parse color {Key}={Hex}: {Error}", key, hex, ex.Message);
+        }
     }
 
     private void ApplyTheme(AppTheme theme)
@@ -194,15 +406,18 @@ public class ThemeService : IThemeService
     private void LoadThemePreference()
     {
         var settings = _appSettings.Settings;
-        _currentTheme = Enum.TryParse<AppTheme>(settings.Theme, out var parsed) ? parsed : AppTheme.Dark;
-        _log.Debug("Loaded theme preference: {Theme}", _currentTheme);
-    }
+        var themeStr = settings.Theme ?? "Dark";
 
-    private void SaveThemePreference(AppTheme theme)
-    {
-        var settings = _appSettings.Settings;
-        settings.Theme = theme.ToString();
-        _appSettings.Save();
-        _log.Debug("Saved theme preference: {Theme}", theme);
+        if (themeStr.StartsWith("custom:"))
+        {
+            _currentCustomThemeId = themeStr[7..];
+            _currentTheme = AppTheme.Dark; // Will be overridden during Initialize
+            _log.Debug("Loaded custom theme preference: {Id}", _currentCustomThemeId);
+        }
+        else
+        {
+            _currentTheme = Enum.TryParse<AppTheme>(themeStr, out var parsed) ? parsed : AppTheme.Dark;
+            _log.Debug("Loaded theme preference: {Theme}", _currentTheme);
+        }
     }
 }
