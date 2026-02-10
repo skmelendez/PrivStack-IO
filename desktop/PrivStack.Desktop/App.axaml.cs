@@ -142,16 +142,7 @@ public partial class App : Application
 
     private void ShowSetupWizard(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        var appSettings = Services.GetRequiredService<IAppSettingsService>();
-        var themeService = Services.GetRequiredService<IThemeService>();
-        var workspaceService = Services.GetRequiredService<IWorkspaceService>();
-        var fontScaleService = Services.GetRequiredService<IFontScaleService>();
-        var setupVm = new SetupWizardViewModel(
-            Services.GetRequiredService<IPrivStackRuntime>(),
-            Services.GetRequiredService<IAuthService>(),
-            Services.GetRequiredService<ILicensingService>(),
-            appSettings, themeService, fontScaleService, workspaceService,
-            Services.GetRequiredService<PrivStackApiClient>());
+        var setupVm = Services.GetRequiredService<SetupWizardViewModel>();
         var setupWindow = new SetupWindow(setupVm);
 
         setupVm.SetupCompleted += async (_, _) =>

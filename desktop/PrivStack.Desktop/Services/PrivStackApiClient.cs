@@ -28,6 +28,7 @@ public sealed class PrivStackApiClient
     /// <summary>
     /// Authenticates with the PrivStack API using email/password.
     /// </summary>
+    [Obsolete("Use OAuth2 PKCE flow via OAuthLoginService")]
     public async Task<LoginResponse> LoginAsync(string email, string password)
     {
         var payload = JsonSerializer.Serialize(new { email, password }, JsonOptions);
@@ -132,6 +133,39 @@ public sealed class PrivStackApiClient
         return JsonSerializer.Deserialize<AccountReleasesResponse>(body, JsonOptions);
     }
 
+    /// <summary>
+    /// Exchanges an OAuth2 authorization code for access and refresh tokens.
+    /// </summary>
+    public async Task<OAuthTokenResponse> ExchangeCodeForTokenAsync(
+        string code, string codeVerifier, string redirectUri, CancellationToken ct = default)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            grant_type = "authorization_code",
+            code,
+            code_verifier = codeVerifier,
+            redirect_uri = redirectUri,
+            client_id = "privstack-desktop"
+        }, JsonOptions);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/connect/token")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+
+        using var response = await Http.SendAsync(request, ct);
+        var body = await response.Content.ReadAsStringAsync(ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = TryParseError(body);
+            throw new PrivStackApiException(error ?? $"Token exchange failed (HTTP {(int)response.StatusCode})");
+        }
+
+        return JsonSerializer.Deserialize<OAuthTokenResponse>(body, JsonOptions)
+               ?? throw new PrivStackApiException("Empty response from token endpoint");
+    }
+
     private static string? TryParseError(string body)
     {
         try
@@ -207,6 +241,21 @@ public record LicenseData
 
     [JsonPropertyName("issued_at")]
     public string? IssuedAt { get; init; }
+}
+
+public record OAuthTokenResponse
+{
+    [JsonPropertyName("access_token")]
+    public string AccessToken { get; init; } = string.Empty;
+
+    [JsonPropertyName("refresh_token")]
+    public string? RefreshToken { get; init; }
+
+    [JsonPropertyName("token_type")]
+    public string TokenType { get; init; } = string.Empty;
+
+    [JsonPropertyName("expires_in")]
+    public int ExpiresIn { get; init; }
 }
 
 public record OfficialPluginsResponse

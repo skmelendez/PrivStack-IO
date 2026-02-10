@@ -173,11 +173,11 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
             try
             {
                 var host = HostFactory.CreateHost(plugin.Metadata.Id);
+                RegisterEntitySchemas(plugin);
                 var success = plugin.InitializeAsync(host, CancellationToken.None).GetAwaiter().GetResult();
                 if (success)
                 {
                     _log.Information("Plugin initialized: {PluginId}", plugin.Metadata.Id);
-                    RegisterEntitySchemas(plugin);
                 }
             }
             catch (Exception ex)

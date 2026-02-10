@@ -321,7 +321,7 @@
                 <StackPanel IsVisible="{Binding IsLicenseStep}" Spacing="12">
                     <TextBlock Text="Activate Your License" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                    <TextBlock Text="Sign in with your PrivStack account to activate."
+                    <TextBlock Text="Activate your license to unlock all features."
                                Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"/>
 
                     <!-- Success State (Licensed) -->
@@ -345,52 +345,54 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Sign In Form -->
+                    <!-- Sign In via Browser (Idle state) -->
                     <StackPanel Spacing="8" IsVisible="{Binding !IsLicenseValid}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Email" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                            <TextBox Text="{Binding LoginEmail}"
-                                     Watermark="you@example.com"
-                                     Background="{DynamicResource ThemeSurfaceElevatedBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                     BorderThickness="0" Padding="10" CornerRadius="6"/>
+                        <!-- Idle state -->
+                        <StackPanel Spacing="8" IsVisible="{Binding !IsWaitingForBrowser}">
+                            <TextBlock Text="Sign in through your web browser to activate your license."
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       TextWrapping="Wrap"/>
+
+                            <!-- Login Error -->
+                            <TextBlock Text="{Binding LoginError}" Foreground="{DynamicResource ThemeDangerBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding LoginError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <!-- Sign In with Browser button -->
+                            <Button Command="{Binding SignInWithBrowserCommand}"
+                                    Background="{DynamicResource ThemePrimaryBrush}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                    Padding="14,8" CornerRadius="6"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    FontSize="{DynamicResource ThemeFontSizeSm}">
+                                <TextBlock Text="Sign In with Browser" FontWeight="SemiBold"/>
+                            </Button>
+
+                            <!-- No account hint -->
+                            <TextBlock Text="Don't have an account? Sign up at privstack.io"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       HorizontalAlignment="Center"/>
                         </StackPanel>
 
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Password" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                            <TextBox Text="{Binding LoginPassword}"
-                                     PasswordChar="&#x25CF;"
-                                     Watermark="Your account password"
-                                     Background="{DynamicResource ThemeSurfaceElevatedBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                     BorderThickness="0" Padding="10" CornerRadius="6"/>
+                        <!-- Waiting state -->
+                        <StackPanel Spacing="10" IsVisible="{Binding IsWaitingForBrowser}" HorizontalAlignment="Center">
+                            <ProgressBar IsIndeterminate="True" Width="120" Height="3"
+                                         Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                         Foreground="{DynamicResource ThemePrimaryBrush}"
+                                         CornerRadius="2" Margin="0,4,0,0"/>
+                            <TextBlock Text="Waiting for browser authorization..."
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Complete the sign-in in your web browser"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       HorizontalAlignment="Center"/>
+                            <Button Command="{Binding CancelSignInCommand}"
+                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}" Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                    Padding="14,6" CornerRadius="6"
+                                    HorizontalAlignment="Center"
+                                    FontSize="{DynamicResource ThemeFontSizeSm}">
+                                <TextBlock Text="Cancel" FontWeight="SemiBold"/>
+                            </Button>
                         </StackPanel>
-
-                        <!-- Login Error -->
-                        <TextBlock Text="{Binding LoginError}" Foreground="{DynamicResource ThemeDangerBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                   TextWrapping="Wrap"
-                                   IsVisible="{Binding LoginError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                        <!-- Sign In & Activate button -->
-                        <Button Command="{Binding LoginAndActivateCommand}"
-                                IsEnabled="{Binding !IsLoggingIn}"
-                                Background="{DynamicResource ThemePrimaryBrush}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                Padding="14,8" CornerRadius="6"
-                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                FontSize="{DynamicResource ThemeFontSizeSm}">
-                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                <ProgressBar IsIndeterminate="True" Width="14" Height="14"
-                                             Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                             IsVisible="{Binding IsLoggingIn}"/>
-                                <TextBlock Text="Sign In &amp; Activate" FontWeight="SemiBold"
-                                           IsVisible="{Binding !IsLoggingIn}"/>
-                                <TextBlock Text="Signing in..." FontWeight="SemiBold"
-                                           IsVisible="{Binding IsLoggingIn}"/>
-                            </StackPanel>
-                        </Button>
-
-                        <!-- No account hint -->
-                        <TextBlock Text="Don't have an account? Sign up at privstack.io"
-                                   Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                   HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Device Info -->

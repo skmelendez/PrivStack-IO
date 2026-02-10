@@ -50,6 +50,8 @@ public partial class SetupWizardViewModel : ViewModelBase
     private readonly IFontScaleService _fontScaleService;
     private readonly IWorkspaceService _workspaceService;
     private readonly PrivStackApiClient _apiClient;
+    private readonly OAuthLoginService _oauthService;
+    private CancellationTokenSource? _oauthCts;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsWelcomeStep))]
@@ -97,15 +99,9 @@ public partial class SetupWizardViewModel : ViewModelBase
     [ObservableProperty]
     private string _licenseTier = string.Empty;
 
-    // Server login properties
+    // OAuth login properties
     [ObservableProperty]
-    private string _loginEmail = string.Empty;
-
-    [ObservableProperty]
-    private string _loginPassword = string.Empty;
-
-    [ObservableProperty]
-    private bool _isLoggingIn;
+    private bool _isWaitingForBrowser;
 
     [ObservableProperty]
     private string _loginError = string.Empty;
@@ -284,7 +280,8 @@ public partial class SetupWizardViewModel : ViewModelBase
         IThemeService themeService,
         IFontScaleService fontScaleService,
         IWorkspaceService workspaceService,
-        PrivStackApiClient apiClient)
+        PrivStackApiClient apiClient,
+        OAuthLoginService oauthService)
     {
         _runtime = runtime;
         _authService = authService;
@@ -294,6 +291,7 @@ public partial class SetupWizardViewModel : ViewModelBase
         _fontScaleService = fontScaleService;
         _workspaceService = workspaceService;
         _apiClient = apiClient;
+        _oauthService = oauthService;
         LoadDeviceInfo();
 
         SelectedTheme = AvailableThemes.FirstOrDefault(t => t.Theme == AppTheme.Dark);
@@ -353,35 +351,49 @@ public partial class SetupWizardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task LoginAndActivateAsync()
+    private async Task SignInWithBrowserAsync()
     {
-        if (string.IsNullOrWhiteSpace(LoginEmail) || string.IsNullOrWhiteSpace(LoginPassword))
-        {
-            LoginError = "Please enter your email and password";
-            return;
-        }
-
-        IsLoggingIn = true;
+        IsWaitingForBrowser = true;
         LoginError = string.Empty;
-        Log.Information("[Login] Starting login for {Email}", LoginEmail.Trim());
+        _oauthCts = new CancellationTokenSource();
+
+        Log.Information("[OAuth] Starting browser sign-in flow");
 
         try
         {
-            Log.Information("[Login] Calling LoginAsync...");
-            var loginResult = await _apiClient.LoginAsync(LoginEmail.Trim(), LoginPassword);
-            Log.Information("[Login] Login succeeded. User ID: {UserId}, Has token: {HasToken}",
-                loginResult.User?.Id, !string.IsNullOrEmpty(loginResult.AccessToken));
+            // Generate PKCE params
+            var codeVerifier = OAuthLoginService.GenerateCodeVerifier();
+            var codeChallenge = OAuthLoginService.ComputeCodeChallenge(codeVerifier);
+            var state = OAuthLoginService.GenerateState();
 
-            Log.Information("[Login] Fetching license key...");
-            var licenseResult = await _apiClient.GetLicenseKeyAsync(loginResult.AccessToken);
-            Log.Information("[Login] License response — has license: {HasLicense}, plan: {Plan}, status: {Status}",
+            // Build authorize URL (redirect_uri is appended by OAuthLoginService)
+            var authorizeUrl = $"{PrivStackApiClient.ApiBaseUrl}/connect/authorize" +
+                $"?client_id=privstack-desktop" +
+                $"&response_type=code" +
+                $"&code_challenge={Uri.EscapeDataString(codeChallenge)}" +
+                $"&code_challenge_method=S256" +
+                $"&state={Uri.EscapeDataString(state)}";
+
+            Log.Information("[OAuth] Opening browser for authorization...");
+            var callback = await _oauthService.AuthorizeAsync(authorizeUrl, state, _oauthCts.Token);
+            Log.Information("[OAuth] Received authorization code, exchanging for tokens...");
+
+            // Exchange code for tokens
+            var tokenResult = await _apiClient.ExchangeCodeForTokenAsync(
+                callback.Code, codeVerifier, callback.RedirectUri, _oauthCts.Token);
+            Log.Information("[OAuth] Token exchange succeeded");
+
+            // Fetch license key
+            Log.Information("[OAuth] Fetching license key...");
+            var licenseResult = await _apiClient.GetLicenseKeyAsync(tokenResult.AccessToken);
+            Log.Information("[OAuth] License response — has license: {HasLicense}, plan: {Plan}, status: {Status}",
                 licenseResult.License != null,
                 licenseResult.License?.Plan,
                 licenseResult.License?.SubscriptionStatus);
 
             if (licenseResult.License == null || string.IsNullOrEmpty(licenseResult.License.Key))
             {
-                Log.Warning("[Login] No license key found for account");
+                Log.Warning("[OAuth] No license key found for account");
                 LoginError = "No license found for this account. Purchase a license at privstack.io";
                 return;
             }
@@ -389,7 +401,7 @@ public partial class SetupWizardViewModel : ViewModelBase
             var status = licenseResult.License.SubscriptionStatus?.ToLower();
             if (status is "expired" or "cancelled")
             {
-                Log.Warning("[Login] Subscription status disqualified: {Status}", status);
+                Log.Warning("[OAuth] Subscription status disqualified: {Status}", status);
                 LoginError = status == "expired"
                     ? "Your subscription has expired. Renew at privstack.io"
                     : "Your subscription has been cancelled. Resubscribe at privstack.io";
@@ -397,18 +409,18 @@ public partial class SetupWizardViewModel : ViewModelBase
             }
 
             // Persist tokens for authenticated API calls (e.g., update downloads)
-            _appSettings.Settings.AccessToken = loginResult.AccessToken;
-            _appSettings.Settings.RefreshToken = loginResult.RefreshToken;
+            _appSettings.Settings.AccessToken = tokenResult.AccessToken;
+            _appSettings.Settings.RefreshToken = tokenResult.RefreshToken;
             _appSettings.SaveDebounced();
-            Log.Information("[Login] Persisted access and refresh tokens");
+            Log.Information("[OAuth] Persisted access and refresh tokens");
 
             // Got a valid license key — run standard validation
-            Log.Information("[Login] License key received (length: {Length}), running local validation...",
+            Log.Information("[OAuth] License key received (length: {Length}), running local validation...",
                 licenseResult.License.Key.Length);
             LicenseKey = licenseResult.License.Key;
             ValidateLicense();
 
-            Log.Information("[Login] Validation result — IsLicenseValid: {Valid}, LicenseError: {Error}",
+            Log.Information("[OAuth] Validation result — IsLicenseValid: {Valid}, LicenseError: {Error}",
                 IsLicenseValid, LicenseError);
 
             if (!IsLicenseValid)
@@ -416,30 +428,42 @@ public partial class SetupWizardViewModel : ViewModelBase
                 LoginError = "License validation failed. Contact support at privstack.io";
             }
         }
+        catch (OperationCanceledException)
+        {
+            Log.Information("[OAuth] Sign-in cancelled by user");
+        }
+        catch (OAuthException ex)
+        {
+            Log.Warning("[OAuth] OAuth error: {Message}", ex.Message);
+            LoginError = ex.Message;
+        }
         catch (PrivStackApiException ex)
         {
-            Log.Warning("[Login] API error: {Message}", ex.Message);
+            Log.Warning("[OAuth] API error: {Message}", ex.Message);
             LoginError = ex.Message;
         }
         catch (HttpRequestException ex)
         {
-            Log.Warning("[Login] HTTP error: {Message}", ex.Message);
+            Log.Warning("[OAuth] HTTP error: {Message}", ex.Message);
             LoginError = "Could not reach activation server. Check your internet connection.";
-        }
-        catch (TaskCanceledException)
-        {
-            Log.Warning("[Login] Request timed out");
-            LoginError = "Connection timed out. Please try again.";
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "[Login] Unexpected failure");
+            Log.Error(ex, "[OAuth] Unexpected failure");
             LoginError = "An unexpected error occurred. Please try again.";
         }
         finally
         {
-            IsLoggingIn = false;
+            IsWaitingForBrowser = false;
+            _oauthCts?.Dispose();
+            _oauthCts = null;
         }
+    }
+
+    [RelayCommand]
+    private void CancelSignIn()
+    {
+        _oauthCts?.Cancel();
     }
 
     private void ValidateLicense()

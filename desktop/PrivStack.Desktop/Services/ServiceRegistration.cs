@@ -52,6 +52,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISystemNotificationService, SystemNotificationService>();
         services.AddSingleton<ReminderSchedulerService>();
         services.AddSingleton<PrivStackApiClient>();
+        services.AddSingleton<OAuthLoginService>();
         services.AddSingleton<IPluginInstallService, PluginInstallService>();
         services.AddSingleton<IUpdateService, RegistryUpdateService>();
 
@@ -63,6 +64,7 @@ public static class ServiceRegistration
 
         // ViewModels (transient — created fresh each resolution)
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<SetupWizardViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<UpdateViewModel>();
 
