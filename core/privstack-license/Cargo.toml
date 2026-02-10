@@ -25,5 +25,5 @@ online = ["reqwest"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
-tempfile = "3.19"
+tempfile = "3.25"
 rand = "0.8"
