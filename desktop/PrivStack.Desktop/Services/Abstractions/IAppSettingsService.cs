@@ -26,4 +26,14 @@ public interface IAppSettingsService
     /// Creates a new entry if one doesn't exist yet, migrating from global settings on first access.
     /// </summary>
     WorkspacePluginConfig GetWorkspacePluginConfig();
+
+    /// <summary>
+    /// Raised when the user's profile (display name or image) changes.
+    /// </summary>
+    event Action? ProfileChanged;
+
+    /// <summary>
+    /// Fires the ProfileChanged event.
+    /// </summary>
+    void NotifyProfileChanged();
 }

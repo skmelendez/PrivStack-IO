@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PrivStack.UI.Adaptive.Controls.EmojiPicker.SkinTonePopover"
+             x:CompileBindings="False"
+             IsVisible="False">
+    <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+            BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="4"
+            BoxShadow="0 4 16 0 #30000000">
+        <StackPanel Name="TonePanel"
+                    Orientation="Horizontal"
+                    Spacing="2"/>
+    </Border>
+</UserControl>

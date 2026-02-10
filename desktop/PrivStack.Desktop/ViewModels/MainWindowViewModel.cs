@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using Avalonia;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PrivStack.Desktop.Models;
@@ -11,6 +12,7 @@ using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Sdk;
 using PrivStack.Sdk.Capabilities;
+using PrivStack.UI.Adaptive.Controls.EmojiPicker;
 
 namespace PrivStack.Desktop.ViewModels;
 
@@ -126,6 +128,11 @@ public partial class MainWindowViewModel : ViewModelBase
                     IsSettingsPanelOpen = false;
                     WorkspaceSwitcherVM.OpenCommand.Execute(null);
                 };
+                _settingsVM.LogoutRequested += (_, _) =>
+                {
+                    IsSettingsPanelOpen = false;
+                    (App.Current as App)?.RequestLogout();
+                };
             }
             return _settingsVM;
         }
@@ -136,6 +143,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private WorkspaceSwitcherViewModel? _workspaceSwitcherVM;
     public WorkspaceSwitcherViewModel WorkspaceSwitcherVM => _workspaceSwitcherVM ??= new WorkspaceSwitcherViewModel(_workspaceService);
+
+    private EmojiPickerViewModel? _emojiPickerVM;
+    public EmojiPickerViewModel EmojiPickerVM => _emojiPickerVM ??= new EmojiPickerViewModel(_ => { });
+
+    /// <summary>
+    /// Opens the unified emoji picker with the given selection callback.
+    /// All consumers should use this instead of creating their own instances.
+    /// </summary>
+    public void OpenEmojiPicker(Action<string> onSelected)
+    {
+        EmojiPickerVM.SetSelectionCallback(onSelected);
+        EmojiPickerVM.OpenCommand.Execute(null);
+    }
 
     private InfoPanelViewModel? _infoPanelVM;
     public InfoPanelViewModel InfoPanelVM
@@ -196,6 +216,40 @@ public partial class MainWindowViewModel : ViewModelBase
         ? "U"
         : UserDisplayName[0].ToString().ToUpperInvariant();
 
+    private Bitmap? _userProfileImage;
+
+    public Bitmap? UserProfileImage
+    {
+        get
+        {
+            var imgPath = _appSettings.Settings.ProfileImagePath;
+            if (string.IsNullOrEmpty(imgPath))
+            {
+                _userProfileImage?.Dispose();
+                _userProfileImage = null;
+                return null;
+            }
+
+            var fullPath = Path.Combine(Services.DataPaths.BaseDir, imgPath);
+            if (!File.Exists(fullPath))
+            {
+                _userProfileImage?.Dispose();
+                _userProfileImage = null;
+                return null;
+            }
+
+            if (_userProfileImage == null)
+            {
+                try { _userProfileImage = new Bitmap(fullPath); }
+                catch { _userProfileImage = null; }
+            }
+
+            return _userProfileImage;
+        }
+    }
+
+    public bool HasProfileImage => !string.IsNullOrEmpty(_appSettings.Settings.ProfileImagePath);
+
     public string SidebarCollapseTooltip => IsSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar";
 
     /// <summary>
@@ -236,6 +290,12 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         _pluginRegistry.SetMainViewModel(this);
+
+        // Subscribe to profile changes (display name or image updated in settings)
+        _appSettings.ProfileChanged += OnProfileChanged;
+
+        // Register the unified emoji picker service for cross-component access
+        EmojiPickerService.Register(OpenEmojiPicker, () => EmojiPickerVM.CloseCommand.Execute(null));
 
         IsSidebarCollapsed = _appSettings.Settings.SidebarCollapsed;
 
@@ -935,8 +995,27 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusMessage = "Ready";
     }
 
+    private void OnProfileChanged()
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            // Dispose old cached bitmap so it gets reloaded
+            _userProfileImage?.Dispose();
+            _userProfileImage = null;
+
+            OnPropertyChanged(nameof(UserProfileImage));
+            OnPropertyChanged(nameof(HasProfileImage));
+            OnPropertyChanged(nameof(UserDisplayName));
+            OnPropertyChanged(nameof(UserInitial));
+        });
+    }
+
     public void Cleanup()
     {
+        _appSettings.ProfileChanged -= OnProfileChanged;
+        _userProfileImage?.Dispose();
+        _userProfileImage = null;
+
         // Notify all IShutdownAware providers (this logs time for active timers)
         foreach (var aware in _pluginRegistry.GetCapabilityProviders<IShutdownAware>())
         {

@@ -5,6 +5,7 @@
         xmlns:controls="using:PrivStack.Desktop.Controls"
         xmlns:plugin="using:PrivStack.Desktop.Services.Plugin"
         xmlns:services="using:PrivStack.Desktop.Services"
+        xmlns:emoji="using:PrivStack.UI.Adaptive.Controls.EmojiPicker"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
@@ -490,6 +491,9 @@
 
         <!-- Command Palette Overlay -->
         <views:CommandPalette DataContext="{Binding CommandPaletteVM}" ZIndex="1001"/>
+
+        <!-- Unified Emoji Picker Overlay -->
+        <emoji:EmojiPicker DataContext="{Binding EmojiPickerVM}" ZIndex="1001"/>
 
         <!-- Speech Recording Overlay -->
         <views:SpeechRecordingOverlay DataContext="{Binding SpeechRecordingVM}" ZIndex="1001"/>

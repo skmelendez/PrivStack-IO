@@ -61,6 +61,9 @@ public class AppSettings
     [JsonPropertyName("user_display_name")]
     public string? UserDisplayName { get; set; }
 
+    [JsonPropertyName("profile_image_path")]
+    public string? ProfileImagePath { get; set; }
+
     // Data & Backup settings
     [JsonPropertyName("data_directory_type")]
     public string DataDirectoryType { get; set; } = "Default";
@@ -302,6 +305,10 @@ public class AppSettingsService : IAppSettingsService
     private System.Timers.Timer? _saveTimer;
 
     public AppSettings Settings => _settings;
+
+    public event Action? ProfileChanged;
+
+    public void NotifyProfileChanged() => ProfileChanged?.Invoke();
 
     public AppSettingsService()
     {

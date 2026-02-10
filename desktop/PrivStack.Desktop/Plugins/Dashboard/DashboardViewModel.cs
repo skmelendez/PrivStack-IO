@@ -411,6 +411,31 @@ public partial class DashboardViewModel : ViewModelBase
     // Plugin install/update/uninstall/reload
     // =========================================================================
 
+    [ObservableProperty]
+    private bool _isUpdatingAll;
+
+    [RelayCommand]
+    private async Task UpdateAllPluginsAsync()
+    {
+        if (IsUpdatingAll) return;
+
+        var updatable = AllPlugins.Where(p => p.HasUpdate && !p.IsInstalling).ToList();
+        if (updatable.Count == 0) return;
+
+        IsUpdatingAll = true;
+        try
+        {
+            foreach (var item in updatable)
+            {
+                await UpdatePluginAsync(item);
+            }
+        }
+        finally
+        {
+            IsUpdatingAll = false;
+        }
+    }
+
     [RelayCommand]
     private async Task InstallPluginAsync(DashboardPluginItem item)
     {

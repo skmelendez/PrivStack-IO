@@ -8,14 +8,66 @@
              x:Class="PrivStack.Desktop.Views.SettingsPanel"
              x:DataType="vm:SettingsViewModel">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="24" Margin="20" MaxWidth="480">
-            <!-- Profile Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Profile" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
+    <UserControl.Styles>
+        <Style Selector="Expander.settings-section">
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Expander.settings-section /template/ ToggleButton">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+    </UserControl.Styles>
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="8" Margin="20" MaxWidth="480">
+
+            <!-- Profile Section -->
+            <Expander IsExpanded="True" Classes="settings-section">
+                <Expander.Header>
+                    <TextBlock Text="Profile" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                </Expander.Header>
+                <StackPanel Spacing="12" Margin="16,0,16,16">
+                    <!-- Profile Image -->
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <!-- Circular preview -->
+                        <Border Width="48" Height="48" CornerRadius="24"
+                                ClipToBounds="True"
+                                Background="{DynamicResource ThemePrimaryBrush}">
+                            <Panel>
+                                <!-- Image (shown when set) -->
+                                <Image Source="{Binding ProfileImageBitmap}"
+                                       IsVisible="{Binding HasProfileImage}"
+                                       Width="48" Height="48"
+                                       Stretch="UniformToFill"/>
+                                <!-- Initial fallback (shown when no image) -->
+                                <TextBlock Text="{Binding UserInitial}"
+                                           IsVisible="{Binding !HasProfileImage}"
+                                           FontSize="18" FontWeight="SemiBold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Panel>
+                        </Border>
+                        <!-- Buttons -->
+                        <StackPanel VerticalAlignment="Center" Spacing="6">
+                            <Button Content="Choose Image"
+                                    x:Name="ChooseProfileImageButton"
+                                    Click="OnChooseProfileImageClick"
+                                    Padding="12,6"
+                                    FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                            <Button Content="Remove"
+                                    Command="{Binding RemoveProfileImageCommand}"
+                                    IsVisible="{Binding HasProfileImage}"
+                                    Padding="12,6"
+                                    FontSize="{DynamicResource ThemeFontSizeSm}"
+                                    Foreground="{DynamicResource ThemeDangerBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Display Name -->
                     <StackPanel Spacing="6">
                         <TextBlock Text="Display Name" FontSize="{DynamicResource ThemeFontSizeSm}"
                                    Foreground="{DynamicResource ThemeTextMutedBrush}"/>
@@ -24,140 +76,137 @@
                                  Padding="12,8"/>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </Expander>
 
             <!-- Appearance Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Appearance" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
-
-                    <StackPanel Spacing="6">
-                        <TextBlock Text="Theme" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                        <Grid ColumnDefinitions="*,8,Auto">
-                            <ComboBox Grid.Column="0"
-                                      ItemsSource="{Binding AvailableThemes}"
-                                      SelectedItem="{Binding SelectedTheme}"
-                                      HorizontalAlignment="Stretch"
-                                      Padding="12,8">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ThemeOption">
-                                        <TextBlock Text="{Binding DisplayName}"/>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Button Grid.Column="2"
-                                    Content="Customize"
-                                    Command="{Binding OpenThemeEditorCommand}"
-                                    Padding="12,8"
-                                    VerticalAlignment="Stretch"/>
-                        </Grid>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- Accessibility Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Accessibility" FontWeight="SemiBold"
+            <Expander IsExpanded="False" Classes="settings-section">
+                <Expander.Header>
+                    <TextBlock Text="Appearance" FontWeight="SemiBold"
                                FontSize="{DynamicResource ThemeFontSizeMd}"/>
-
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0"
-                                       Text="Font Size"
-                                       FontSize="{DynamicResource ThemeFontSizeSm}"
-                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="{Binding FontScaleDisplayText}"
-                                           FontSize="{DynamicResource ThemeFontSizeSm}"
-                                           Foreground="{DynamicResource ThemePrimaryBrush}"/>
-                                <TextBlock Text="{Binding FontScalePercentText}"
-                                           FontSize="{DynamicResource ThemeFontSizeSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Slider Minimum="0.8" Maximum="1.5"
-                                Value="{Binding FontScaleMultiplier}"
-                                TickFrequency="0.1"
-                                IsSnapToTickEnabled="True"
-                                TickPlacement="BottomRight"/>
-
-                        <!-- Preset buttons -->
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <Button Content="80%"
-                                    Command="{Binding SetFontScaleCommand}"
-                                    CommandParameter="0.8"
-                                    Padding="8,4"
-                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                            <Button Content="100%"
-                                    Command="{Binding SetFontScaleCommand}"
-                                    CommandParameter="1.0"
-                                    Padding="8,4"
-                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                            <Button Content="125%"
-                                    Command="{Binding SetFontScaleCommand}"
-                                    CommandParameter="1.25"
-                                    Padding="8,4"
-                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                            <Button Content="150%"
-                                    Command="{Binding SetFontScaleCommand}"
-                                    CommandParameter="1.5"
-                                    Padding="8,4"
-                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                        </StackPanel>
-
-                        <!-- Font Family -->
-                        <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
-                            <TextBlock Grid.Column="0"
-                                       Text="Font"
-                                       FontSize="{DynamicResource ThemeFontSizeSm}"
-                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                        </Grid>
-
-                        <ComboBox ItemsSource="{Binding AvailableFontFamilies}"
-                                  SelectedItem="{Binding SelectedFontFamily}"
-                                  HorizontalAlignment="Stretch">
+                </Expander.Header>
+                <StackPanel Spacing="6" Margin="16,0,16,16">
+                    <TextBlock Text="Theme" FontSize="{DynamicResource ThemeFontSizeSm}"
+                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                    <Grid ColumnDefinitions="*,8,Auto">
+                        <ComboBox Grid.Column="0"
+                                  ItemsSource="{Binding AvailableThemes}"
+                                  SelectedItem="{Binding SelectedTheme}"
+                                  HorizontalAlignment="Stretch"
+                                  Padding="12,8">
                             <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Spacing="2" Margin="4,2">
-                                        <TextBlock Text="{Binding DisplayName}"
-                                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"/>
-                                        <TextBlock Text="{Binding Description}"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                    </StackPanel>
+                                <DataTemplate x:DataType="vm:ThemeOption">
+                                    <TextBlock Text="{Binding DisplayName}"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-
-                        <!-- Live preview -->
-                        <Border Background="{DynamicResource ThemeSurfaceBrush}"
-                                CornerRadius="4" Padding="12" Margin="0,4,0,0">
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Preview"
-                                           FontSize="{DynamicResource ThemeFontSizeXs}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                <TextBlock Text="The quick brown fox jumps over the lazy dog."
-                                           FontSize="{DynamicResource ThemeFontSizeMd}"
-                                           FontFamily="{DynamicResource ThemeFontSans}"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
+                        <Button Grid.Column="2"
+                                Content="Customize"
+                                Command="{Binding OpenThemeEditorCommand}"
+                                Padding="12,8"
+                                VerticalAlignment="Stretch"/>
+                    </Grid>
                 </StackPanel>
-            </Border>
+            </Expander>
+
+            <!-- Accessibility Section -->
+            <Expander IsExpanded="False" Classes="settings-section">
+                <Expander.Header>
+                    <TextBlock Text="Accessibility" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                </Expander.Header>
+                <StackPanel Spacing="8" Margin="16,0,16,16">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="Font Size"
+                                   FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding FontScaleDisplayText}"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                            <TextBlock Text="{Binding FontScalePercentText}"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Slider Minimum="0.8" Maximum="1.5"
+                            Value="{Binding FontScaleMultiplier}"
+                            TickFrequency="0.1"
+                            IsSnapToTickEnabled="True"
+                            TickPlacement="BottomRight"/>
+
+                    <!-- Preset buttons -->
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Button Content="80%"
+                                Command="{Binding SetFontScaleCommand}"
+                                CommandParameter="0.8"
+                                Padding="8,4"
+                                FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                        <Button Content="100%"
+                                Command="{Binding SetFontScaleCommand}"
+                                CommandParameter="1.0"
+                                Padding="8,4"
+                                FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                        <Button Content="125%"
+                                Command="{Binding SetFontScaleCommand}"
+                                CommandParameter="1.25"
+                                Padding="8,4"
+                                FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                        <Button Content="150%"
+                                Command="{Binding SetFontScaleCommand}"
+                                CommandParameter="1.5"
+                                Padding="8,4"
+                                FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                    </StackPanel>
+
+                    <!-- Font Family -->
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                        <TextBlock Grid.Column="0"
+                                   Text="Font"
+                                   FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                    </Grid>
+
+                    <ComboBox ItemsSource="{Binding AvailableFontFamilies}"
+                              SelectedItem="{Binding SelectedFontFamily}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Spacing="2" Margin="4,2">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               FontSize="{DynamicResource ThemeFontSizeSmMd}"/>
+                                    <TextBlock Text="{Binding Description}"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <!-- Live preview -->
+                    <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                            CornerRadius="4" Padding="12" Margin="0,4,0,0">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Preview"
+                                       FontSize="{DynamicResource ThemeFontSizeXs}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            <TextBlock Text="The quick brown fox jumps over the lazy dog."
+                                       FontSize="{DynamicResource ThemeFontSizeMd}"
+                                       FontFamily="{DynamicResource ThemeFontSans}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Expander>
 
             <!-- Notifications Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
+            <Expander IsExpanded="False" Classes="settings-section">
+                <Expander.Header>
                     <TextBlock Text="Notifications" FontWeight="SemiBold"
                                FontSize="{DynamicResource ThemeFontSizeMd}"/>
-
+                </Expander.Header>
+                <StackPanel Spacing="16" Margin="16,0,16,16">
                     <!-- Enable/Disable Toggle -->
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -209,15 +258,15 @@
                                TextWrapping="Wrap"
                                IsVisible="{Binding NotificationsEnabled}"/>
                 </StackPanel>
-            </Border>
+            </Expander>
 
             <!-- Speech-to-Text Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
+            <Expander IsExpanded="False" Classes="settings-section">
+                <Expander.Header>
                     <TextBlock Text="Speech-to-Text" FontWeight="SemiBold"
                                FontSize="{DynamicResource ThemeFontSizeMd}"/>
-
+                </Expander.Header>
+                <StackPanel Spacing="16" Margin="16,0,16,16">
                     <!-- Enable/Disable Toggle -->
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -300,7 +349,7 @@
                             CornerRadius="4" Padding="12"
                             IsVisible="{Binding HasSpeechWarning}">
                         <Grid ColumnDefinitions="Auto,*">
-                            <TextBlock Grid.Column="0" Text="⚠️"
+                            <TextBlock Grid.Column="0" Text="&#x26A0;&#xFE0F;"
                                        FontSize="{DynamicResource ThemeFontSizeSm}"
                                        VerticalAlignment="Top"
                                        Margin="0,0,8,0"/>
@@ -388,236 +437,221 @@
                         </WrapPanel>
                     </Border>
                 </StackPanel>
-            </Border>
+            </Expander>
 
-            <!-- Data Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="Data &amp; Backup" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
-                        <Button Grid.Column="1" Content="Configure" Padding="12,6">
-                            <Button.Flyout>
-                                <Flyout Placement="Left">
-                                    <Border Background="{DynamicResource ThemeSurfaceBrush}"
-                                            BorderBrush="{DynamicResource ThemeBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="8"
-                                            Padding="16"
-                                            Width="320">
-                                        <StackPanel Spacing="16">
-                                            <TextBlock Text="Data &amp; Backup Settings" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
-
-                                            <!-- Storage Location -->
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="Storage Location" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-
-                                                <!-- Storage Options -->
-                                                <StackPanel Spacing="4">
-                                                    <!-- Default -->
-                                                    <Button Command="{Binding SelectStorageLocationCommand}"
-                                                            CommandParameter="{x:Static vm:DataDirectoryType.Default}"
-                                                            HorizontalContentAlignment="Stretch"
-                                                            Padding="8,6" CornerRadius="4">
-                                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                                            <TextBlock Grid.Column="0" Text="📁" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <TextBlock Grid.Column="1" Text="Default (Local)" FontSize="{DynamicResource ThemeFontSizeXsSm}" VerticalAlignment="Center"/>
-                                                            <TextBlock Grid.Column="2" Text="✓" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                                       Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                                       IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.Default}}"/>
-                                                        </Grid>
-                                                    </Button>
-
-                                                    <!-- Google Drive -->
-                                                    <Button Command="{Binding SelectStorageLocationCommand}"
-                                                            CommandParameter="{x:Static vm:DataDirectoryType.GoogleDrive}"
-                                                            IsEnabled="{Binding IsGoogleDriveAvailable}"
-                                                            HorizontalContentAlignment="Stretch"
-                                                            Padding="8,6" CornerRadius="4">
-                                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                                            <TextBlock Grid.Column="0" Text="G" FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Bold" Foreground="#4285F4" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                                <TextBlock Text="Google Drive" FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                                                                <TextBlock Text="Not found" FontSize="{DynamicResource ThemeFontSize2Xs}" Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                                           IsVisible="{Binding !IsGoogleDriveAvailable}"/>
-                                                            </StackPanel>
-                                                            <TextBlock Grid.Column="2" Text="✓" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                                       Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                                       IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.GoogleDrive}}"/>
-                                                        </Grid>
-                                                    </Button>
-
-                                                    <!-- iCloud -->
-                                                    <Button Command="{Binding SelectStorageLocationCommand}"
-                                                            CommandParameter="{x:Static vm:DataDirectoryType.ICloud}"
-                                                            IsEnabled="{Binding IsICloudAvailable}"
-                                                            HorizontalContentAlignment="Stretch"
-                                                            Padding="8,6" CornerRadius="4">
-                                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                                            <TextBlock Grid.Column="0" Text="☁️" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                                <TextBlock Text="iCloud Drive" FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                                                                <TextBlock Text="Not found" FontSize="{DynamicResource ThemeFontSize2Xs}" Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                                           IsVisible="{Binding !IsICloudAvailable}"/>
-                                                            </StackPanel>
-                                                            <TextBlock Grid.Column="2" Text="✓" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                                       Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                                       IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.ICloud}}"/>
-                                                        </Grid>
-                                                    </Button>
-
-                                                    <!-- Custom -->
-                                                    <Button Command="{Binding SelectStorageLocationCommand}"
-                                                            CommandParameter="{x:Static vm:DataDirectoryType.Custom}"
-                                                            HorizontalContentAlignment="Stretch"
-                                                            Padding="8,6" CornerRadius="4">
-                                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                                            <TextBlock Grid.Column="0" Text="📂" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <TextBlock Grid.Column="1" Text="Custom Location" FontSize="{DynamicResource ThemeFontSizeXsSm}" VerticalAlignment="Center"/>
-                                                            <TextBlock Grid.Column="2" Text="✓" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                                       Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                                       IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.Custom}}"/>
-                                                        </Grid>
-                                                    </Button>
-                                                </StackPanel>
-
-                                                <!-- Current Path Display -->
-                                                <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                                        CornerRadius="4" Padding="8,6" Margin="0,4,0,0">
-                                                    <TextBlock Text="{Binding DataDirectoryDisplay}"
-                                                               FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                               ToolTip.Tip="{Binding DataDirectoryDisplay}"/>
-                                                </Border>
-
-                                                <!-- Browse button for custom -->
-                                                <StackPanel Orientation="Horizontal" Spacing="4"
-                                                            IsVisible="{Binding IsCustomDirectorySelected}">
-                                                    <Button Content="Browse..."
-                                                            Command="{Binding ChangeDataDirectoryCommand}"
-                                                            Padding="8,4"
-                                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                                                </StackPanel>
-
-                                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                                    <Button Content="Open Folder"
-                                                            Command="{Binding OpenDataDirectoryCommand}"
-                                                            Padding="8,4"
-                                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <Separator Background="{DynamicResource ThemeBorderBrush}"/>
-
-                                            <!-- Backup Directory -->
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="Backup Directory" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                                <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                                        CornerRadius="4" Padding="8,6">
-                                                    <TextBlock Text="{Binding BackupDirectory}"
-                                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               ToolTip.Tip="{Binding BackupDirectory}"/>
-                                                </Border>
-                                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                                    <Button Content="Change"
-                                                            Command="{Binding ChangeBackupDirectoryCommand}"
-                                                            Padding="8,4"
-                                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                                                    <Button Content="Open"
-                                                            Command="{Binding OpenBackupDirectoryCommand}"
-                                                            Padding="8,4"
-                                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <!-- Backup Frequency -->
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="Backup Frequency" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                                <ComboBox ItemsSource="{Binding BackupFrequencies}"
-                                                          SelectedItem="{Binding SelectedBackupFrequency}"
-                                                          HorizontalAlignment="Stretch"
-                                                          Padding="8,6"/>
-                                            </StackPanel>
-
-                                            <!-- Backup Type -->
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="Backup Type" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                                <StackPanel Orientation="Horizontal" Spacing="16">
-                                                    <RadioButton Content="Single"
-                                                                 IsChecked="{Binding IsOneTimeBackup}"/>
-                                                    <RadioButton Content="Rolling"
-                                                                 IsChecked="{Binding IsRollingBackup}"/>
-                                                </StackPanel>
-                                                <TextBlock Text="Keeps only one backup, replacing it each time"
-                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                           TextWrapping="Wrap"
-                                                           IsVisible="{Binding IsOneTimeBackup}"/>
-                                                <TextBlock Text="Keeps the most recent backups up to max count"
-                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                           TextWrapping="Wrap"
-                                                           IsVisible="{Binding IsRollingBackup}"/>
-                                            </StackPanel>
-
-                                            <!-- Max Backups (only shown for Rolling) -->
-                                            <StackPanel Spacing="6"
-                                                        IsVisible="{Binding IsRollingBackup}">
-                                                <TextBlock Text="Max Backups" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                                <NumericUpDown Value="{Binding MaxBackups}"
-                                                               Minimum="1"
-                                                               Maximum="100"
-                                                               Increment="1"
-                                                               FormatString="0"
-                                                               Padding="8,6"/>
-                                            </StackPanel>
-
-                                            <Separator Background="{DynamicResource ThemeBorderBrush}"/>
-
-                                            <!-- Backup Now Button -->
-                                            <StackPanel Spacing="8">
-                                                <Button Command="{Binding BackupNowCommand}"
-                                                        IsEnabled="{Binding !IsBackingUp}"
-                                                        HorizontalAlignment="Stretch"
-                                                        Padding="12,8">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="Backup Now" IsVisible="{Binding !IsBackingUp}"/>
-                                                        <TextBlock Text="Creating backup..." IsVisible="{Binding IsBackingUp}"/>
-                                                    </StackPanel>
-                                                </Button>
-                                                <TextBlock Text="{Binding BackupStatus}"
-                                                           IsVisible="{Binding BackupStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                           TextWrapping="Wrap"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </Flyout>
-                            </Button.Flyout>
-                        </Button>
-                    </Grid>
-
+            <!-- Data & Backup Section -->
+            <Expander IsExpanded="False" Classes="settings-section">
+                <Expander.Header>
+                    <TextBlock Text="Data &amp; Backup" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                </Expander.Header>
+                <StackPanel Spacing="12" Margin="16,0,16,16">
                     <TextBlock Text="Configure data storage location and automatic backups."
                                Foreground="{DynamicResource ThemeTextMutedBrush}"
                                FontSize="{DynamicResource ThemeFontSizeSm}"
                                TextWrapping="Wrap"/>
+                    <!-- Storage Location -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Storage Location" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+
+                        <StackPanel Spacing="4">
+                            <!-- Default -->
+                            <Button Command="{Binding SelectStorageLocationCommand}"
+                                    CommandParameter="{x:Static vm:DataDirectoryType.Default}"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="8,6" CornerRadius="4">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <TextBlock Grid.Column="0" Text="&#x1F4C1;" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Grid.Column="1" Text="Default (Local)" FontSize="{DynamicResource ThemeFontSizeXsSm}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.Default}}"/>
+                                </Grid>
+                            </Button>
+
+                            <!-- Google Drive -->
+                            <Button Command="{Binding SelectStorageLocationCommand}"
+                                    CommandParameter="{x:Static vm:DataDirectoryType.GoogleDrive}"
+                                    IsEnabled="{Binding IsGoogleDriveAvailable}"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="8,6" CornerRadius="4">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <TextBlock Grid.Column="0" Text="G" FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Bold" Foreground="#4285F4" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Google Drive" FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                                        <TextBlock Text="Not found" FontSize="{DynamicResource ThemeFontSize2Xs}" Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                   IsVisible="{Binding !IsGoogleDriveAvailable}"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.GoogleDrive}}"/>
+                                </Grid>
+                            </Button>
+
+                            <!-- iCloud -->
+                            <Button Command="{Binding SelectStorageLocationCommand}"
+                                    CommandParameter="{x:Static vm:DataDirectoryType.ICloud}"
+                                    IsEnabled="{Binding IsICloudAvailable}"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="8,6" CornerRadius="4">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <TextBlock Grid.Column="0" Text="&#x2601;&#xFE0F;" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="iCloud Drive" FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                                        <TextBlock Text="Not found" FontSize="{DynamicResource ThemeFontSize2Xs}" Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                   IsVisible="{Binding !IsICloudAvailable}"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.ICloud}}"/>
+                                </Grid>
+                            </Button>
+
+                            <!-- Custom -->
+                            <Button Command="{Binding SelectStorageLocationCommand}"
+                                    CommandParameter="{x:Static vm:DataDirectoryType.Custom}"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="8,6" CornerRadius="4">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <TextBlock Grid.Column="0" Text="&#x1F4C2;" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Grid.Column="1" Text="Custom Location" FontSize="{DynamicResource ThemeFontSizeXsSm}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.Custom}}"/>
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Current Path Display -->
+                        <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                CornerRadius="4" Padding="8,6" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding DataDirectoryDisplay}"
+                                       FontSize="{DynamicResource ThemeFontSizeXs}"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       ToolTip.Tip="{Binding DataDirectoryDisplay}"/>
+                        </Border>
+
+                        <!-- Browse button for custom -->
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    IsVisible="{Binding IsCustomDirectorySelected}">
+                            <Button Content="Browse..."
+                                    Command="{Binding ChangeDataDirectoryCommand}"
+                                    Padding="8,4"
+                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Button Content="Open Folder"
+                                    Command="{Binding OpenDataDirectoryCommand}"
+                                    Padding="8,4"
+                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Separator Background="{DynamicResource ThemeBorderBrush}" Margin="0,4"/>
+
+                    <!-- Backup Directory -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Backup Directory" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                CornerRadius="4" Padding="8,6">
+                            <TextBlock Text="{Binding BackupDirectory}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding BackupDirectory}"/>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Button Content="Change"
+                                    Command="{Binding ChangeBackupDirectoryCommand}"
+                                    Padding="8,4"
+                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                            <Button Content="Open"
+                                    Command="{Binding OpenBackupDirectoryCommand}"
+                                    Padding="8,4"
+                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Separator Background="{DynamicResource ThemeBorderBrush}" Margin="0,4"/>
+
+                    <!-- Backup Frequency -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Backup Frequency" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        <ComboBox ItemsSource="{Binding BackupFrequencies}"
+                                  SelectedItem="{Binding SelectedBackupFrequency}"
+                                  HorizontalAlignment="Stretch"
+                                  Padding="8,6"/>
+                    </StackPanel>
+
+                    <!-- Backup Type -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Backup Type" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <RadioButton Content="Single"
+                                         IsChecked="{Binding IsOneTimeBackup}"/>
+                            <RadioButton Content="Rolling"
+                                         IsChecked="{Binding IsRollingBackup}"/>
+                        </StackPanel>
+                        <TextBlock Text="Keeps only one backup, replacing it each time"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding IsOneTimeBackup}"/>
+                        <TextBlock Text="Keeps the most recent backups up to max count"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding IsRollingBackup}"/>
+                    </StackPanel>
+
+                    <!-- Max Backups (only shown for Rolling) -->
+                    <StackPanel Spacing="6"
+                                IsVisible="{Binding IsRollingBackup}">
+                        <TextBlock Text="Max Backups" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        <NumericUpDown Value="{Binding MaxBackups}"
+                                       Minimum="1"
+                                       Maximum="100"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Padding="8,6"/>
+                    </StackPanel>
+
+                    <Separator Background="{DynamicResource ThemeBorderBrush}" Margin="0,4"/>
+
+                    <!-- Backup Now -->
+                    <StackPanel Spacing="8">
+                        <Button Command="{Binding BackupNowCommand}"
+                                IsEnabled="{Binding !IsBackingUp}"
+                                HorizontalAlignment="Left"
+                                Padding="12,8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="Backup Now" IsVisible="{Binding !IsBackingUp}"/>
+                                <TextBlock Text="Creating backup..." IsVisible="{Binding IsBackingUp}"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="{Binding BackupStatus}"
+                                   IsVisible="{Binding BackupStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
                 </StackPanel>
-            </Border>
+            </Expander>
 
             <!-- Security Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Security" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
-
+            <Expander IsExpanded="False" Classes="settings-section">
+                <Expander.Header>
+                    <TextBlock Text="Security" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                </Expander.Header>
+                <StackPanel Spacing="16" Margin="16,0,16,16">
+                    <!-- Sensitive Data Lockout -->
                     <StackPanel Spacing="6">
                         <TextBlock Text="Sensitive Data Lockout" FontSize="{DynamicResource ThemeFontSizeSm}"
                                    Foreground="{DynamicResource ThemeTextMutedBrush}"/>
@@ -636,63 +670,110 @@
                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
-                </StackPanel>
-            </Border>
 
-            <!-- Plugins Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="Plugins" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
-                        <Button Grid.Column="1"
-                                Content="Manage"
-                                Padding="12,6"
-                                Command="{Binding OpenManagePluginsDialogCommand}"/>
-                    </Grid>
+                    <Separator Background="{DynamicResource ThemeBorderBrush}" Margin="0,4"/>
 
-                    <TextBlock Text="Enable or disable features, manage permissions, and view resource usage."
-                               Foreground="{DynamicResource ThemeTextMutedBrush}"
-                               FontSize="{DynamicResource ThemeFontSizeSm}"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
-            </Border>
+                    <!-- Change Password -->
+                    <StackPanel Spacing="8">
+                        <Button Command="{Binding ToggleChangePasswordCommand}"
+                                Background="Transparent"
+                                Padding="0"
+                                Cursor="Hand"
+                                HorizontalAlignment="Left">
+                            <TextBlock Text="Change Master Password"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                        </Button>
 
-            <!-- Plugin Sandbox Status (P5.7) -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16"
-                    IsVisible="{Binding HasWasmPlugins}">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Plugin Sandbox" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                        <StackPanel Spacing="10" IsVisible="{Binding IsChangePasswordVisible}">
+                            <TextBlock Text="All encrypted data will be re-encrypted with the new password. This may take a moment."
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       TextWrapping="Wrap"/>
+                            <TextBox Watermark="Current password"
+                                     PasswordChar="&#x2022;"
+                                     Text="{Binding CurrentPassword, Mode=TwoWay}"
+                                     IsEnabled="{Binding !IsChangingPassword}"
+                                     Padding="12,8"/>
+                            <TextBox Watermark="New password (min 8 characters)"
+                                     PasswordChar="&#x2022;"
+                                     Text="{Binding NewPassword, Mode=TwoWay}"
+                                     IsEnabled="{Binding !IsChangingPassword}"
+                                     Padding="12,8"/>
+                            <TextBox Watermark="Confirm new password"
+                                     PasswordChar="&#x2022;"
+                                     Text="{Binding ConfirmNewPassword, Mode=TwoWay}"
+                                     IsEnabled="{Binding !IsChangingPassword}"
+                                     Padding="12,8"/>
 
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Status"
-                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                            <Border Width="8" Height="8" CornerRadius="4"
-                                    Background="{DynamicResource ThemeSuccessBrush}"
-                                    VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding SandboxStatusText}"/>
+                            <Button Command="{Binding ChangePasswordCommand}"
+                                    IsEnabled="{Binding !IsChangingPassword}"
+                                    Background="{DynamicResource ThemePrimaryBrush}"
+                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                    Padding="12,8"
+                                    CornerRadius="6"
+                                    HorizontalAlignment="Left">
+                                <TextBlock Text="Change Password"
+                                           IsVisible="{Binding !IsChangingPassword}"/>
+                            </Button>
+
+                            <!-- Progress overlay during re-encryption -->
+                            <Border IsVisible="{Binding IsChangingPassword}"
+                                    Background="{DynamicResource ThemeWarningMutedBrush}"
+                                    CornerRadius="6"
+                                    Padding="12,8">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Re-encrypting all data — do not close the app..."
+                                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <ProgressBar IsIndeterminate="True" Height="4" CornerRadius="2"
+                                                 Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Status: error -->
+                            <TextBlock Text="{Binding ChangePasswordStatus}"
+                                       IsVisible="{Binding !ChangePasswordSuccess}"
+                                       Foreground="{DynamicResource ThemeDangerBrush}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       TextWrapping="Wrap"/>
+                            <!-- Status: success -->
+                            <TextBlock Text="{Binding ChangePasswordStatus}"
+                                       IsVisible="{Binding ChangePasswordSuccess}"
+                                       Foreground="{DynamicResource ThemeSuccessBrush}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       TextWrapping="Wrap"/>
                         </StackPanel>
+                    </StackPanel>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Isolation" Margin="0,8,0,0"
-                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="Memory + CPU sandboxed (Wasmtime)" Margin="0,8,0,0"/>
-                    </Grid>
+                    <Separator Background="{DynamicResource ThemeBorderBrush}" Margin="0,4"/>
 
-                    <TextBlock Text="Wasm plugins run in isolated sandboxes with capability-based permissions. Each plugin has its own memory space and CPU fuel budget."
-                               Foreground="{DynamicResource ThemeTextMutedBrush}"
-                               FontSize="{DynamicResource ThemeFontSizeSm}"
-                               TextWrapping="Wrap"/>
+                    <!-- Logout / Lock App -->
+                    <StackPanel Spacing="6">
+                        <Button Command="{Binding LogoutCommand}"
+                                Background="{DynamicResource ThemeDangerMutedBrush}"
+                                Foreground="{DynamicResource ThemeDangerBrush}"
+                                Padding="12,8"
+                                CornerRadius="6"
+                                HorizontalAlignment="Left">
+                            <TextBlock Text="Lock App" FontWeight="Medium"/>
+                        </Button>
+                        <TextBlock Text="Clears encryption keys from memory and returns to the unlock screen."
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
                 </StackPanel>
-            </Border>
+            </Expander>
 
             <!-- Enterprise Admin (P5.8) -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Enterprise" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
-
+            <Expander IsExpanded="False" Classes="settings-section"
+                      IsVisible="{Binding IsPolicyActive}">
+                <Expander.Header>
+                    <TextBlock Text="Enterprise" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                </Expander.Header>
+                <StackPanel Spacing="12" Margin="16,0,16,16">
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Policy"
                                    Foreground="{DynamicResource ThemeTextMutedBrush}"/>
@@ -709,14 +790,15 @@
                                FontSize="{DynamicResource ThemeFontSizeSm}"
                                TextWrapping="Wrap"/>
                 </StackPanel>
-            </Border>
+            </Expander>
 
             <!-- About Section -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="About" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"/>
-
+            <Expander IsExpanded="False" Classes="settings-section">
+                <Expander.Header>
+                    <TextBlock Text="About" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                </Expander.Header>
+                <StackPanel Spacing="12" Margin="16,0,16,16">
                     <TextBlock Text="Local-first, privacy-focused productivity suite."
                                Foreground="{DynamicResource ThemeTextMutedBrush}"
                                FontSize="{DynamicResource ThemeFontSizeSm}"
@@ -763,17 +845,18 @@
                         </Button>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </Expander>
 
             <!-- Danger Zone -->
-            <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                    BorderBrush="{DynamicResource ThemeDangerBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Danger Zone" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeMd}"
+            <Expander IsExpanded="False" Classes="settings-section"
+                      BorderBrush="{DynamicResource ThemeDangerBrush}"
+                      BorderThickness="1">
+                <Expander.Header>
+                    <TextBlock Text="Danger Zone" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"
                                Foreground="{DynamicResource ThemeDangerBrush}"/>
-
+                </Expander.Header>
+                <StackPanel Spacing="12" Margin="16,0,16,16">
                     <TextBlock Text="Reset all settings to their default values."
                                Foreground="{DynamicResource ThemeTextMutedBrush}"
                                FontSize="{DynamicResource ThemeFontSizeSm}"/>
@@ -821,7 +904,7 @@
                                Foreground="{DynamicResource ThemeTextMutedBrush}"
                                FontSize="{DynamicResource ThemeFontSizeSm}"/>
                 </StackPanel>
-            </Border>
+            </Expander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

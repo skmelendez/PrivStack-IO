@@ -4,6 +4,7 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -248,6 +249,99 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _userDisplayName = string.Empty;
 
+    // ========================================
+    // Profile Image
+    // ========================================
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProfileImage))]
+    [NotifyPropertyChangedFor(nameof(ProfileImageBitmap))]
+    private string? _profileImagePath;
+
+    private Bitmap? _cachedProfileBitmap;
+
+    public bool HasProfileImage => !string.IsNullOrEmpty(ProfileImagePath);
+
+    public Bitmap? ProfileImageBitmap
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(ProfileImagePath))
+            {
+                _cachedProfileBitmap?.Dispose();
+                _cachedProfileBitmap = null;
+                return null;
+            }
+
+            var fullPath = Path.Combine(Services.DataPaths.BaseDir, ProfileImagePath);
+            if (!File.Exists(fullPath))
+            {
+                _cachedProfileBitmap?.Dispose();
+                _cachedProfileBitmap = null;
+                return null;
+            }
+
+            // Only reload if we don't have a cached bitmap
+            if (_cachedProfileBitmap == null)
+            {
+                try
+                {
+                    _cachedProfileBitmap = new Bitmap(fullPath);
+                }
+                catch
+                {
+                    _cachedProfileBitmap = null;
+                }
+            }
+
+            return _cachedProfileBitmap;
+        }
+    }
+
+    public string UserInitial => string.IsNullOrEmpty(UserDisplayName)
+        ? "U"
+        : UserDisplayName[0].ToString().ToUpperInvariant();
+
+    public void SetProfileImage(string sourcePath)
+    {
+        var destPath = Path.Combine(Services.DataPaths.BaseDir, "profile-image.png");
+
+        try
+        {
+            File.Copy(sourcePath, destPath, overwrite: true);
+        }
+        catch
+        {
+            return;
+        }
+
+        // Dispose old cached bitmap before updating path
+        _cachedProfileBitmap?.Dispose();
+        _cachedProfileBitmap = null;
+
+        ProfileImagePath = "profile-image.png";
+        _settingsService.Settings.ProfileImagePath = "profile-image.png";
+        _settingsService.SaveDebounced();
+        _settingsService.NotifyProfileChanged();
+    }
+
+    [RelayCommand]
+    private void RemoveProfileImage()
+    {
+        if (string.IsNullOrEmpty(ProfileImagePath)) return;
+
+        var fullPath = Path.Combine(Services.DataPaths.BaseDir, ProfileImagePath);
+        try { if (File.Exists(fullPath)) File.Delete(fullPath); } catch { /* best effort */ }
+
+        _cachedProfileBitmap?.Dispose();
+        _cachedProfileBitmap = null;
+
+        ProfileImagePath = null;
+        _settingsService.Settings.ProfileImagePath = null;
+        _settingsService.SaveDebounced();
+        _settingsService.NotifyProfileChanged();
+    }
+
     [ObservableProperty]
     private ThemeOption? _selectedTheme;
 
@@ -381,6 +475,119 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private LockoutOption? _selectedLockoutOption;
+
+    // ========================================
+    // Logout & Change Password
+    // ========================================
+
+    /// <summary>
+    /// Fired when the user requests to log out (lock the app).
+    /// </summary>
+    public event EventHandler? LogoutRequested;
+
+    [ObservableProperty]
+    private bool _isChangePasswordVisible;
+
+    [ObservableProperty]
+    private string _currentPassword = string.Empty;
+
+    [ObservableProperty]
+    private string _newPassword = string.Empty;
+
+    [ObservableProperty]
+    private string _confirmNewPassword = string.Empty;
+
+    [ObservableProperty]
+    private bool _isChangingPassword;
+
+    [ObservableProperty]
+    private string? _changePasswordStatus;
+
+    [ObservableProperty]
+    private bool _changePasswordSuccess;
+
+    [RelayCommand]
+    private async Task LogoutAsync()
+    {
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Lock App",
+            "This will lock the app and clear encryption keys from memory. You'll need to re-enter your master password to continue.",
+            "Lock");
+
+        if (!confirmed) return;
+
+        _authService.LockApp();
+        LogoutRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void ToggleChangePassword()
+    {
+        IsChangePasswordVisible = !IsChangePasswordVisible;
+        if (!IsChangePasswordVisible)
+        {
+            CurrentPassword = string.Empty;
+            NewPassword = string.Empty;
+            ConfirmNewPassword = string.Empty;
+            ChangePasswordStatus = null;
+            ChangePasswordSuccess = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ChangePasswordAsync()
+    {
+        if (IsChangingPassword) return;
+
+        ChangePasswordStatus = null;
+        ChangePasswordSuccess = false;
+
+        if (string.IsNullOrEmpty(CurrentPassword))
+        {
+            ChangePasswordStatus = "Current password is required.";
+            return;
+        }
+
+        if (NewPassword.Length < 8)
+        {
+            ChangePasswordStatus = "New password must be at least 8 characters.";
+            return;
+        }
+
+        if (NewPassword != ConfirmNewPassword)
+        {
+            ChangePasswordStatus = "New passwords do not match.";
+            return;
+        }
+
+        if (!_authService.ValidateMasterPassword(CurrentPassword))
+        {
+            ChangePasswordStatus = "Current password is incorrect.";
+            return;
+        }
+
+        IsChangingPassword = true;
+        ChangePasswordStatus = "Re-encrypting data — do not close the app...";
+
+        try
+        {
+            await Task.Run(() => _authService.ChangeAppPassword(CurrentPassword, NewPassword));
+
+            ChangePasswordSuccess = true;
+            ChangePasswordStatus = "Password changed successfully.";
+            CurrentPassword = string.Empty;
+            NewPassword = string.Empty;
+            ConfirmNewPassword = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            ChangePasswordStatus = $"Failed to change password: {ex.Message}";
+        }
+        finally
+        {
+            IsChangingPassword = false;
+        }
+    }
 
     /// <summary>
     /// List of plugins for the settings panel.
@@ -1018,6 +1225,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         var settings = _settingsService.Settings;
         UserDisplayName = settings.UserDisplayName ?? Environment.UserName ?? "User";
+        ProfileImagePath = settings.ProfileImagePath;
         Version = $"v{Native.PrivStackService.Version}";
 
         // Get data directory type and path
@@ -1082,6 +1290,8 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _settingsService.Settings.UserDisplayName = value;
         _settingsService.SaveDebounced();
+        OnPropertyChanged(nameof(UserInitial));
+        _settingsService.NotifyProfileChanged();
     }
 
     partial void OnSelectedThemeChanged(ThemeOption? value)
@@ -1434,9 +1644,21 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private void ResetSettings()
     {
+        // Remove profile image file if it exists
+        if (!string.IsNullOrEmpty(_settingsService.Settings.ProfileImagePath))
+        {
+            var fullPath = Path.Combine(Services.DataPaths.BaseDir, _settingsService.Settings.ProfileImagePath);
+            try { if (File.Exists(fullPath)) File.Delete(fullPath); } catch { /* best effort */ }
+        }
+
+        _cachedProfileBitmap?.Dispose();
+        _cachedProfileBitmap = null;
+
         _settingsService.Settings.UserDisplayName = null;
+        _settingsService.Settings.ProfileImagePath = null;
         _settingsService.Settings.Theme = "Dark";
         _settingsService.Save();
+        _settingsService.NotifyProfileChanged();
         LoadSettings();
     }
 

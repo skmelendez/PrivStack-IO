@@ -297,6 +297,19 @@ public partial class App : Application
         desktop.MainWindow = unlockWindow;
     }
 
+    /// <summary>
+    /// Locks the app and transitions back to the unlock screen.
+    /// Called from Settings → Logout.
+    /// </summary>
+    public void RequestLogout()
+    {
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
+
+        var currentWindow = desktop.MainWindow;
+        ShowUnlockScreen(desktop);
+        currentWindow?.Close();
+    }
+
     private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop, bool skipPluginInit = false)
     {
         if (!skipPluginInit)
@@ -336,14 +349,6 @@ public partial class App : Application
         sensitiveLock.LockoutMinutes = lockoutMinutes;
         // Do NOT auto-unlock - user must explicitly unlock sensitive features
         Log.Information("Sensitive lock service initialized with {Minutes} minute lockout (locked)", lockoutMinutes);
-
-        // Wire emoji picker recent emojis persistence
-        AdaptiveViewRenderer.LoadRecentEmojis(appSettings.Settings.RecentEmojis);
-        AdaptiveViewRenderer.RecentEmojisSaved = recents =>
-        {
-            appSettings.Settings.RecentEmojis = [..recents];
-            appSettings.SaveDebounced();
-        };
 
         // Start the reminder scheduler for OS notifications
         Services.GetRequiredService<ReminderSchedulerService>().Start();

@@ -80,7 +80,7 @@ public sealed class RegistryUpdateService : IUpdateService
             var arch = PlatformDetector.GetArch();
             var format = PlatformDetector.DetectCurrentInstallFormat();
 
-            var hasMatch = release.Platforms.Any(p =>
+            var hasMatch = release.AllReleases.Any(p =>
                 p.Platform.Equals(platform, StringComparison.OrdinalIgnoreCase) &&
                 p.Arch.Equals(arch, StringComparison.OrdinalIgnoreCase) &&
                 p.Format.Equals(format, StringComparison.OrdinalIgnoreCase));

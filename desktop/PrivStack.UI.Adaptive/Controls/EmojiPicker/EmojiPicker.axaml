@@ -8,7 +8,7 @@
              IsVisible="{Binding IsOpen}">
 
     <!-- Overlay Background -->
-    <Grid>
+    <Grid Name="OverlayGrid">
         <!-- Backdrop (click to close) -->
         <Border Background="#80000000" PointerPressed="OnBackdropPressed"/>
 
@@ -66,6 +66,7 @@
                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
                             Margin="12,8,12,0" Spacing="8">
                     <TextBlock Text="click to insert" FontSize="{DynamicResource ThemeFontSizeXs}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                    <TextBlock Text="hold for skin tone" FontSize="{DynamicResource ThemeFontSizeXs}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                     <TextBlock Text="esc close" FontSize="{DynamicResource ThemeFontSizeXs}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                 </StackPanel>
 
