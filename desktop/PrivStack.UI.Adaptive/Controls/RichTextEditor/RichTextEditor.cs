@@ -65,6 +65,37 @@ public sealed class RichTextEditor : Control
     }
 
     /// <summary>
+    /// Inserts transcription text, splitting on double-newlines into separate paragraph blocks.
+    /// The first paragraph is inserted at the caret; remaining paragraphs are dispatched via
+    /// <see cref="ParagraphsInsertRequested"/> for the host to create as new blocks.
+    /// Falls back to <see cref="InsertAtCaret"/> when there are no paragraph breaks.
+    /// </summary>
+    public void InsertTranscription(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+
+        var paragraphs = text.Split("\n\n", StringSplitOptions.RemoveEmptyEntries);
+        if (paragraphs.Length <= 1)
+        {
+            InsertAtCaret(text.Trim());
+            return;
+        }
+
+        // Insert the first paragraph into the current block
+        InsertAtCaret(paragraphs[0].Trim());
+
+        // Flush so the host sees the updated text before structural changes
+        FlushTextChange();
+
+        // Ask the host to create new paragraph blocks for the rest
+        var remaining = new string[paragraphs.Length - 1];
+        for (int i = 1; i < paragraphs.Length; i++)
+            remaining[i - 1] = paragraphs[i].Trim();
+
+        ParagraphsInsertRequested?.Invoke(_blockId, remaining);
+    }
+
+    /// <summary>
     /// Inserts an emoji at the caret with no formatting (no bold, italic, etc.)
     /// and a trailing thin space for visual padding.
     /// </summary>
@@ -102,6 +133,11 @@ public sealed class RichTextEditor : Control
 
     /// <summary>Fired when Enter is pressed (no shift). Args: (blockId, markdownAfterCaret).</summary>
     public event Action<string, string>? SplitRequested;
+
+    /// <summary>Fired when a multi-paragraph transcription is inserted.
+    /// Args: (blockId, paragraphs). The first paragraph is already inserted into this block;
+    /// remaining paragraphs should be created as new blocks by the host.</summary>
+    public event Action<string, string[]>? ParagraphsInsertRequested;
 
     /// <summary>Fired when Backspace at position 0. Args: blockId.</summary>
     public event Action<string>? MergeWithPreviousRequested;

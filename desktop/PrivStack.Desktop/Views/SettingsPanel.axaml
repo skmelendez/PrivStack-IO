@@ -278,6 +278,23 @@
                         </ComboBox>
                     </StackPanel>
 
+                    <!-- Beam Search Toggle -->
+                    <Grid ColumnDefinitions="*,Auto"
+                          IsVisible="{Binding SpeechToTextEnabled}">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="Beam Search" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            <TextBlock Text="Slower but more accurate transcription"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       Opacity="0.7"/>
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding WhisperBeamSearch}"
+                                      OnContent="" OffContent=""
+                                      VerticalAlignment="Center"/>
+                    </Grid>
+
                     <!-- Warning Message -->
                     <Border Background="{DynamicResource ThemeWarningMutedBrush}"
                             CornerRadius="4" Padding="12"

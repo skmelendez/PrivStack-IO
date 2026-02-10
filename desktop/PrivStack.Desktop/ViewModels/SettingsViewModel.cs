@@ -649,6 +649,12 @@ public partial class SettingsViewModel : ViewModelBase
     private AudioInputDevice? _selectedAudioInputDevice;
 
     /// <summary>
+    /// When enabled, Whisper uses beam search decoding for higher accuracy at the cost of speed.
+    /// </summary>
+    [ObservableProperty]
+    private bool _whisperBeamSearch;
+
+    /// <summary>
     /// Warning message shown when speech-to-text is enabled but model not downloaded.
     /// </summary>
     public string? SpeechWarningMessage
@@ -1063,6 +1069,10 @@ public partial class SettingsViewModel : ViewModelBase
         var modelId = settings.WhisperModelSize ?? "base.en";
         SelectedWhisperModel = WhisperModels.FirstOrDefault(m => m.Id == modelId) ?? WhisperModels[1]; // Default to base.en
 
+        // Beam search
+        WhisperBeamSearch = settings.WhisperBeamSearch;
+        WhisperService.Instance.BeamSearchEnabled = settings.WhisperBeamSearch;
+
         // Audio input device
         AudioRecorderService.Instance.SelectedDeviceId = settings.AudioInputDevice;
         RefreshAudioDevices();
@@ -1164,25 +1174,36 @@ public partial class SettingsViewModel : ViewModelBase
         _settingsService.SaveDebounced();
     }
 
+    partial void OnWhisperBeamSearchChanged(bool value)
+    {
+        _settingsService.Settings.WhisperBeamSearch = value;
+        WhisperService.Instance.BeamSearchEnabled = value;
+        _settingsService.SaveDebounced();
+
+        // Force model reload with new sampling strategy on next use
+        if (WhisperService.Instance.IsModelLoaded)
+            _ = WhisperService.Instance.InitializeAsync();
+    }
+
     [RelayCommand]
     private void RefreshAudioDevices()
     {
+        // Capture saved device ID BEFORE clearing the collection.
+        // Clear() nulls SelectedAudioInputDevice, which triggers
+        // OnSelectedAudioInputDeviceChanged(null) and overwrites the setting.
+        var savedId = _settingsService.Settings.AudioInputDevice;
+
         AudioInputDevices.Clear();
 
         var devices = AudioRecorderService.Instance.GetAvailableDevices();
         foreach (var device in devices)
             AudioInputDevices.Add(device);
 
-        // Restore saved selection
-        var savedId = _settingsService.Settings.AudioInputDevice;
+        // Restore saved selection (or fall back to first device)
         if (savedId != null)
-        {
             SelectedAudioInputDevice = AudioInputDevices.FirstOrDefault(d => d.Id == savedId);
-        }
-        else
-        {
-            SelectedAudioInputDevice = AudioInputDevices.FirstOrDefault();
-        }
+
+        SelectedAudioInputDevice ??= AudioInputDevices.FirstOrDefault();
     }
 
     partial void OnSelectedWhisperModelChanged(WhisperModelOption? value)

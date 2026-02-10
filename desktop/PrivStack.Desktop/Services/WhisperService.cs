@@ -49,6 +49,7 @@ public sealed class WhisperService : INotifyPropertyChanged, IDisposable
     private WhisperProcessor? _processor;
     private string? _loadedModelPath;
     private bool _isModelLoaded;
+    private bool _lastBeamSearch;
     private bool _isRecording;
     private bool _isTranscribing;
     private string? _lastTranscription;
@@ -60,6 +61,12 @@ public sealed class WhisperService : INotifyPropertyChanged, IDisposable
     public event EventHandler? RecordingStarted;
     public event EventHandler? RecordingStopped;
     public event EventHandler<string>? Error;
+
+    /// <summary>
+    /// When true, uses beam search sampling (slower but more accurate).
+    /// Takes effect on next model load.
+    /// </summary>
+    public bool BeamSearchEnabled { get; set; }
 
     public bool IsModelLoaded
     {
@@ -150,7 +157,7 @@ public sealed class WhisperService : INotifyPropertyChanged, IDisposable
     /// </summary>
     public async Task InitializeAsync(string? modelPath = null)
     {
-        if (IsModelLoaded && _loadedModelPath == modelPath)
+        if (IsModelLoaded && _loadedModelPath == modelPath && _lastBeamSearch == BeamSearchEnabled)
         {
             return;
         }
@@ -179,16 +186,22 @@ public sealed class WhisperService : INotifyPropertyChanged, IDisposable
             _processor?.Dispose();
 
             // Load the model on a background thread
+            var useBeamSearch = BeamSearchEnabled;
             await Task.Run(() =>
             {
-                _processor = WhisperFactory.FromPath(modelPath)
+                var builder = WhisperFactory.FromPath(modelPath)
                     .CreateBuilder()
                     .WithLanguage("en")
-                    .WithThreads(Environment.ProcessorCount > 4 ? 4 : Environment.ProcessorCount)
-                    .Build();
+                    .WithThreads(Environment.ProcessorCount > 4 ? 4 : Environment.ProcessorCount);
+
+                if (useBeamSearch)
+                    builder.WithBeamSearchSamplingStrategy();
+
+                _processor = builder.Build();
             });
 
             _loadedModelPath = modelPath;
+            _lastBeamSearch = useBeamSearch;
             IsModelLoaded = true;
 
             _log.Information("Whisper model loaded successfully");
@@ -326,19 +339,37 @@ public sealed class WhisperService : INotifyPropertyChanged, IDisposable
         {
             _log.Debug("Transcribing audio file: {Path}", audioPath);
 
-            var result = new List<string>();
+            var sb = new System.Text.StringBuilder();
 
             await Task.Run(async () =>
             {
                 await using var fileStream = File.OpenRead(audioPath);
 
+                TimeSpan? previousEnd = null;
+
                 await foreach (var segment in _processor.ProcessAsync(fileStream))
                 {
-                    result.Add(segment.Text);
+                    var text = segment.Text;
+                    if (string.IsNullOrWhiteSpace(text))
+                        continue;
+
+                    // Insert a paragraph break when there's a pause >= 1s between segments
+                    if (previousEnd.HasValue &&
+                        (segment.Start - previousEnd.Value).TotalSeconds >= 1.0)
+                    {
+                        sb.Append("\n\n");
+                    }
+                    else if (sb.Length > 0)
+                    {
+                        sb.Append(' ');
+                    }
+
+                    sb.Append(text.Trim());
+                    previousEnd = segment.End;
                 }
             });
 
-            var transcription = string.Join(" ", result).Trim();
+            var transcription = sb.ToString().Trim();
 
             _log.Information("Transcription completed: {Length} characters", transcription.Length);
 
