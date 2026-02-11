@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:PrivStack.Desktop.ViewModels"
+             xmlns:svc="using:PrivStack.Desktop.Services"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
              x:Class="PrivStack.Desktop.Views.SettingsPanel"
              x:DataType="vm:SettingsViewModel">
@@ -248,6 +249,30 @@
                                                    Foreground="{DynamicResource ThemeTextMutedBrush}"
                                                    Margin="12,0,0,0"/>
                                     </Grid>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Microphone Selection -->
+                    <StackPanel Spacing="6" IsVisible="{Binding SpeechToTextEnabled}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Text="Microphone" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            <Button Grid.Column="1"
+                                    Content="Refresh"
+                                    Command="{Binding RefreshAudioDevicesCommand}"
+                                    Padding="8,4"
+                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                        </Grid>
+                        <ComboBox ItemsSource="{Binding AudioInputDevices}"
+                                  SelectedItem="{Binding SelectedAudioInputDevice}"
+                                  HorizontalAlignment="Stretch"
+                                  Padding="12,8">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="svc:AudioInputDevice">
+                                    <TextBlock Text="{Binding Name}"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>

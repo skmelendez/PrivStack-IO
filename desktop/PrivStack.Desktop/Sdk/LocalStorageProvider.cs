@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using PrivStack.Sdk.Capabilities;
 using Serilog;
 
@@ -32,13 +33,28 @@ internal sealed class LocalStorageProvider : IStorageProvider
         ct.ThrowIfCancellationRequested();
 
         var ext = Path.GetExtension(fileName);
-        var id = Guid.NewGuid().ToString("N");
-        var destPath = Path.Combine(_storagePath, id + ext);
 
-        File.Copy(sourcePath, destPath, overwrite: true);
-        _log.Debug("LocalStorage: stored {FileName} as {Id}", fileName, id);
+        // Content-addressable: SHA-256 hash the file so duplicates reuse the same ID
+        var hash = HashFile(sourcePath);
+        var destPath = Path.Combine(_storagePath, hash + ext);
 
-        return Task.FromResult(id);
+        if (File.Exists(destPath))
+        {
+            _log.Debug("LocalStorage: dedup hit for {FileName}, reusing {Id}", fileName, hash);
+            return Task.FromResult(hash);
+        }
+
+        File.Copy(sourcePath, destPath, overwrite: false);
+        _log.Debug("LocalStorage: stored {FileName} as {Id}", fileName, hash);
+
+        return Task.FromResult(hash);
+    }
+
+    private static string HashFile(string path)
+    {
+        using var stream = File.OpenRead(path);
+        var hashBytes = SHA256.HashData(stream);
+        return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
     public Task<string?> RetrieveFileAsync(string fileId, string fileName, CancellationToken ct = default)

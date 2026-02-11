@@ -7,6 +7,11 @@ using Serilog;
 namespace PrivStack.Desktop.Services;
 
 /// <summary>
+/// Represents an available audio input device.
+/// </summary>
+public record AudioInputDevice(string Id, string Name);
+
+/// <summary>
 /// Cross-platform audio recording service.
 /// Uses NAudio on Windows, ffmpeg/sox on macOS/Linux.
 /// Records audio from the default microphone and saves to WAV format.
@@ -31,6 +36,13 @@ public sealed class AudioRecorderService : INotifyPropertyChanged, IDisposable
     private bool _isRecording;
     private TimeSpan _recordingDuration;
     private bool _disposed;
+
+    /// <summary>
+    /// The selected audio input device ID. Null means use system default.
+    /// On macOS this is the avfoundation device index (e.g. "0", "1").
+    /// On Windows this is the NAudio device number.
+    /// </summary>
+    public string? SelectedDeviceId { get; set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public event EventHandler? RecordingStarted;
@@ -68,6 +80,153 @@ public sealed class AudioRecorderService : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
+    /// Enumerates available audio input devices on the current platform.
+    /// </summary>
+    public List<AudioInputDevice> GetAvailableDevices()
+    {
+        var devices = new List<AudioInputDevice>();
+
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                devices = GetWindowsDevices();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                devices = GetMacDevices();
+            }
+            else
+            {
+                devices = GetLinuxDevices();
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Failed to enumerate audio input devices");
+        }
+
+        return devices;
+    }
+
+    private static List<AudioInputDevice> GetWindowsDevices()
+    {
+        var devices = new List<AudioInputDevice>();
+        for (int i = 0; i < WaveInEvent.DeviceCount; i++)
+        {
+            var caps = WaveInEvent.GetCapabilities(i);
+            devices.Add(new AudioInputDevice(i.ToString(), caps.ProductName));
+        }
+        return devices;
+    }
+
+    private static List<AudioInputDevice> GetMacDevices()
+    {
+        var devices = new List<AudioInputDevice>();
+        if (!IsCommandAvailable("ffmpeg")) return devices;
+
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "ffmpeg",
+                    Arguments = "-f avfoundation -list_devices true -i \"\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
+            process.Start();
+            // ffmpeg writes device list to stderr
+            var stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit(5000);
+
+            // Parse lines like: [AVFoundation ...] [0] MacBook Pro Microphone
+            bool inAudioSection = false;
+            foreach (var line in stderr.Split('\n'))
+            {
+                if (line.Contains("AVFoundation audio devices:"))
+                {
+                    inAudioSection = true;
+                    continue;
+                }
+                if (line.Contains("AVFoundation video devices:"))
+                {
+                    inAudioSection = false;
+                    continue;
+                }
+
+                if (inAudioSection)
+                {
+                    // Match pattern: [index] Device Name
+                    var match = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+)\]\s+(.+)");
+                    if (match.Success)
+                    {
+                        var index = match.Groups[1].Value;
+                        var name = match.Groups[2].Value.Trim();
+                        devices.Add(new AudioInputDevice(index, name));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "Failed to enumerate macOS audio devices via ffmpeg");
+        }
+
+        return devices;
+    }
+
+    private static List<AudioInputDevice> GetLinuxDevices()
+    {
+        var devices = new List<AudioInputDevice>();
+
+        // Try PulseAudio sources via ffmpeg
+        if (!IsCommandAvailable("ffmpeg")) return devices;
+
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "ffmpeg",
+                    Arguments = "-sources pulse",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
+            process.Start();
+            var stdout = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(5000);
+
+            // Parse lines like: * alsa_input.pci-0000_00_1f.3.analog-stereo [Built-in Audio Analog Stereo]
+            foreach (var line in stdout.Split('\n'))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(line, @"^\s*\*?\s*(\S+)\s+\[(.+)\]");
+                if (match.Success)
+                {
+                    var id = match.Groups[1].Value;
+                    var name = match.Groups[2].Value.Trim();
+                    if (id != "default")
+                        devices.Add(new AudioInputDevice(id, name));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "Failed to enumerate Linux audio devices");
+        }
+
+        return devices;
+    }
+
+    /// <summary>
     /// Starts recording audio to a temporary WAV file.
     /// </summary>
     /// <returns>The path to the WAV file being recorded.</returns>
@@ -99,9 +258,13 @@ public sealed class AudioRecorderService : INotifyPropertyChanged, IDisposable
     {
         try
         {
+            var deviceNumber = 0;
+            if (SelectedDeviceId != null && int.TryParse(SelectedDeviceId, out var parsed))
+                deviceNumber = parsed;
+
             _waveIn = new WaveInEvent
             {
-                DeviceNumber = 0,
+                DeviceNumber = deviceNumber,
                 BufferMilliseconds = 50,
                 WaveFormat = new WaveFormat(16000, 16, 1) // 16kHz, 16-bit, mono
             };
@@ -172,7 +335,7 @@ public sealed class AudioRecorderService : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private static (string command, string args) GetUnixRecordingCommand(string outputPath)
+    private (string command, string args) GetUnixRecordingCommand(string outputPath)
     {
         // Try ffmpeg first (most common)
         if (IsCommandAvailable("ffmpeg"))
@@ -180,13 +343,15 @@ public sealed class AudioRecorderService : INotifyPropertyChanged, IDisposable
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 // macOS uses avfoundation
-                // ":0" means default audio input device
-                return ("ffmpeg", $"-f avfoundation -i \":0\" -ar 16000 -ac 1 -acodec pcm_s16le -y \"{outputPath}\"");
+                // SelectedDeviceId is the avfoundation audio device index, default "0"
+                var deviceIndex = SelectedDeviceId ?? "0";
+                return ("ffmpeg", $"-f avfoundation -i \":{deviceIndex}\" -ar 16000 -ac 1 -acodec pcm_s16le -y \"{outputPath}\"");
             }
             else
             {
-                // Linux uses ALSA or PulseAudio
-                return ("ffmpeg", $"-f pulse -i default -ar 16000 -ac 1 -acodec pcm_s16le -y \"{outputPath}\"");
+                // Linux uses PulseAudio
+                var deviceId = SelectedDeviceId ?? "default";
+                return ("ffmpeg", $"-f pulse -i \"{deviceId}\" -ar 16000 -ac 1 -acodec pcm_s16le -y \"{outputPath}\"");
             }
         }
 
