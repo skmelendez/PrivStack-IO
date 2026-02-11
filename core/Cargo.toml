@@ -13,11 +13,12 @@ members = [
     "privstack-plugin-host",
     "privstack-plugin-sdk",
     "privstack-ppk",
+    "privstack-datasets",
     "privstack-ffi",
 ]
 
 [workspace.package]
-version = "1.4.0"
+version = "1.6.1"
 edition = "2024"
 license = "Proprietary"
 repository = "https://github.com/privstack/privstack"
@@ -62,6 +63,7 @@ privstack-model = { path = "privstack-model" }
 privstack-plugin-host = { path = "privstack-plugin-host" }
 privstack-plugin-sdk = { path = "privstack-plugin-sdk" }
 privstack-ppk = { path = "privstack-ppk" }
+privstack-datasets = { path = "privstack-datasets" }
 
 [workspace.dependencies.duckdb]
 version = "1.1"

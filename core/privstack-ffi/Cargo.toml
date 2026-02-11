@@ -26,6 +26,7 @@ privstack-blobstore.workspace = true
 privstack-model.workspace = true
 privstack-plugin-host = { workspace = true, optional = true }
 privstack-ppk = { path = "../privstack-ppk" }
+privstack-datasets.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

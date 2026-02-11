@@ -115,7 +115,8 @@ public sealed class ReminderSchedulerService : IDisposable
                                 "privstack.tasks" => "Tasks",
                                 "privstack.calendar" => "Calendar",
                                 _ => null
-                            });
+                            },
+                            _appSettings.Settings.NotificationSoundEnabled);
                     }
                 }
                 catch (OperationCanceledException)

@@ -15,7 +15,7 @@
     <CFBundleDisplayName>PrivStack</CFBundleDisplayName>
     <AssemblyTitle>PrivStack</AssemblyTitle>
     <Product>PrivStack</Product>
-    <Version>1.10.1</Version>
+    <Version>1.11.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -55,6 +55,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.11" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11" />
     <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.3.11" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.11" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.11" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.11">

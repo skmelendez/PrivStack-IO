@@ -1,0 +1,19 @@
+[package]
+name = "privstack-datasets"
+description = "DuckDB-backed tabular dataset storage for PrivStack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+duckdb.workspace = true
+regex-lite = "0.1"
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+pretty_assertions.workspace = true

@@ -826,7 +826,8 @@ public partial class SettingsViewModel : ViewModelBase
         var success = await _notificationService.SendNotificationAsync(
             "PrivStack",
             "Notifications are working!",
-            "Test Notification");
+            "Test Notification",
+            NotificationSoundEnabled);
         TestNotificationStatus = success ? "Notification sent!" : "Failed to send notification";
         await Task.Delay(3000);
         TestNotificationStatus = null;

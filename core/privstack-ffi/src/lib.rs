@@ -8,6 +8,8 @@
 //! All functions use C-compatible types and handle errors via return codes.
 //! Zero domain logic — plugins consume generic vault, blob, and entity APIs.
 
+mod datasets;
+
 use privstack_blobstore::BlobStore;
 use privstack_license::{
     Activation, ActivationStore, DeviceFingerprint, DeviceInfo, LicenseError, LicenseKey,
@@ -160,6 +162,8 @@ pub struct PrivStackHandle {
     // Generic capabilities — no domain logic
     vault_manager: Arc<VaultManager>,
     blob_store: BlobStore,
+    // Tabular datasets (unencrypted DuckDB for SQL queries)
+    dataset_store: Option<privstack_datasets::DatasetStore>,
     // Wasm plugin host manager
     #[cfg(feature = "wasm-plugins")]
     plugin_host: PluginHostManager,
@@ -286,6 +290,15 @@ pub enum CloudProvider {
 
 /// Global handle storage (single instance for now).
 static HANDLE: Mutex<Option<PrivStackHandle>> = Mutex::new(None);
+
+/// Acquire the HANDLE lock, recovering from poison if a prior
+/// `catch_unwind` caught a DuckDB panic while the lock was held.
+pub(crate) fn lock_handle() -> std::sync::MutexGuard<'static, Option<PrivStackHandle>> {
+    HANDLE.lock().unwrap_or_else(|poisoned| {
+        eprintln!("[FFI] recovering from poisoned HANDLE mutex");
+        poisoned.into_inner()
+    })
+}
 
 // ============================================================================
 // Core Functions
@@ -489,6 +502,34 @@ fn init_core(path: &str) -> PrivStackError {
         .map(|h| h.to_string_lossy().to_string())
         .unwrap_or_else(|_| "PrivStack Device".to_string());
 
+    // Dataset store (unencrypted DuckDB for tabular data)
+    let dataset_store = {
+        let ds_path = if path == ":memory:" {
+            None
+        } else {
+            Some(Path::new(path).with_extension("datasets.duckdb"))
+        };
+        match ds_path {
+            Some(p) => {
+                eprintln!("[FFI] Opening dataset store: {}", p.display());
+                match privstack_datasets::DatasetStore::open(&p) {
+                    Ok(ds) => {
+                        eprintln!("[FFI] Dataset store opened OK");
+                        Some(ds)
+                    }
+                    Err(e) => {
+                        eprintln!("[FFI] WARN: Failed to open dataset store: {e:?}");
+                        None
+                    }
+                }
+            }
+            None => match privstack_datasets::DatasetStore::open_in_memory() {
+                Ok(ds) => Some(ds),
+                Err(_) => None,
+            },
+        }
+    };
+
     let mut handle = HANDLE.lock().unwrap();
     *handle = Some(PrivStackHandle {
         db_path: path.to_string(),
@@ -509,6 +550,7 @@ fn init_core(path: &str) -> PrivStackError {
         activation_store,
         vault_manager,
         blob_store,
+        dataset_store,
     });
 
     PrivStackError::Ok
@@ -625,6 +667,34 @@ where
         .map(|h| h.to_string_lossy().to_string())
         .unwrap_or_else(|_| "PrivStack Device".to_string());
 
+    // Dataset store (unencrypted DuckDB for tabular data)
+    let dataset_store = {
+        let ds_path = if path == ":memory:" {
+            None
+        } else {
+            Some(Path::new(path).with_extension("datasets.duckdb"))
+        };
+        match ds_path {
+            Some(p) => {
+                eprintln!("[FFI] Opening dataset store: {}", p.display());
+                match privstack_datasets::DatasetStore::open(&p) {
+                    Ok(ds) => {
+                        eprintln!("[FFI] Dataset store opened OK");
+                        Some(ds)
+                    }
+                    Err(e) => {
+                        eprintln!("[FFI] WARN: Failed to open dataset store: {e:?}");
+                        None
+                    }
+                }
+            }
+            None => match privstack_datasets::DatasetStore::open_in_memory() {
+                Ok(ds) => Some(ds),
+                Err(_) => None,
+            },
+        }
+    };
+
     let mut handle = HANDLE.lock().unwrap();
     *handle = Some(PrivStackHandle {
         db_path: path.to_string(),
@@ -645,6 +715,7 @@ where
         activation_store,
         vault_manager,
         blob_store,
+        dataset_store,
         plugin_host,
     });
 

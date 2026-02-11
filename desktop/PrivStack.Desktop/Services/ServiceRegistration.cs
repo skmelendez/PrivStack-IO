@@ -6,6 +6,7 @@ using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Desktop.Services.Update;
 using PrivStack.Desktop.ViewModels;
 using PrivStack.Sdk;
+using PrivStack.Sdk.Capabilities;
 
 namespace PrivStack.Desktop.Services;
 
@@ -62,6 +63,7 @@ public static class ServiceRegistration
         services.AddSingleton<WhisperModelManager>();
         services.AddSingleton<ViewStatePrefetchService>();
         services.AddSingleton<LinkProviderCacheService>();
+        services.AddSingleton<IDatasetService, DatasetService>();
 
         // ViewModels (transient — created fresh each resolution)
         services.AddTransient<MainWindowViewModel>();

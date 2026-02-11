@@ -13,15 +13,15 @@ public class SystemNotificationService : ISystemNotificationService
 {
     private static readonly ILogger _log = Log.ForContext<SystemNotificationService>();
 
-    public async Task<bool> SendNotificationAsync(string title, string body, string? subtitle = null)
+    public async Task<bool> SendNotificationAsync(string title, string body, string? subtitle = null, bool playSound = true)
     {
         try
         {
             if (OperatingSystem.IsMacOS())
-                return await SendMacNotificationAsync(title, body, subtitle);
+                return await SendMacNotificationAsync(title, body, subtitle, playSound);
 
             if (OperatingSystem.IsWindows())
-                return await SendWindowsNotificationAsync(title, body, subtitle);
+                return await SendWindowsNotificationAsync(title, body, subtitle, playSound);
 
             if (OperatingSystem.IsLinux())
                 return await SendLinuxNotificationAsync(title, body);
@@ -36,7 +36,7 @@ public class SystemNotificationService : ISystemNotificationService
         }
     }
 
-    private static async Task<bool> SendMacNotificationAsync(string title, string body, string? subtitle)
+    private static async Task<bool> SendMacNotificationAsync(string title, string body, string? subtitle, bool playSound)
     {
         var escapedTitle = EscapeAppleScript(title);
         var escapedBody = EscapeAppleScript(body);
@@ -45,20 +45,24 @@ public class SystemNotificationService : ISystemNotificationService
             ? $"display notification \"{escapedBody}\" with title \"{escapedTitle}\" subtitle \"{EscapeAppleScript(subtitle)}\""
             : $"display notification \"{escapedBody}\" with title \"{escapedTitle}\"";
 
-        // Use ArgumentList so the script is passed as a single argument to -e
+        if (playSound)
+            script += " sound name \"default\"";
+
         return await RunProcessWithArgsAsync("osascript", ["-e", script]);
     }
 
-    private static async Task<bool> SendWindowsNotificationAsync(string title, string body, string? subtitle)
+    private static async Task<bool> SendWindowsNotificationAsync(string title, string body, string? subtitle, bool playSound)
     {
         var displayBody = subtitle != null ? $"{subtitle}\n{body}" : body;
         var escapedTitle = EscapePowerShell(title);
         var escapedBody = EscapePowerShell(displayBody);
 
+        var audioElement = playSound ? "" : "<audio silent='true'/>";
+
         var ps = $"[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; " +
                  $"[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null; " +
                  $"$xml = New-Object Windows.Data.Xml.Dom.XmlDocument; " +
-                 $"$template = '<toast><visual><binding template=\"ToastGeneric\"><text>{escapedTitle}</text><text>{escapedBody}</text></binding></visual></toast>'; " +
+                 $"$template = '<toast><visual><binding template=\"ToastGeneric\"><text>{escapedTitle}</text><text>{escapedBody}</text></binding></visual>{audioElement}</toast>'; " +
                  $"$xml.LoadXml($template); " +
                  $"$toast = New-Object Windows.UI.Notifications.ToastNotification $xml; " +
                  $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('PrivStack').Show($toast)";

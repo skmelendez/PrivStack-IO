@@ -670,13 +670,21 @@ public sealed class BacklinkService
     }
 
     /// <summary>
-    /// Extracts explicit links from custom_fields (linked_items and task_links arrays)
-    /// and top-level linked_items (used by sticky notes with privstack://type/id URIs).
+    /// Extracts explicit links from custom_fields (linked_items and task_links arrays),
+    /// top-level linked_items (sticky notes), and foreign-key fields (project_id).
     /// Returns a list of "type:id" strings.
     /// </summary>
     private static List<string> ExtractExplicitLinksFromCustomFields(JsonElement item)
     {
         var links = new List<string>();
+
+        // Top-level project_id (tasks → projects)
+        if (item.TryGetProperty("project_id", out var projectIdProp) &&
+            projectIdProp.ValueKind == JsonValueKind.String &&
+            !string.IsNullOrEmpty(projectIdProp.GetString()))
+        {
+            links.Add($"project:{projectIdProp.GetString()}");
+        }
 
         // Top-level linked_items (e.g. sticky notes store privstack://type/id URIs)
         if (item.TryGetProperty("linked_items", out var topLinkedItems) &&

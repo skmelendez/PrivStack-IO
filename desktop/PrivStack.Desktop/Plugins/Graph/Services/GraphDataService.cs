@@ -87,9 +87,10 @@ public sealed class GraphDataService
         // Create parent-child edges from page hierarchy
         await CreateParentChildEdgesAsync(graphData, edgeSet);
 
-        // Create company/group membership edges
+        // Create structural membership edges (company, group, project)
         await CreateCompanyMembershipEdgesAsync(graphData, edgeSet);
         await CreateGroupMembershipEdgesAsync(graphData, edgeSet);
+        await CreateProjectMembershipEdgesAsync(graphData, edgeSet);
 
         // Parse links from content fields
         await ParseLinksAsync(graphData, edgeSet);
@@ -346,11 +347,31 @@ public sealed class GraphDataService
     }
 
     /// <summary>
-    /// Extracts explicit links from custom_fields (linked_items and task_links arrays).
-    /// This handles the Tasks plugin's linked items which are stored separately from content.
+    /// Extracts explicit links from custom_fields (linked_items and task_links arrays)
+    /// and top-level foreign-key fields (project_id).
     /// </summary>
     private void ParseExplicitLinksFromCustomFields(string sourceKey, JsonElement item, GraphData graphData, HashSet<(string, string)> edgeSet)
     {
+        // Top-level project_id (tasks → projects)
+        if (item.TryGetProperty("project_id", out var projectIdProp) &&
+            projectIdProp.ValueKind == JsonValueKind.String &&
+            !string.IsNullOrEmpty(projectIdProp.GetString()))
+        {
+            var projectKey = $"project:{projectIdProp.GetString()}";
+            if (sourceKey != projectKey && graphData.Nodes.ContainsKey(projectKey))
+            {
+                if (edgeSet.Add((sourceKey, projectKey)))
+                {
+                    graphData.Edges.Add(new GraphEdge
+                    {
+                        SourceId = sourceKey,
+                        TargetId = projectKey,
+                        Type = EdgeType.ProjectMembership,
+                    });
+                }
+            }
+        }
+
         if (!item.TryGetProperty("custom_fields", out var customFields))
             return;
 
@@ -520,6 +541,57 @@ public sealed class GraphDataService
         catch (Exception ex)
         {
             _log.Warning(ex, "GraphDataService: failed to load contact group relationships");
+        }
+    }
+
+    /// <summary>
+    /// Creates edges between tasks and their projects via project_id field.
+    /// </summary>
+    private async Task CreateProjectMembershipEdgesAsync(GraphData graphData, HashSet<(string, string)> edgeSet)
+    {
+        try
+        {
+            var response = await _sdk.SendAsync<List<JsonElement>>(new SdkMessage
+            {
+                PluginId = "privstack.graph",
+                Action = SdkAction.ReadList,
+                EntityType = "task",
+            });
+
+            if (response.Data == null) return;
+
+            var count = 0;
+            foreach (var item in response.Data)
+            {
+                var id = item.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                if (string.IsNullOrEmpty(id)) continue;
+
+                var projectId = item.TryGetProperty("project_id", out var pProp) ? pProp.GetString() : null;
+                if (string.IsNullOrEmpty(projectId)) continue;
+
+                var taskKey = $"task:{id}";
+                var projectKey = $"project:{projectId}";
+
+                if (!graphData.Nodes.ContainsKey(taskKey) || !graphData.Nodes.ContainsKey(projectKey)) continue;
+
+                if (edgeSet.Add((taskKey, projectKey)))
+                {
+                    graphData.Edges.Add(new GraphEdge
+                    {
+                        SourceId = taskKey,
+                        TargetId = projectKey,
+                        Type = EdgeType.ProjectMembership,
+                    });
+                    count++;
+                }
+            }
+
+            if (count > 0)
+                _log.Information("GraphDataService: created {Count} project membership edges", count);
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "GraphDataService: failed to load task project relationships");
         }
     }
 

@@ -36,6 +36,10 @@ internal sealed class PluginHostFactory
 
         // Register the default local filesystem storage provider
         _capabilityBroker.Register<IStorageProvider>(new LocalStorageProvider());
+
+        // Register dataset service for cross-plugin access
+        var datasetService = App.Services.GetRequiredService<IDatasetService>();
+        _capabilityBroker.Register<IDatasetService>(datasetService);
     }
 
     public IPluginHost CreateHost(string pluginId)
