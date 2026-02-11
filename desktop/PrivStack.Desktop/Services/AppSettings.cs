@@ -160,6 +160,9 @@ public class AppSettings
     [JsonPropertyName("audio_input_device")]
     public string? AudioInputDevice { get; set; }
 
+    [JsonPropertyName("whisper_beam_search")]
+    public bool WhisperBeamSearch { get; set; }
+
     // Sync settings
     [JsonPropertyName("sync_device_name")]
     public string? SyncDeviceName { get; set; }

@@ -90,7 +90,7 @@ public partial class MainWindow : Window
                     InsertTextIntoEditor(editor, transcription);
                     break;
                 case RichTextEditorControl rte:
-                    rte.InsertAtCaret(transcription);
+                    rte.InsertTranscription(transcription);
                     rte.Focus();
                     break;
             }
