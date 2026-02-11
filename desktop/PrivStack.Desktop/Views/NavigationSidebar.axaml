@@ -453,12 +453,20 @@
                                                 Command="{Binding ToggleUserMenuCommand}">
                                             <StackPanel Orientation="Horizontal" Spacing="10">
                                                 <Border Width="24" Height="24" CornerRadius="12"
+                                                        ClipToBounds="True"
                                                         Background="{DynamicResource ThemePrimaryBrush}">
-                                                    <TextBlock Text="{Binding UserInitial}"
-                                                               FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="SemiBold"
-                                                               Foreground="White"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"/>
+                                                    <Panel>
+                                                        <Image Source="{Binding UserProfileImage}"
+                                                               IsVisible="{Binding HasProfileImage}"
+                                                               Width="24" Height="24"
+                                                               Stretch="UniformToFill"/>
+                                                        <TextBlock Text="{Binding UserInitial}"
+                                                                   IsVisible="{Binding !HasProfileImage}"
+                                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="SemiBold"
+                                                                   Foreground="White"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Panel>
                                                 </Border>
                                                 <TextBlock Text="{Binding UserDisplayName}"
                                                            FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Medium"
@@ -483,7 +491,7 @@
                                     </Grid>
 
                                 </StackPanel>
-            
+
                                 <!-- Collapsed footer (icons only) -->
                                 <StackPanel IsVisible="{Binding IsSidebarCollapsed}"
                                             HorizontalAlignment="Stretch" Spacing="4">
@@ -594,12 +602,20 @@
                                                 Command="{Binding ToggleUserMenuCommand}"
                                                 ToolTip.Tip="{Binding UserDisplayName}">
                                             <Border Width="24" Height="24" CornerRadius="12"
+                                                    ClipToBounds="True"
                                                     Background="{DynamicResource ThemePrimaryBrush}">
-                                                <TextBlock Text="{Binding UserInitial}"
-                                                           FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="SemiBold"
-                                                           Foreground="White"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
+                                                <Panel>
+                                                    <Image Source="{Binding UserProfileImage}"
+                                                           IsVisible="{Binding HasProfileImage}"
+                                                           Width="24" Height="24"
+                                                           Stretch="UniformToFill"/>
+                                                    <TextBlock Text="{Binding UserInitial}"
+                                                               IsVisible="{Binding !HasProfileImage}"
+                                                               FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="SemiBold"
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Panel>
                                             </Border>
                                         </Button>
 

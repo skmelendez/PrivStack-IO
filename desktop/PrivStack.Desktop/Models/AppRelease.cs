@@ -4,8 +4,31 @@ namespace PrivStack.Desktop.Models;
 
 /// <summary>
 /// Response from GET /api/releases/latest (public, no auth required).
+/// The API returns platforms as a dictionary keyed by platform name.
 /// </summary>
 public record LatestReleaseInfo
+{
+    [JsonPropertyName("platforms")]
+    public Dictionary<string, PlatformReleaseGroup> Platforms { get; init; } = new();
+
+    /// <summary>Latest version across all platforms (from the first platform group).</summary>
+    [JsonIgnore]
+    public string Version => Platforms.Values.FirstOrDefault()?.Version ?? string.Empty;
+
+    /// <summary>Published timestamp (from the first platform group).</summary>
+    [JsonIgnore]
+    public string? PublishedAt => Platforms.Values.FirstOrDefault()?.PublishedAt;
+
+    /// <summary>Flattened list of all release artifacts across all platforms.</summary>
+    [JsonIgnore]
+    public IReadOnlyList<ReleasePlatformInfo> AllReleases =>
+        Platforms.Values.SelectMany(g => g.Releases).ToList();
+}
+
+/// <summary>
+/// A group of release artifacts for a single platform (e.g. "windows", "macos").
+/// </summary>
+public record PlatformReleaseGroup
 {
     [JsonPropertyName("version")]
     public string Version { get; init; } = string.Empty;
@@ -13,8 +36,8 @@ public record LatestReleaseInfo
     [JsonPropertyName("published_at")]
     public string? PublishedAt { get; init; }
 
-    [JsonPropertyName("platforms")]
-    public List<ReleasePlatformInfo> Platforms { get; init; } = [];
+    [JsonPropertyName("releases")]
+    public List<ReleasePlatformInfo> Releases { get; init; } = [];
 }
 
 /// <summary>

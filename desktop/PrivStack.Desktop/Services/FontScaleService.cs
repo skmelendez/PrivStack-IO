@@ -24,14 +24,22 @@ public class FontScaleService : IFontScaleService
     /// Maps font family setting keys to FontFamily values.
     /// "system" uses the default theme font; bundled fonts use avares:// URIs.
     /// </summary>
+    /// <summary>
+    /// Fallback fonts appended to every bundled font so that Unicode symbols
+    /// (e.g. ★ ☆) still render when the primary face lacks the glyph.
+    /// Mirrors the chain defined in each theme's ThemeFontSans resource.
+    /// </summary>
+    private const string FontFallbacks =
+        ", Segoe UI, -apple-system, Noto Sans, sans-serif, Segoe UI Emoji, Noto Color Emoji";
+
     private static readonly Dictionary<string, string> FontFamilyMap = new()
     {
-        ["system"] = "", // empty = use theme default (Inter)
-        ["ibm-plex-sans"] = "avares://PrivStack.Desktop/Assets/Fonts#IBM Plex Sans",
-        ["lexend"] = "avares://PrivStack.Desktop/Assets/Fonts#Lexend",
-        ["nunito"] = "avares://PrivStack.Desktop/Assets/Fonts#Nunito",
-        ["atkinson"] = "avares://PrivStack.Desktop/Assets/Fonts#Atkinson Hyperlegible",
-        ["opendyslexic"] = "avares://PrivStack.Desktop/Assets/Fonts#OpenDyslexic",
+        ["system"] = "", // empty = use theme default (Inter + fallbacks)
+        ["ibm-plex-sans"] = "avares://PrivStack.Desktop/Assets/Fonts#IBM Plex Sans" + FontFallbacks,
+        ["lexend"] = "avares://PrivStack.Desktop/Assets/Fonts#Lexend" + FontFallbacks,
+        ["nunito"] = "avares://PrivStack.Desktop/Assets/Fonts#Nunito" + FontFallbacks,
+        ["atkinson"] = "avares://PrivStack.Desktop/Assets/Fonts#Atkinson Hyperlegible" + FontFallbacks,
+        ["opendyslexic"] = "avares://PrivStack.Desktop/Assets/Fonts#OpenDyslexic" + FontFallbacks,
     };
 
     /// <summary>

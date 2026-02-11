@@ -23,6 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Controls\EmojiPicker\EmojiCatalog.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PrivStack.Sdk\PrivStack.Sdk.csproj" />
   </ItemGroup>
 
