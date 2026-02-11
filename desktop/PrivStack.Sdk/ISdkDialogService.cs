@@ -22,6 +22,11 @@ public interface ISdkDialogService
     Task<string?> ShowSaveFileDialogAsync(string title, string defaultFileName, (string Name, string Extension)[] filters);
 
     /// <summary>
+    /// Shows an open folder dialog and returns the selected folder path.
+    /// </summary>
+    Task<string?> ShowOpenFolderDialogAsync(string title);
+
+    /// <summary>
     /// Shows a plugin-created dialog as a modal window hosted by the shell.
     /// The factory must return an Avalonia Window; the host provides the owner
     /// window and calls ShowDialog.

@@ -25,6 +25,9 @@ internal sealed class SdkDialogServiceAdapter : ISdkDialogService
     public Task<string?> ShowSaveFileDialogAsync(string title, string defaultFileName, (string Name, string Extension)[] filters)
         => _dialogService.ShowSaveFileDialogAsync(title, defaultFileName, filters);
 
+    public Task<string?> ShowOpenFolderDialogAsync(string title)
+        => _dialogService.ShowOpenFolderDialogAsync(title);
+
     public async Task<TResult?> ShowDialogAsync<TResult>(Func<object> windowFactory) where TResult : class
     {
         var owner = _dialogService.Owner;

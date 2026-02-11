@@ -157,7 +157,8 @@
         </Border>
 
         <!-- ==================== OVERVIEW TAB ==================== -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="24,0,24,24"
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Padding="24,0,24,24"
                       IsVisible="{Binding IsOverviewTab}">
             <StackPanel Spacing="20">
 
@@ -355,10 +356,12 @@
                                HorizontalAlignment="Center"
                                Margin="0,24"/>
 
-                    <ItemsControl ItemsSource="{Binding FilteredPlugins}">
+                    <ItemsControl x:Name="PluginGridHost" ItemsSource="{Binding FilteredPlugins}"
+                                  SizeChanged="OnPluginGridSizeChanged">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
+                                <UniformGrid x:Name="PluginGrid" Columns="3"
+                                             ColumnSpacing="10" RowSpacing="10"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
@@ -366,8 +369,7 @@
                                 <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
                                         CornerRadius="10"
                                         Padding="16"
-                                        Margin="0,0,10,10"
-                                        Width="280"
+                                        MinWidth="220"
                                         BorderBrush="{DynamicResource ThemeBorderBrush}"
                                         BorderThickness="1">
                                     <Grid RowDefinitions="Auto,*,Auto">
@@ -710,7 +712,28 @@
                                            IsVisible="{Binding IsRunningMaintenance}"/>
                             </StackPanel>
                         </Button>
+                        <Button Command="{Binding ValidateMetadataCommand}"
+                                IsEnabled="{Binding !IsValidatingMetadata}"
+                                Background="{DynamicResource ThemeHoverBrush}"
+                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                Padding="16,8" CornerRadius="6"
+                                FontSize="{DynamicResource ThemeFontSizeSm}"
+                                ToolTip.Tip="Scans for orphaned metadata records and removes them">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="&#x1F50D;" VerticalAlignment="Center"/>
+                                <TextBlock Text="Validate Metadata" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsValidatingMetadata}"/>
+                                <TextBlock Text="Validating..." VerticalAlignment="Center"
+                                           IsVisible="{Binding IsValidatingMetadata}"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
+
+                    <!-- Validation status -->
+                    <TextBlock Text="{Binding ValidationStatus}"
+                               IsVisible="{Binding ValidationStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
 
                     <!-- Loading indicator -->
                     <TextBlock Text="Loading data metrics..."

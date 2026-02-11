@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Plugins.Dashboard.Services;
+using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Sdk;
@@ -17,7 +18,7 @@ public sealed class DashboardPlugin : PluginBase<DashboardViewModel>
         Id = "privstack.dashboard",
         Name = "Dashboard",
         Description = "System overview, plugin marketplace, and management dashboard",
-        Version = new Version(1, 1, 0),
+        Version = new Version(1, 2, 0),
         Author = "PrivStack",
         Icon = "LayoutDashboard",
         NavigationOrder = 50,
@@ -42,7 +43,10 @@ public sealed class DashboardPlugin : PluginBase<DashboardViewModel>
         var pluginRegistry = App.Services.GetRequiredService<IPluginRegistry>();
         var sdk = App.Services.GetRequiredService<IPrivStackSdk>();
         var metricsService = new SystemMetricsService();
-        return new DashboardViewModel(installService, pluginRegistry, metricsService, sdk);
+        var entityMetadataService = App.Services.GetRequiredService<EntityMetadataService>();
+        var linkProviderCache = App.Services.GetRequiredService<LinkProviderCacheService>();
+        return new DashboardViewModel(installService, pluginRegistry, metricsService, sdk,
+            entityMetadataService, linkProviderCache);
     }
 
     public override async Task OnNavigatedToAsync(CancellationToken cancellationToken = default)

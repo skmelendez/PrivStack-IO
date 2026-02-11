@@ -31,18 +31,24 @@ public partial class DashboardViewModel : ViewModelBase
     private readonly IPluginRegistry _pluginRegistry;
     private readonly SystemMetricsService _metricsService;
     private readonly IPrivStackSdk _sdk;
+    private readonly EntityMetadataService _entityMetadataService;
+    private readonly LinkProviderCacheService _linkProviderCache;
     private List<OfficialPluginInfo> _serverPlugins = [];
 
     internal DashboardViewModel(
         IPluginInstallService installService,
         IPluginRegistry pluginRegistry,
         SystemMetricsService metricsService,
-        IPrivStackSdk sdk)
+        IPrivStackSdk sdk,
+        EntityMetadataService entityMetadataService,
+        LinkProviderCacheService linkProviderCache)
     {
         _installService = installService;
         _pluginRegistry = pluginRegistry;
         _metricsService = metricsService;
         _sdk = sdk;
+        _entityMetadataService = entityMetadataService;
+        _linkProviderCache = linkProviderCache;
     }
 
     // --- Tab State ---
@@ -119,6 +125,12 @@ public partial class DashboardViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isRunningMaintenance;
+
+    [ObservableProperty]
+    private bool _isValidatingMetadata;
+
+    [ObservableProperty]
+    private string? _validationStatus;
 
     public ObservableCollection<PluginDataInfo> PluginDataItems { get; } = [];
 
@@ -404,6 +416,33 @@ public partial class DashboardViewModel : ViewModelBase
         finally
         {
             IsRunningMaintenance = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ValidateMetadataAsync()
+    {
+        try
+        {
+            IsValidatingMetadata = true;
+            ValidationStatus = null;
+
+            var result = await _entityMetadataService.ValidateAndCleanOrphansAsync(_linkProviderCache);
+
+            ValidationStatus = result.OrphansRemoved > 0
+                ? $"Cleaned {result.OrphansRemoved} orphaned metadata record{(result.OrphansRemoved == 1 ? "" : "s")} (scanned {result.TotalScanned})"
+                : $"No orphans found — all {result.TotalScanned} metadata records are valid";
+
+            if (result.OrphansRemoved > 0)
+                await LoadDataMetricsAsync();
+        }
+        catch (Exception ex)
+        {
+            ValidationStatus = $"Validation failed: {ex.Message}";
+        }
+        finally
+        {
+            IsValidatingMetadata = false;
         }
     }
 
