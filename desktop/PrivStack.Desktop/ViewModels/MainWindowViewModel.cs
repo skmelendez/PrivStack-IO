@@ -1042,6 +1042,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>
     /// Navigates to a linked item by finding the appropriate IDeepLinkTarget plugin.
+    /// Uses lightweight tab switching to avoid destroying info panel state
+    /// (ClearActiveItem + full OnNavigatedToAsync) which causes the neuron graph
+    /// to lose data due to cascading async cancellations.
     /// </summary>
     public async Task NavigateToLinkedItemAsync(string linkType, string itemId)
     {
@@ -1067,7 +1070,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (targetPlugin?.NavigationItem != null)
         {
-            await SelectTab(targetPlugin.NavigationItem.Id);
+            var navItemId = targetPlugin.NavigationItem.Id;
+            if (navItemId != SelectedTab)
+            {
+                // Cross-plugin: lightweight tab switch without ClearActiveItem or
+                // OnNavigatedToAsync — NavigateToItemAsync will set the correct item.
+                await SelectTabForEntityNavigation(navItemId);
+            }
+            // Same-tab: skip tab switch entirely — no need to clear/reload.
         }
 
         await target.NavigateToItemAsync(itemId);
