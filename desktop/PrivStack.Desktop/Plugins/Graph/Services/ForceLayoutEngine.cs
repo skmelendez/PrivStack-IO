@@ -40,10 +40,12 @@ public class ForceLayoutEngine
         if (nodes.Count == 0) return;
 
         ApplyManyBodyForce(nodes);
-        ApplyLinkForce(nodes);
         ApplyCollisionForce(nodes);
         ApplyCenterForce(nodes);
         UpdatePositions(nodes);
+
+        // Rigid link distance constraint (post-velocity, direct displacement)
+        EnforceLinkDistance(nodes);
 
         _params.Alpha += (_params.AlphaMin - _params.Alpha) * _params.AlphaDecay;
     }
@@ -69,14 +71,20 @@ public class ForceLayoutEngine
         }
     }
 
-    private void ApplyLinkForce(List<GraphNode> nodes)
+    /// <summary>
+    /// Rigid distance constraint: connected nodes are held at exactly LinkDistance.
+    /// Applied as direct position displacement after velocity integration so it
+    /// cannot be damped away. Each node moves half the deficit.
+    /// </summary>
+    private void EnforceLinkDistance(List<GraphNode> nodes)
     {
         if (_graphData == null) return;
         var nodeMap = _graphData.Nodes;
 
         foreach (var edge in _graphData.Edges)
         {
-            if (!nodeMap.TryGetValue(edge.SourceId, out var source) || !nodeMap.TryGetValue(edge.TargetId, out var target))
+            if (!nodeMap.TryGetValue(edge.SourceId, out var source) ||
+                !nodeMap.TryGetValue(edge.TargetId, out var target))
                 continue;
 
             var dx = target.X - source.X;
@@ -84,12 +92,12 @@ public class ForceLayoutEngine
             var dist = Math.Sqrt(dx * dx + dy * dy);
             if (dist < 1) dist = 1;
 
-            var force = (dist - _params.LinkDistance) * _params.LinkStrength;
-            var fx = dx / dist * force;
-            var fy = dy / dist * force;
+            var correction = (dist - _params.LinkDistance) * 0.5;
+            var nx = dx / dist;
+            var ny = dy / dist;
 
-            if (!source.IsDragging && !source.IsPinned) { source.Vx += fx; source.Vy += fy; }
-            if (!target.IsDragging && !target.IsPinned) { target.Vx -= fx; target.Vy -= fy; }
+            if (!source.IsDragging && !source.IsPinned) { source.X += nx * correction; source.Y += ny * correction; }
+            if (!target.IsDragging && !target.IsPinned) { target.X -= nx * correction; target.Y -= ny * correction; }
         }
     }
 
