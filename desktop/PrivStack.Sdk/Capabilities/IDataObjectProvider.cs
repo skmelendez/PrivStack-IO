@@ -20,7 +20,4 @@ public interface IDataObjectProvider
 
     /// <summary>Get all saved query views (queries with IsView=true).</summary>
     Task<IReadOnlyList<SavedQueryInfo>> GetSavedQueryViewsAsync(CancellationToken ct = default);
-
-    /// <summary>Execute read-only SQL against the datasets database (for view-backed tables).</summary>
-    Task<DatasetQueryResult> ExecuteSqlAsync(string sql, int page, int pageSize, CancellationToken ct = default);
 }
