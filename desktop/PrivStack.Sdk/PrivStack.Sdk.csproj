@@ -10,11 +10,17 @@
     <PackageId>PrivStack.Sdk</PackageId>
     <Authors>PrivStack</Authors>
     <Description>SDK for building PrivStack plugins. Provides base classes, entity schemas, messaging, and capability interfaces.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/PrivStackApp/PrivStack-IO</RepositoryUrl>
     <PackageProjectUrl>https://privstack.io</PackageProjectUrl>
     <PackageTags>privstack;plugin;sdk</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />

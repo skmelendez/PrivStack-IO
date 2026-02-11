@@ -10,11 +10,17 @@
     <PackageId>PrivStack.UI.Adaptive</PackageId>
     <Authors>PrivStack</Authors>
     <Description>Adaptive UI components for PrivStack plugins. Provides themed controls, editor integration, and layout primitives built on Avalonia.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/PrivStackApp/PrivStack-IO</RepositoryUrl>
     <PackageProjectUrl>https://privstack.io</PackageProjectUrl>
     <PackageTags>privstack;plugin;ui;avalonia</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PrivStack.Sdk\PrivStack.Sdk.csproj" />
