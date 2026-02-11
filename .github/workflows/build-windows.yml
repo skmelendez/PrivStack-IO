@@ -23,7 +23,7 @@ permissions:
 
 env:
   DOTNET_VERSION: '9.0.x'
-  RUST_VERSION: '1.85'
+  RUST_VERSION: '1.88'
 
 jobs:
   build-sign-deploy:
