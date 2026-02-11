@@ -720,6 +720,131 @@ public sealed class EntityMetadataService
     }
 
     // =========================================================================
+    // Orphaned Metadata Validation
+    // =========================================================================
+
+    public record MetadataValidationResult(int TotalScanned, int OrphansRemoved, int SkippedUnknownType);
+
+    /// <summary>
+    /// Scans all entity_metadata records and deletes any whose target entity no longer exists.
+    /// Unknown target types are skipped (not deleted) since orphan status can't be confirmed.
+    /// </summary>
+    public async Task<MetadataValidationResult> ValidateAndCleanOrphansAsync(
+        LinkProviderCacheService linkProviderCache, CancellationToken ct = default)
+    {
+        _log.Information("ValidateAndCleanOrphans: starting metadata validation");
+
+        var response = await _sdk.SendAsync<List<JsonElement>>(new SdkMessage
+        {
+            PluginId = PluginId,
+            Action = SdkAction.ReadList,
+            EntityType = MetaEntityType,
+        }, ct);
+
+        var metaRecords = response.Data;
+        if (metaRecords is not { Count: > 0 })
+        {
+            _log.Information("ValidateAndCleanOrphans: no metadata records found");
+            return new MetadataValidationResult(0, 0, 0);
+        }
+
+        // Extract (metaId, targetType, targetId) from each record
+        var entries = new List<(string MetaId, string TargetType, string TargetId)>();
+        foreach (var record in metaRecords)
+        {
+            var metaId = record.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+            var targetType = record.TryGetProperty("target_type", out var typeProp) ? typeProp.GetString() : null;
+            var targetId = record.TryGetProperty("target_id", out var tidProp) ? tidProp.GetString() : null;
+
+            if (metaId != null && targetType != null && targetId != null)
+                entries.Add((metaId, targetType, targetId));
+        }
+
+        var totalScanned = entries.Count;
+        int skippedUnknownType = 0;
+
+        // For each unique target type, load all valid entity IDs
+        var validIdsByType = new Dictionary<string, HashSet<string>>();
+
+        foreach (var group in entries.GroupBy(e => e.TargetType))
+        {
+            var linkType = group.Key;
+            var entityType = EntityTypeMap.GetEntityType(linkType);
+            if (entityType == null)
+            {
+                _log.Warning("ValidateAndCleanOrphans: unknown target_type '{TargetType}', skipping {Count} records",
+                    linkType, group.Count());
+                skippedUnknownType += group.Count();
+                continue;
+            }
+
+            var pluginId = linkProviderCache.GetPluginIdForLinkType(linkType) ?? PluginId;
+
+            try
+            {
+                var entityResponse = await _sdk.SendAsync<List<JsonElement>>(new SdkMessage
+                {
+                    PluginId = pluginId,
+                    Action = SdkAction.ReadList,
+                    EntityType = entityType,
+                }, ct);
+
+                var ids = new HashSet<string>();
+                if (entityResponse.Data != null)
+                {
+                    foreach (var entity in entityResponse.Data)
+                    {
+                        var id = entity.TryGetProperty("id", out var eProp) ? eProp.GetString() : null;
+                        if (id != null) ids.Add(id);
+                    }
+                }
+
+                validIdsByType[linkType] = ids;
+                _log.Debug("ValidateAndCleanOrphans: {Count} valid IDs for {LinkType}", ids.Count, linkType);
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "ValidateAndCleanOrphans: failed to load entities for {LinkType}, skipping", linkType);
+                skippedUnknownType += group.Count();
+            }
+        }
+
+        // Delete metadata records whose target entity no longer exists
+        int orphansRemoved = 0;
+        foreach (var entry in entries)
+        {
+            if (!validIdsByType.TryGetValue(entry.TargetType, out var ids))
+                continue;
+
+            if (!ids.Contains(entry.TargetId))
+            {
+                try
+                {
+                    await _sdk.SendAsync(new SdkMessage
+                    {
+                        PluginId = PluginId,
+                        Action = SdkAction.Delete,
+                        EntityType = MetaEntityType,
+                        EntityId = entry.MetaId,
+                    }, ct);
+                    orphansRemoved++;
+                }
+                catch (Exception ex)
+                {
+                    _log.Warning(ex, "ValidateAndCleanOrphans: failed to delete orphan {MetaId}", entry.MetaId);
+                }
+            }
+        }
+
+        InvalidateAll();
+
+        _log.Information("ValidateAndCleanOrphans: scanned {Total}, removed {Orphans}, skipped {Skipped}",
+            totalScanned, orphansRemoved, skippedUnknownType);
+
+        return new MetadataValidationResult(totalScanned, orphansRemoved, skippedUnknownType);
+    }
+
+    // =========================================================================
     // Cache Invalidation
     // =========================================================================
 

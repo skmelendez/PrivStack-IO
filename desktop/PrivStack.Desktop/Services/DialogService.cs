@@ -131,4 +131,30 @@ public class DialogService : IDialogService
             throw;
         }
     }
+
+    public async Task<string?> ShowOpenFolderDialogAsync(string title)
+    {
+        if (_owner == null)
+        {
+            _log.Warning("ShowOpenFolderDialogAsync called but owner is null");
+            return null;
+        }
+
+        try
+        {
+            var storageProvider = _owner.StorageProvider;
+            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = title,
+                AllowMultiple = false
+            });
+
+            return folders.FirstOrDefault()?.Path.LocalPath;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Error showing open folder dialog");
+            throw;
+        }
+    }
 }
