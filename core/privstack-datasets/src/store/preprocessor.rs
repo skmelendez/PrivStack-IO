@@ -54,7 +54,7 @@ pub fn preprocess_sql(
 /// Classify the SQL statement type from its first keyword.
 fn classify_sql(sql: &str) -> StatementType {
     let upper = sql.trim().to_uppercase();
-    if upper.starts_with("SELECT") {
+    if upper.starts_with("SELECT") || upper.starts_with("WITH") {
         StatementType::Select
     } else if upper.starts_with("INSERT") {
         StatementType::Insert
