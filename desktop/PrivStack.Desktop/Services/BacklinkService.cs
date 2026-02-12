@@ -265,6 +265,7 @@ public sealed class BacklinkService
         var entityMap = new Dictionary<string, (string Title, string LinkType, DateTimeOffset? ModifiedAt, string? Icon)>();
         var entityContents = new Dictionary<string, string>(); // key → concatenated content
         var entityExplicitLinks = new Dictionary<string, List<string>>(); // key → list of "type:id" explicit links
+        var entityTags = new Dictionary<string, List<string>>(); // key → list of tag names
 
         // Load all entity types in parallel
         var tasks = EntityTypes.Select(et => LoadEntitiesAsync(et.EntityType, et.LinkType, ct)).ToArray();
@@ -276,7 +277,7 @@ public sealed class BacklinkService
             var entityType = EntityTypes[i].EntityType;
             var icon = EntityTypes[i].Icon;
             var withContent = 0;
-            foreach (var (id, title, content, explicitLinks, modifiedAt) in results[i])
+            foreach (var (id, title, content, explicitLinks, modifiedAt, tags) in results[i])
             {
                 var key = $"{linkType}:{id}";
                 entityMap[key] = (title, linkType, modifiedAt, icon);
@@ -288,6 +289,10 @@ public sealed class BacklinkService
                 if (explicitLinks.Count > 0)
                 {
                     entityExplicitLinks[key] = explicitLinks;
+                }
+                if (tags.Count > 0)
+                {
+                    entityTags[key] = tags;
                 }
             }
             _log.Information("BacklinkService: loaded {Count} {EntityType} entities ({WithContent} with content)",
@@ -526,6 +531,58 @@ public sealed class BacklinkService
         if (parentChildCount > 0)
             _log.Information("BacklinkService: added {Count} parent-child relationships", parentChildCount);
 
+        // Create tag virtual nodes and edges (item ↔ tag)
+        var tagNodeCount = 0;
+        var tagToItems = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (entityKey, tags) in entityTags)
+        {
+            foreach (var tag in tags)
+            {
+                if (string.IsNullOrWhiteSpace(tag)) continue;
+                if (!tagToItems.TryGetValue(tag, out var items)) { items = []; tagToItems[tag] = items; }
+                items.Add(entityKey);
+            }
+        }
+
+        foreach (var (tag, itemKeys) in tagToItems)
+        {
+            var tagKey = $"tag:{tag}";
+            entityMap[tagKey] = ($"#{tag}", "tag", null, "Tag");
+            tagNodeCount++;
+
+            foreach (var itemKey in itemKeys)
+            {
+                // Forward link: item → tag
+                if (!forwardLinks.TryGetValue(itemKey, out var fwdSet))
+                {
+                    fwdSet = [];
+                    forwardLinks[itemKey] = fwdSet;
+                }
+                fwdSet.Add(tagKey);
+
+                // Reverse link: tag has backlink from item
+                if (!reverseIndex.TryGetValue(tagKey, out var entries))
+                {
+                    entries = [];
+                    reverseIndex[tagKey] = entries;
+                }
+
+                var parts = itemKey.Split(':', 2);
+                if (parts.Length != 2) continue;
+                if (!entityMap.TryGetValue(itemKey, out var itemInfo)) continue;
+
+                if (entries.All(e => e.SourceId != parts[1] || e.SourceLinkType != itemInfo.LinkType))
+                {
+                    entries.Add(new BacklinkEntry(
+                        parts[1], itemInfo.LinkType, itemInfo.Title, itemInfo.Icon,
+                        null, itemInfo.ModifiedAt));
+                }
+            }
+        }
+
+        if (tagNodeCount > 0)
+            _log.Information("BacklinkService: created {Count} tag nodes with edges", tagNodeCount);
+
         _entityMap = entityMap;
         _forwardLinks = forwardLinks;
         _reverseIndex = reverseIndex;
@@ -536,20 +593,21 @@ public sealed class BacklinkService
         // once the link indices have been built.
         entityContents.Clear();
         entityExplicitLinks.Clear();
+        entityTags.Clear();
 
         _log.Information("BacklinkService: index built — {EntityCount} entities, {ContentCount} with content, " +
             "{LinksFound} wiki-links found, {LinksResolved} resolved, " +
             "{ExplicitFound} explicit links found, {ExplicitResolved} resolved, " +
-            "{BacklinkCount} backlink targets, {ForwardCount} forward sources",
+            "{BacklinkCount} backlink targets, {ForwardCount} forward sources, {TagNodes} tag nodes",
             entityMap.Count, contentCount, totalLinksFound, totalLinksResolved,
             explicitLinksFound, explicitLinksResolved,
-            reverseIndex.Count, forwardLinks.Count);
+            reverseIndex.Count, forwardLinks.Count, tagNodeCount);
     }
 
-    private async Task<List<(string Id, string Title, string? Content, List<string> ExplicitLinks, DateTimeOffset? ModifiedAt)>> LoadEntitiesAsync(
+    private async Task<List<(string Id, string Title, string? Content, List<string> ExplicitLinks, DateTimeOffset? ModifiedAt, List<string> Tags)>> LoadEntitiesAsync(
         string entityType, string linkType, CancellationToken ct)
     {
-        var items = new List<(string Id, string Title, string? Content, List<string> ExplicitLinks, DateTimeOffset? ModifiedAt)>();
+        var items = new List<(string Id, string Title, string? Content, List<string> ExplicitLinks, DateTimeOffset? ModifiedAt, List<string> Tags)>();
         try
         {
             var response = await _sdk.SendAsync<List<JsonElement>>(new SdkMessage
@@ -577,6 +635,9 @@ public sealed class BacklinkService
                 // Extract modified_at timestamp
                 var modifiedAt = ExtractModifiedAt(item);
 
+                // Extract tags
+                var tags = ExtractTags(item);
+
                 // Capture parent_id for page entities (used for parent-child relationships)
                 if (entityType == "page"
                     && item.TryGetProperty("parent_id", out var parentProp)
@@ -592,7 +653,7 @@ public sealed class BacklinkService
                     }
                 }
 
-                items.Add((id, title, content, explicitLinks, modifiedAt));
+                items.Add((id, title, content, explicitLinks, modifiedAt, tags));
             }
         }
         catch (Exception ex)
@@ -797,5 +858,16 @@ public sealed class BacklinkService
                     ExtractStringsFromJson(item, results);
                 break;
         }
+    }
+
+    private static List<string> ExtractTags(JsonElement item)
+    {
+        if (!item.TryGetProperty("tags", out var tagsProp)) return [];
+        if (tagsProp.ValueKind != JsonValueKind.Array) return [];
+        return tagsProp.EnumerateArray()
+            .Where(t => t.ValueKind == JsonValueKind.String)
+            .Select(t => t.GetString() ?? "")
+            .Where(t => !string.IsNullOrEmpty(t))
+            .ToList();
     }
 }

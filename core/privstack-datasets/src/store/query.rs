@@ -88,7 +88,7 @@ impl DatasetStore {
     ) -> DatasetResult<DatasetQueryResult> {
         let sql = sql.trim().trim_end_matches(';').trim();
         let trimmed = sql.to_uppercase();
-        if !trimmed.starts_with("SELECT") {
+        if !trimmed.starts_with("SELECT") && !trimmed.starts_with("WITH") {
             return Err(DatasetError::InvalidQuery(
                 "Only SELECT statements are allowed".to_string(),
             ));

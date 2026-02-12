@@ -232,9 +232,12 @@ public partial class InfoPanelViewModel : ViewModelBase
     /// </summary>
     public event Func<string, string, Task>? NavigateToItemRequested;
 
-    // All link types with display metadata — derived from the shared EntityTypeMap.
+    // All link types with display metadata — derived from the shared EntityTypeMap + virtual tag type.
     private static readonly Dictionary<string, (string DisplayName, string Icon)> AllLinkTypeMeta =
-        EntityTypeMap.All.ToDictionary(e => e.LinkType, e => (e.DisplayName, e.Icon));
+        EntityTypeMap.All
+            .ToDictionary(e => e.LinkType, e => (e.DisplayName, e.Icon))
+            .Concat(new[] { KeyValuePair.Create("tag", ("Tags", "Tag")) })
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
 
     public InfoPanelViewModel(
         InfoPanelService infoPanelService,
