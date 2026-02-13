@@ -149,12 +149,97 @@ internal static class TableGridCellFactory
         return widths;
     }
 
+    public static (Border cell, TextBox textBox) CreateEditableCell(
+        string text, bool isHeader, string rowId, int colIndex,
+        IReadOnlyList<TableColumnAlignment> alignments,
+        Action<string, int, string> onCellEdited,
+        TableGridCellNavigation navigation, int displayRow,
+        Control themeSource)
+    {
+        var alignment = colIndex < alignments.Count ? alignments[colIndex] : TableColumnAlignment.Left;
+        var textAlignment = alignment switch
+        {
+            TableColumnAlignment.Center => TextAlignment.Center,
+            TableColumnAlignment.Right => TextAlignment.Right,
+            _ => TextAlignment.Left
+        };
+
+        var tb = new TextBox
+        {
+            Text = text,
+            FontWeight = isHeader ? FontWeight.Bold : FontWeight.Normal,
+            TextAlignment = textAlignment,
+            AcceptsReturn = false,
+            BorderThickness = new Thickness(0),
+            Background = Brushes.Transparent,
+            Padding = new Thickness(12, 6),
+            MinWidth = 60,
+            MinHeight = 28,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        if (themeSource.TryFindResource("ThemeFontSans", out var font) && font is FontFamily ff)
+            tb.FontFamily = ff;
+        if (themeSource.TryFindResource("ThemeFontSizeMd", out var fs) && fs is double size)
+            tb.FontSize = size;
+        if (themeSource.TryFindResource("ThemeTextPrimaryBrush", out var fg) && fg is IBrush fgBrush)
+            tb.Foreground = fgBrush;
+
+        var capturedRowId = rowId;
+        var capturedCol = colIndex;
+        tb.LostFocus += (_, _) => onCellEdited(capturedRowId, capturedCol, tb.Text ?? "");
+
+        // Cell navigation
+        var dr = displayRow;
+        var ci = colIndex;
+        tb.KeyDown += (_, e) =>
+        {
+            switch (e.Key)
+            {
+                case Key.Enter:
+                    e.Handled = true;
+                    onCellEdited(capturedRowId, capturedCol, tb.Text ?? "");
+                    navigation.HandleArrowDown(dr, ci);
+                    break;
+                case Key.Tab:
+                    e.Handled = true;
+                    if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+                        navigation.NavigateToPreviousCell(dr, ci);
+                    else
+                        navigation.NavigateToNextCell(dr, ci);
+                    break;
+                case Key.Up:
+                    navigation.HandleArrowUp(dr, ci);
+                    e.Handled = true;
+                    break;
+                case Key.Down:
+                    navigation.HandleArrowDown(dr, ci);
+                    e.Handled = true;
+                    break;
+            }
+        };
+
+        var backgroundColor = isHeader
+            ? GetBrush(themeSource, "ThemeTableHeaderBrush")
+            : GetBrush(themeSource, "ThemeSurfaceBrush");
+
+        var border = new Border
+        {
+            BorderThickness = new Thickness(1),
+            BorderBrush = GetBrush(themeSource, "ThemeBorderBrush"),
+            Background = backgroundColor,
+            Child = tb
+        };
+
+        return (border, tb);
+    }
+
     private static bool IsUrl(string text) =>
         !string.IsNullOrWhiteSpace(text) &&
         (text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
          text.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
 
-    private static IBrush? GetBrush(Control source, string resourceKey)
+    internal static IBrush? GetBrush(Control source, string resourceKey)
     {
         if (source.TryFindResource(resourceKey, out var resource) && resource is IBrush brush)
             return brush;

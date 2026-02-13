@@ -3,7 +3,8 @@
 // Description: Main TableGrid control. A generic, configurable data grid for
 //              PrivStack plugins. Delegates data fetching to ITableGridDataSource
 //              and renders via TableGridRenderer. Supports sorting, paging,
-//              column resize, and theme-aware styling.
+//              column resize, editing, drag-drop reorder, context menus,
+//              toolbar, export, and theme-aware styling.
 // ============================================================================
 
 using Avalonia;
@@ -32,6 +33,9 @@ public sealed class TableGrid : Border
 
     public static readonly StyledProperty<bool> ShowPagingProperty =
         AvaloniaProperty.Register<TableGrid, bool>(nameof(ShowPaging), true);
+
+    public static readonly StyledProperty<bool> ShowToolbarProperty =
+        AvaloniaProperty.Register<TableGrid, bool>(nameof(ShowToolbar), true);
 
     public ITableGridDataSource? DataSource
     {
@@ -63,6 +67,12 @@ public sealed class TableGrid : Border
         set => SetValue(ShowPagingProperty, value);
     }
 
+    public bool ShowToolbar
+    {
+        get => GetValue(ShowToolbarProperty);
+        set => SetValue(ShowToolbarProperty, value);
+    }
+
     // ── Events ────────────────────────────────────────────────────────────
 
     public event Action<int>? BoundaryEscapeRequested;
@@ -77,6 +87,12 @@ public sealed class TableGrid : Border
     private readonly TextBlock _errorText;
     private readonly TableGridSortState _sortState = new();
     private readonly TableGridColumnResize _columnResize;
+    private readonly TableGridCellNavigation _cellNavigation;
+    private readonly TableGridToolbar _toolbar;
+
+    private TableGridRowDrag? _rowDrag;
+    private TableGridColumnDrag? _columnDrag;
+    private int _lastDataRowCount;
 
     private int _currentPage;
     private int _rebuildVersion;
@@ -84,6 +100,11 @@ public sealed class TableGrid : Border
     {
         CurrentPage = 0, TotalPages = 1, TotalFilteredRows = 0, PageSize = 10
     };
+
+    /// <summary>
+    /// Access the toolbar's additional content slot for plugin-specific buttons.
+    /// </summary>
+    public StackPanel AdditionalToolbarContent => _toolbar.AdditionalContentSlot;
 
     public TableGrid()
     {
@@ -121,7 +142,14 @@ public sealed class TableGrid : Border
             () => _lastPaging.PageSize > 0 ? GetColumnCount() : 0,
             OnColumnWidthsCommitted);
 
+        _cellNavigation = new TableGridCellNavigation();
+        _cellNavigation.BoundaryEscapeRequested += dir => BoundaryEscapeRequested?.Invoke(dir);
+
+        _toolbar = new TableGridToolbar();
+        _toolbar.WireStructureButtons(Rebuild);
+
         var root = new StackPanel { Spacing = 4 };
+        root.Children.Add(_toolbar);
         root.Children.Add(_errorBorder);
 
         var gridBorder = new Border
@@ -160,6 +188,7 @@ public sealed class TableGrid : Border
         {
             _sortState.Reset();
             _currentPage = 0;
+            UpdateDragHandlers();
             Rebuild();
         }
         else if (change.Property == FilterTextProperty)
@@ -176,6 +205,10 @@ public sealed class TableGrid : Border
         {
             _pagingBar.IsVisible = change.GetNewValue<bool>();
         }
+        else if (change.Property == ShowToolbarProperty)
+        {
+            _toolbar.IsVisible = change.GetNewValue<bool>();
+        }
     }
 
     // ── Public API ────────────────────────────────────────────────────────
@@ -183,7 +216,7 @@ public sealed class TableGrid : Border
     public void Rebuild() => RebuildAsync();
 
     public void FocusEdge(int direction) =>
-        BoundaryEscapeRequested?.Invoke(direction);
+        _cellNavigation.FocusEdge(direction);
 
     // ── Async rebuild ─────────────────────────────────────────────────────
 
@@ -196,6 +229,7 @@ public sealed class TableGrid : Border
             _grid.RowDefinitions.Clear();
             _grid.Children.Clear();
             _errorBorder.IsVisible = false;
+            _toolbar.Update(null, Rebuild, false);
             return;
         }
 
@@ -222,17 +256,35 @@ public sealed class TableGrid : Border
 
             ClearError();
 
-            TableGridRenderer.RenderGrid(
+            var hasHeaderRow = data.HeaderRows.Count > 0 &&
+                               data.HeaderRows.Any(r => r.IsHeader);
+
+            var result = TableGridRenderer.RenderGrid(
                 _grid, data, paging, _sortState,
                 source.SupportsSorting,
+                source.IsEditable,
+                IsReadOnly,
+                source.SupportsRowReorder,
+                source.SupportsColumnReorder,
+                source.SupportsStructureEditing,
+                source,
                 OnHeaderClick,
                 (col, e) => _columnResize.OnGripPressed(col, e, this),
                 e => _columnResize.OnGripMoved(e, this),
                 e => _columnResize.OnGripReleased(e),
+                source.IsEditable ? _cellNavigation : null,
+                source.IsEditable ? OnCellEdited : null,
+                source.SupportsRowReorder && !IsReadOnly ? _rowDrag : null,
+                source.SupportsColumnReorder && !IsReadOnly ? _columnDrag : null,
+                Rebuild,
                 this);
 
+            _lastDataRowCount = result.DataRowCount;
             _pagingBar.Update(paging);
             _pagingBar.IsVisible = ShowPaging;
+
+            _toolbar.Update(source, Rebuild, hasHeaderRow);
+            _toolbar.IsVisible = ShowToolbar;
         }
         catch (Exception ex)
         {
@@ -271,11 +323,57 @@ public sealed class TableGrid : Border
     private void OnColumnWidthsCommitted(IReadOnlyList<double> widths) =>
         DataSource?.OnColumnWidthsChanged(widths);
 
+    private void OnCellEdited(string rowId, int columnIndex, string newValue)
+    {
+        var source = DataSource;
+        if (source == null || IsReadOnly) return;
+
+        _ = source.OnCellEditedAsync(rowId, columnIndex, newValue);
+        DataChanged?.Invoke();
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    private void UpdateDragHandlers()
+    {
+        var source = DataSource;
+        if (source == null)
+        {
+            _rowDrag = null;
+            _columnDrag = null;
+            return;
+        }
+
+        if (source.SupportsRowReorder)
+        {
+            _rowDrag = new TableGridRowDrag(
+                () => _grid,
+                () => _lastDataRowCount,
+                () => DataSource,
+                Rebuild,
+                () => this);
+        }
+        else
+        {
+            _rowDrag = null;
+        }
+
+        if (source.SupportsColumnReorder)
+        {
+            _columnDrag = new TableGridColumnDrag(
+                () => _grid,
+                () => GetColumnCount(),
+                () => DataSource,
+                Rebuild);
+        }
+        else
+        {
+            _columnDrag = null;
+        }
+    }
 
     private int GetColumnCount()
     {
-        // Count content columns: every other column after col 0
         var count = 0;
         for (var i = 1; i < _grid.ColumnDefinitions.Count; i += 2)
             count++;
