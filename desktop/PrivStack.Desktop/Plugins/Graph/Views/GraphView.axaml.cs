@@ -231,6 +231,7 @@ public partial class GraphView : UserControl
         PluginNodeType.Transaction => "transaction",
         PluginNodeType.Credential => "credential",
         PluginNodeType.File => "file",
+        PluginNodeType.WikiSource => "wiki_source",
         _ => "note",
     };
 
@@ -241,6 +242,7 @@ public partial class GraphView : UserControl
         PluginEdgeType.TagRelation => "tag",
         PluginEdgeType.ProjectMembership => "parent",
         PluginEdgeType.ParentChild => "parent",
+        PluginEdgeType.WikiSourceMembership => "parent",
         _ => "link",
     };
 }

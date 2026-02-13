@@ -27,6 +27,7 @@ public static class EntityTypeMap
         new("credential", "credential", "Lock", "Passwords"),
         new("vault_file", "file", "FileText", "Files"),
         new("sticky_note", "sticky_note", "Edit", "Sticky Notes"),
+        new("wiki_source", "wiki_source", "Globe", "Wiki Sources"),
     ];
 
     private static readonly Dictionary<string, EntityTypeInfo> _byLinkType =

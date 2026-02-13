@@ -30,6 +30,7 @@ public sealed class RichTextEditor : Control
     private string _blockId = "";
     private System.Timers.Timer? _saveTimer;
     private HashSet<string> _trackedInternalLinks = [];
+    private bool _suppressContextMenu;
 
     // ---- Public properties ----
 
@@ -301,6 +302,17 @@ public sealed class RichTextEditor : Control
         _layout.MonoFont = FontFamily.Default;
         _caret.BlinkChanged += () => InvalidateVisual();
         Cursor = new Cursor(StandardCursorType.Ibeam);
+
+        AddHandler(ContextRequestedEvent, OnContextRequested, RoutingStrategies.Tunnel);
+    }
+
+    private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (_suppressContextMenu)
+        {
+            e.Handled = true;
+            _suppressContextMenu = false;
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -645,6 +657,7 @@ public sealed class RichTextEditor : Control
             var link = FindLinkAt(charIndex);
             if (link is { } l)
             {
+                _suppressContextMenu = true;
                 LinkEditRequested?.Invoke(this, l.Start, l.Length, l.Text, l.Url);
                 return;
             }
