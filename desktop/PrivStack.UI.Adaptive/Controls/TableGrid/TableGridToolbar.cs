@@ -24,6 +24,7 @@ internal sealed class TableGridToolbar : Border
     private Action? _rebuild;
     private bool _currentHasHeader;
     private bool _currentIsStriped;
+    private MenuFlyout? _lastFlyout;
 
     public event Action<bool>? IsStripedChanged;
     public event Action<bool>? HeaderToggleChanged;
@@ -75,7 +76,11 @@ internal sealed class TableGridToolbar : Border
 
     private void OnOptionsButtonClick(object? sender, RoutedEventArgs e)
     {
+        // Detach AdditionalMenuItems from any previous flyout's visual tree
+        _lastFlyout?.Items.Clear();
+
         var flyout = new MenuFlyout();
+        _lastFlyout = flyout;
 
         // Header Row toggle
         var headerItem = new MenuItem
