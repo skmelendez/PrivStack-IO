@@ -1,7 +1,8 @@
 // ============================================================================
 // File: TableGridCellFactory.cs
 // Description: Creates read-only and editable table cells for the TableGrid.
-//              Handles theme brushes, URL detection, alignment, and click-to-open.
+//              Handles theme brushes, URL detection, alignment, striping,
+//              color themes, and click-to-open.
 // ============================================================================
 
 using System.Diagnostics;
@@ -19,7 +20,8 @@ internal static class TableGridCellFactory
 {
     public static Border CreateReadOnlyCell(
         string text, bool isHeader, int colIndex,
-        IReadOnlyList<TableColumnAlignment> alignments, Control themeSource)
+        IReadOnlyList<TableColumnAlignment> alignments, Control themeSource,
+        bool isStriped = false, int dataRowIndex = 0, string? colorTheme = null)
     {
         var alignment = colIndex < alignments.Count ? alignments[colIndex] : TableColumnAlignment.Left;
         var textAlignment = alignment switch
@@ -56,9 +58,7 @@ internal static class TableGridCellFactory
         else if (themeSource.TryFindResource("ThemeTextPrimaryBrush", out var fg) && fg is IBrush fgBrush)
             tb.Foreground = fgBrush;
 
-        var backgroundColor = isHeader
-            ? GetBrush(themeSource, "ThemeTableHeaderBrush")
-            : GetBrush(themeSource, "ThemeSurfaceBrush");
+        var backgroundColor = GetCellBackground(themeSource, isHeader, isStriped, dataRowIndex, colorTheme);
 
         var border = new Border
         {
@@ -154,7 +154,8 @@ internal static class TableGridCellFactory
         IReadOnlyList<TableColumnAlignment> alignments,
         Action<string, int, string> onCellEdited,
         TableGridCellNavigation navigation, int displayRow,
-        Control themeSource)
+        Control themeSource,
+        bool isStriped = false, int dataRowIndex = 0, string? colorTheme = null)
     {
         var alignment = colIndex < alignments.Count ? alignments[colIndex] : TableColumnAlignment.Left;
         var textAlignment = alignment switch
@@ -219,9 +220,7 @@ internal static class TableGridCellFactory
             }
         };
 
-        var backgroundColor = isHeader
-            ? GetBrush(themeSource, "ThemeTableHeaderBrush")
-            : GetBrush(themeSource, "ThemeSurfaceBrush");
+        var backgroundColor = GetCellBackground(themeSource, isHeader, isStriped, dataRowIndex, colorTheme);
 
         var border = new Border
         {
@@ -232,6 +231,41 @@ internal static class TableGridCellFactory
         };
 
         return (border, tb);
+    }
+
+    private static IBrush? GetCellBackground(
+        Control themeSource, bool isHeader, bool isStriped, int dataRowIndex, string? colorTheme)
+    {
+        if (isHeader)
+        {
+            var themeHeaderKey = ColorThemeBrushKey(colorTheme, "Header");
+            if (themeHeaderKey != null)
+            {
+                var themed = GetBrush(themeSource, themeHeaderKey);
+                if (themed != null) return themed;
+            }
+            return GetBrush(themeSource, "ThemeTableHeaderBrush");
+        }
+
+        if (isStriped && dataRowIndex % 2 == 1)
+        {
+            var themeStripeKey = ColorThemeBrushKey(colorTheme, "Stripe");
+            if (themeStripeKey != null)
+            {
+                var themed = GetBrush(themeSource, themeStripeKey);
+                if (themed != null) return themed;
+            }
+            return GetBrush(themeSource, "ThemeTableStripeBrush")
+                   ?? GetBrush(themeSource, "ThemeSurfaceBrush");
+        }
+
+        return GetBrush(themeSource, "ThemeSurfaceBrush");
+    }
+
+    private static string? ColorThemeBrushKey(string? theme, string part)
+    {
+        if (string.IsNullOrEmpty(theme)) return null;
+        return $"ThemeTable{theme}{part}Brush";
     }
 
     private static bool IsUrl(string text) =>

@@ -32,6 +32,8 @@ public sealed record TableGridData
     public string? Title { get; init; }
     public string? Description { get; init; }
     public string? ErrorMessage { get; init; }
+    public bool IsStriped { get; init; }
+    public string? ColorTheme { get; init; }
 }
 
 public sealed record TablePagingInfo

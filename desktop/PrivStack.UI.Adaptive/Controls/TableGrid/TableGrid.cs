@@ -4,7 +4,8 @@
 //              PrivStack plugins. Delegates data fetching to ITableGridDataSource
 //              and renders via TableGridRenderer. Supports sorting, paging,
 //              column resize, editing, drag-drop reorder, context menus,
-//              toolbar, export, and theme-aware styling.
+//              filter bar, toolbar with options gear, striping, color themes,
+//              and export.
 // ============================================================================
 
 using Avalonia;
@@ -36,6 +37,15 @@ public sealed class TableGrid : Border
 
     public static readonly StyledProperty<bool> ShowToolbarProperty =
         AvaloniaProperty.Register<TableGrid, bool>(nameof(ShowToolbar), true);
+
+    public static readonly StyledProperty<bool> IsStripedProperty =
+        AvaloniaProperty.Register<TableGrid, bool>(nameof(IsStriped));
+
+    public static readonly StyledProperty<bool> ShowFilterProperty =
+        AvaloniaProperty.Register<TableGrid, bool>(nameof(ShowFilter), true);
+
+    public static readonly StyledProperty<string?> ColorThemeProperty =
+        AvaloniaProperty.Register<TableGrid, string?>(nameof(ColorTheme));
 
     public ITableGridDataSource? DataSource
     {
@@ -73,10 +83,32 @@ public sealed class TableGrid : Border
         set => SetValue(ShowToolbarProperty, value);
     }
 
+    public bool IsStriped
+    {
+        get => GetValue(IsStripedProperty);
+        set => SetValue(IsStripedProperty, value);
+    }
+
+    public bool ShowFilter
+    {
+        get => GetValue(ShowFilterProperty);
+        set => SetValue(ShowFilterProperty, value);
+    }
+
+    public string? ColorTheme
+    {
+        get => GetValue(ColorThemeProperty);
+        set => SetValue(ColorThemeProperty, value);
+    }
+
     // ── Events ────────────────────────────────────────────────────────────
 
     public event Action<int>? BoundaryEscapeRequested;
     public event Action? DataChanged;
+    public event Action<string?>? FilterTextCommitted;
+    public event Action<int>? PageSizeCommitted;
+    public event Action<bool>? IsStripedCommitted;
+    public event Action? EditTableRequested;
 
     // ── Internal state ────────────────────────────────────────────────────
 
@@ -89,6 +121,7 @@ public sealed class TableGrid : Border
     private readonly TableGridColumnResize _columnResize;
     private readonly TableGridCellNavigation _cellNavigation;
     private readonly TableGridToolbar _toolbar;
+    private readonly TableGridFilterBar _filterBar;
 
     private TableGridRowDrag? _rowDrag;
     private TableGridColumnDrag? _columnDrag;
@@ -102,9 +135,9 @@ public sealed class TableGrid : Border
     };
 
     /// <summary>
-    /// Access the toolbar's additional content slot for plugin-specific buttons.
+    /// Access the toolbar's additional menu items for plugin-specific entries.
     /// </summary>
-    public StackPanel AdditionalToolbarContent => _toolbar.AdditionalContentSlot;
+    public List<MenuItem> AdditionalMenuItems => _toolbar.AdditionalMenuItems;
 
     public TableGrid()
     {
@@ -133,6 +166,10 @@ public sealed class TableGrid : Border
             Child = _errorText
         };
 
+        _filterBar = new TableGridFilterBar();
+        _filterBar.FilterTextChanged += OnFilterBarTextChanged;
+        _filterBar.PageSizeChanged += OnFilterBarPageSizeChanged;
+
         _pagingBar = new TableGridPagingBar();
         _pagingBar.PrevPageRequested += OnPrevPage;
         _pagingBar.NextPageRequested += OnNextPage;
@@ -146,9 +183,12 @@ public sealed class TableGrid : Border
         _cellNavigation.BoundaryEscapeRequested += dir => BoundaryEscapeRequested?.Invoke(dir);
 
         _toolbar = new TableGridToolbar();
-        _toolbar.WireStructureButtons(Rebuild);
+        _toolbar.IsStripedChanged += OnToolbarStripedChanged;
+        _toolbar.HeaderToggleChanged += OnToolbarHeaderToggled;
+        _toolbar.EditTableRequested += () => EditTableRequested?.Invoke();
 
         var root = new StackPanel { Spacing = 4 };
+        root.Children.Add(_filterBar);
         root.Children.Add(_toolbar);
         root.Children.Add(_errorBorder);
 
@@ -194,11 +234,13 @@ public sealed class TableGrid : Border
         else if (change.Property == FilterTextProperty)
         {
             _currentPage = 0;
+            _filterBar.SetFilterText(FilterText);
             Rebuild();
         }
         else if (change.Property == PageSizeProperty)
         {
             _currentPage = 0;
+            _filterBar.SetPageSize(PageSize);
             Rebuild();
         }
         else if (change.Property == ShowPagingProperty)
@@ -208,6 +250,14 @@ public sealed class TableGrid : Border
         else if (change.Property == ShowToolbarProperty)
         {
             _toolbar.IsVisible = change.GetNewValue<bool>();
+        }
+        else if (change.Property == ShowFilterProperty)
+        {
+            _filterBar.IsVisible = change.GetNewValue<bool>();
+        }
+        else if (change.Property == IsStripedProperty || change.Property == ColorThemeProperty)
+        {
+            Rebuild();
         }
     }
 
@@ -277,14 +327,18 @@ public sealed class TableGrid : Border
                 source.SupportsRowReorder && !IsReadOnly ? _rowDrag : null,
                 source.SupportsColumnReorder && !IsReadOnly ? _columnDrag : null,
                 Rebuild,
-                this);
+                this,
+                IsStriped,
+                ColorTheme);
 
             _lastDataRowCount = result.DataRowCount;
             _pagingBar.Update(paging);
             _pagingBar.IsVisible = ShowPaging;
 
-            _toolbar.Update(source, Rebuild, hasHeaderRow);
+            _toolbar.Update(source, Rebuild, hasHeaderRow, IsStriped);
             _toolbar.IsVisible = ShowToolbar;
+
+            _filterBar.IsVisible = ShowFilter;
         }
         catch (Exception ex)
         {
@@ -329,6 +383,29 @@ public sealed class TableGrid : Border
         if (source == null || IsReadOnly) return;
 
         _ = source.OnCellEditedAsync(rowId, columnIndex, newValue);
+        DataChanged?.Invoke();
+    }
+
+    private void OnFilterBarTextChanged(string? text)
+    {
+        FilterText = text;
+        FilterTextCommitted?.Invoke(text);
+    }
+
+    private void OnFilterBarPageSizeChanged(int pageSize)
+    {
+        PageSize = pageSize;
+        PageSizeCommitted?.Invoke(pageSize);
+    }
+
+    private void OnToolbarStripedChanged(bool isStriped)
+    {
+        IsStriped = isStriped;
+        IsStripedCommitted?.Invoke(isStriped);
+    }
+
+    private void OnToolbarHeaderToggled(bool hasHeader)
+    {
         DataChanged?.Invoke();
     }
 

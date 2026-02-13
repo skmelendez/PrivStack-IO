@@ -1,8 +1,7 @@
 // ============================================================================
 // File: TableGridContextMenu.cs
-// Description: Right-click context menus for table grid rows and columns.
-//              Provides insert/delete/alignment/toggle-header operations via
-//              the ITableGridDataSource interface.
+// Description: Right-click context menus for table grid cells. Uses structured
+//              Row/Column submenus with positional insert/delete operations.
 // ============================================================================
 
 using Avalonia.Controls;
@@ -17,40 +16,76 @@ internal static class TableGridContextMenu
     {
         var menu = new ContextMenu();
 
-        var insertAbove = new MenuItem { Header = "Insert Row Above" };
-        insertAbove.Click += async (_, _) =>
+        // Row submenu
+        var rowMenu = new MenuItem { Header = "Row" };
+
+        var addAbove = new MenuItem { Header = "Add Above" };
+        addAbove.Click += async (_, _) =>
         {
-            await source.OnAddRowAsync();
+            await source.OnInsertRowAtAsync(rowIndex);
             rebuild();
         };
+        rowMenu.Items.Add(addAbove);
 
-        var insertBelow = new MenuItem { Header = "Insert Row Below" };
-        insertBelow.Click += async (_, _) =>
+        var addBelow = new MenuItem { Header = "Add Below" };
+        addBelow.Click += async (_, _) =>
         {
-            await source.OnAddRowAsync();
+            await source.OnInsertRowAtAsync(rowIndex + 1);
             rebuild();
         };
+        rowMenu.Items.Add(addBelow);
 
-        var toggleHeader = new MenuItem { Header = "Toggle Header" };
-        toggleHeader.Click += async (_, _) =>
+        var removeRow = new MenuItem { Header = "Remove Row" };
+        removeRow.Click += async (_, _) =>
         {
-            await source.OnToggleHeaderAsync(true);
+            await source.OnDeleteRowAtAsync(rowIndex);
             rebuild();
         };
+        rowMenu.Items.Add(removeRow);
 
-        var deleteRow = new MenuItem { Header = "Delete Row" };
-        deleteRow.Click += async (_, _) =>
+        menu.Items.Add(rowMenu);
+
+        // Column submenu
+        var colMenu = new MenuItem { Header = "Column" };
+
+        var addLeft = new MenuItem { Header = "Add Left" };
+        addLeft.Click += async (_, _) =>
         {
-            await source.OnRemoveRowAsync();
+            await source.OnInsertColumnAtAsync(0);
             rebuild();
         };
+        colMenu.Items.Add(addLeft);
 
-        menu.Items.Add(insertAbove);
-        menu.Items.Add(insertBelow);
-        menu.Items.Add(new Separator());
-        menu.Items.Add(toggleHeader);
-        menu.Items.Add(new Separator());
-        menu.Items.Add(deleteRow);
+        var addRight = new MenuItem { Header = "Add Right" };
+        addRight.Click += async (_, _) =>
+        {
+            await source.OnAddColumnAsync();
+            rebuild();
+        };
+        colMenu.Items.Add(addRight);
+
+        var removeCol = new MenuItem { Header = "Remove Column" };
+        removeCol.Click += async (_, _) =>
+        {
+            await source.OnRemoveColumnAsync();
+            rebuild();
+        };
+        colMenu.Items.Add(removeCol);
+
+        menu.Items.Add(colMenu);
+
+        // Set as Header (only for row 0)
+        if (rowIndex == 0)
+        {
+            menu.Items.Add(new Separator());
+            var setHeader = new MenuItem { Header = "Set as Header" };
+            setHeader.Click += async (_, _) =>
+            {
+                await source.OnToggleHeaderAsync(true);
+                rebuild();
+            };
+            menu.Items.Add(setHeader);
+        }
 
         return menu;
     }
@@ -60,20 +95,37 @@ internal static class TableGridContextMenu
     {
         var menu = new ContextMenu();
 
-        var insertLeft = new MenuItem { Header = "Insert Column Left" };
-        insertLeft.Click += async (_, _) =>
+        // Column submenu
+        var colMenu = new MenuItem { Header = "Column" };
+
+        var addLeft = new MenuItem { Header = "Add Left" };
+        addLeft.Click += async (_, _) =>
         {
-            await source.OnAddColumnAsync();
+            await source.OnInsertColumnAtAsync(colIndex);
             rebuild();
         };
+        colMenu.Items.Add(addLeft);
 
-        var insertRight = new MenuItem { Header = "Insert Column Right" };
-        insertRight.Click += async (_, _) =>
+        var addRight = new MenuItem { Header = "Add Right" };
+        addRight.Click += async (_, _) =>
         {
-            await source.OnAddColumnAsync();
+            await source.OnInsertColumnAtAsync(colIndex + 1);
             rebuild();
         };
+        colMenu.Items.Add(addRight);
 
+        var removeCol = new MenuItem { Header = "Remove Column" };
+        removeCol.Click += async (_, _) =>
+        {
+            await source.OnDeleteColumnAtAsync(colIndex);
+            rebuild();
+        };
+        colMenu.Items.Add(removeCol);
+
+        menu.Items.Add(colMenu);
+
+        // Alignment submenu
+        menu.Items.Add(new Separator());
         var alignMenu = new MenuItem { Header = "Alignment" };
         var alignLeft = new MenuItem { Header = "Left" };
         alignLeft.Click += async (_, _) =>
@@ -96,20 +148,7 @@ internal static class TableGridContextMenu
         alignMenu.Items.Add(alignLeft);
         alignMenu.Items.Add(alignCenter);
         alignMenu.Items.Add(alignRight);
-
-        var deleteCol = new MenuItem { Header = "Delete Column" };
-        deleteCol.Click += async (_, _) =>
-        {
-            await source.OnRemoveColumnAsync();
-            rebuild();
-        };
-
-        menu.Items.Add(insertLeft);
-        menu.Items.Add(insertRight);
-        menu.Items.Add(new Separator());
         menu.Items.Add(alignMenu);
-        menu.Items.Add(new Separator());
-        menu.Items.Add(deleteCol);
 
         return menu;
     }

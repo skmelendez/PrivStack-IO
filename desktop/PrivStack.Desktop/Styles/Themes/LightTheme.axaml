@@ -180,6 +180,17 @@
 
     <!-- Table Header Brush -->
     <SolidColorBrush x:Key="ThemeTableHeaderBrush" Color="{StaticResource ThemeHover}"/>
+    <SolidColorBrush x:Key="ThemeTableStripeBrush" Color="{StaticResource ThemeHover}"/>
+
+    <!-- Table Color Theme Presets -->
+    <SolidColorBrush x:Key="ThemeTableBlueHeaderBrush" Color="#1A3B5C8A"/>
+    <SolidColorBrush x:Key="ThemeTableBlueStripeBrush" Color="#0D3B5C8A"/>
+    <SolidColorBrush x:Key="ThemeTableGreenHeaderBrush" Color="#1A4CAF50"/>
+    <SolidColorBrush x:Key="ThemeTableGreenStripeBrush" Color="#0D4CAF50"/>
+    <SolidColorBrush x:Key="ThemeTablePurpleHeaderBrush" Color="#1A7B1FA2"/>
+    <SolidColorBrush x:Key="ThemeTablePurpleStripeBrush" Color="#0D7B1FA2"/>
+    <SolidColorBrush x:Key="ThemeTableOrangeHeaderBrush" Color="#1AFF9800"/>
+    <SolidColorBrush x:Key="ThemeTableOrangeStripeBrush" Color="#0DFF9800"/>
 
     <!-- Code Block Brushes -->
     <SolidColorBrush x:Key="ThemeCodeBlockBrush" Color="{StaticResource ThemeBackground}"/>

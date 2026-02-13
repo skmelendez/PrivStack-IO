@@ -30,4 +30,10 @@ public interface ITableGridDataSource
     Task OnToggleHeaderAsync(bool isHeader);
     Task OnColumnAlignmentChangedAsync(int columnIndex, TableColumnAlignment alignment);
     Task<TableGridData?> GetFullDataForExportAsync();
+
+    // Positional insert/delete for hover-to-insert UX
+    Task OnInsertRowAtAsync(int index);
+    Task OnDeleteRowAtAsync(int index);
+    Task OnInsertColumnAtAsync(int index);
+    Task OnDeleteColumnAtAsync(int index);
 }

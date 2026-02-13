@@ -2,8 +2,9 @@
 // File: TableGridRenderer.cs
 // Description: Grid layout engine for the TableGrid control. Builds column/row
 //              definitions, places cells into the Avalonia Grid, and renders
-//              title/description rows. Supports both read-only and editable modes,
-//              drag handles, and context menus.
+//              title/description rows. Supports read-only/editable modes,
+//              drag handles, context menus, striping, color themes, and insert
+//              indicators for hover-to-insert UX.
 // ============================================================================
 
 using Avalonia;
@@ -38,7 +39,9 @@ internal static class TableGridRenderer
         TableGridRowDrag? rowDrag,
         TableGridColumnDrag? columnDrag,
         Action? rebuild,
-        Control themeSource)
+        Control themeSource,
+        bool isStriped = false,
+        string? colorTheme = null)
     {
         grid.ColumnDefinitions.Clear();
         grid.RowDefinitions.Clear();
@@ -111,12 +114,13 @@ internal static class TableGridRenderer
             gridRow++;
         }
 
+        var headerGridRow = gridRow;
+
         // Header rows
         foreach (var headerRow in data.HeaderRows)
         {
             if (showDragHandles && rowDrag != null)
             {
-                // Empty drag handle placeholder for header rows
                 var placeholder = new Border { Width = 20 };
                 Grid.SetRow(placeholder, gridRow);
                 Grid.SetColumn(placeholder, 0);
@@ -129,23 +133,47 @@ internal static class TableGridRenderer
                 if (supportsSorting)
                     text += sortState.GetSortIndicator(c);
 
-                var cell = TableGridCellFactory.CreateReadOnlyCell(text, true, c, alignments, themeSource);
+                Control cell;
 
-                if (supportsSorting && columnDrag == null)
+                // Editable headers for inline tables
+                if (isEditable && !isReadOnly && onCellEdited != null && cellNavigation != null)
                 {
-                    var colIdx = c;
-                    cell.PointerPressed += (_, _) => onHeaderClick(colIdx);
-                    cell.Cursor = new Cursor(StandardCursorType.Hand);
+                    var (editCell, textBox) = TableGridCellFactory.CreateEditableCell(
+                        text, true, headerRow.Id, c, alignments,
+                        onCellEdited, cellNavigation, -1,
+                        themeSource, isStriped, 0, colorTheme);
+                    cell = editCell;
+
+                    if (supportsSorting)
+                    {
+                        var colIdx = c;
+                        editCell.DoubleTapped += (_, _) => onHeaderClick(colIdx);
+                    }
+                }
+                else
+                {
+                    cell = TableGridCellFactory.CreateReadOnlyCell(
+                        text, true, c, alignments, themeSource,
+                        isStriped, 0, colorTheme);
+
+                    if (supportsSorting && columnDrag == null)
+                    {
+                        var colIdx = c;
+                        cell.PointerPressed += (_, _) => onHeaderClick(colIdx);
+                        cell.Cursor = new Cursor(StandardCursorType.Hand);
+                    }
                 }
 
                 if (supportsColumnReorder && !isReadOnly && columnDrag != null)
                 {
-                    columnDrag.AttachToHeader(cell, c, themeSource, onHeaderClick);
-                    cell.Cursor = new Cursor(StandardCursorType.Hand);
+                    if (cell is Border borderCell)
+                    {
+                        columnDrag.AttachToHeader(borderCell, c, themeSource, onHeaderClick);
+                        cell.Cursor = new Cursor(StandardCursorType.Hand);
+                    }
                 }
                 else if (supportsSorting && columnDrag != null)
                 {
-                    // Sort-only header click when column reorder not supported
                     var colIdx = c;
                     cell.PointerPressed += (_, _) => onHeaderClick(colIdx);
                     cell.Cursor = new Cursor(StandardCursorType.Hand);
@@ -155,12 +183,13 @@ internal static class TableGridRenderer
                 if (supportsStructureEditing && !isReadOnly && source != null && rebuild != null)
                 {
                     var colIdx = c;
+                    var capturedCell = cell;
                     cell.PointerPressed += (s, e) =>
                     {
-                        if (e.GetCurrentPoint(cell).Properties.IsRightButtonPressed)
+                        if (e.GetCurrentPoint(capturedCell).Properties.IsRightButtonPressed)
                         {
                             var menu = TableGridContextMenu.BuildColumnContextMenu(colIdx, source, rebuild);
-                            menu.Open(cell);
+                            menu.Open(capturedCell);
                             e.Handled = true;
                         }
                     };
@@ -201,18 +230,19 @@ internal static class TableGridRenderer
                     var (editCell, textBox) = TableGridCellFactory.CreateEditableCell(
                         text, false, dataRow.Id, c, alignments,
                         onCellEdited, cellNavigation, gridRow - dataRowStartGridRow,
-                        themeSource);
+                        themeSource, isStriped, dataIdx, colorTheme);
                     cell = editCell;
                     cellNavigation.Register(gridRow - dataRowStartGridRow, c, textBox);
 
                     // Context menu on editable data cells
                     if (supportsStructureEditing && source != null && rebuild != null)
                     {
+                        var capturedIdx = dataIdx;
                         editCell.PointerPressed += (s, e) =>
                         {
                             if (e.GetCurrentPoint(editCell).Properties.IsRightButtonPressed)
                             {
-                                var menu = TableGridContextMenu.BuildRowContextMenu(dataIdx, source, rebuild);
+                                var menu = TableGridContextMenu.BuildRowContextMenu(capturedIdx, source, rebuild);
                                 menu.Open(editCell);
                                 e.Handled = true;
                             }
@@ -221,7 +251,9 @@ internal static class TableGridRenderer
                 }
                 else
                 {
-                    cell = TableGridCellFactory.CreateReadOnlyCell(text, false, c, alignments, themeSource);
+                    cell = TableGridCellFactory.CreateReadOnlyCell(
+                        text, false, c, alignments, themeSource,
+                        isStriped, dataIdx, colorTheme);
                 }
 
                 Grid.SetRow(cell, gridRow);
@@ -232,6 +264,21 @@ internal static class TableGridRenderer
                     onResizePressed, onResizeMoved, onResizeReleased);
             }
             gridRow++;
+        }
+
+        // Insert indicators for hover-to-insert UX
+        if (supportsStructureEditing && !isReadOnly && source != null && rebuild != null)
+        {
+            TableGridInsertIndicators.AttachRowIndicators(
+                grid, dataRowStartGridRow, data.DataRows.Count,
+                source, rebuild, themeSource);
+
+            if (data.HeaderRows.Count > 0)
+            {
+                TableGridInsertIndicators.AttachColumnIndicators(
+                    grid, colCount, headerGridRow,
+                    source, rebuild, themeSource);
+            }
         }
 
         // Description row

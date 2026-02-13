@@ -233,7 +233,12 @@ public class ThemeService : IThemeService
             "ThemeLinkBrush",
             "ThemeNavBackgroundBrush", "ThemeNavBorderBrush", "ThemeNavBorderSubtleBrush",
             "ThemeNavTextBrush", "ThemeNavTextHoverBrush", "ThemeNavHoverBrush", "ThemeNavSelectedBrush",
-            "ThemeTableHeaderBrush", "ThemeCodeBlockBrush", "ThemeCodeBlockGutterBrush"
+            "ThemeTableHeaderBrush", "ThemeTableStripeBrush",
+            "ThemeTableBlueHeaderBrush", "ThemeTableBlueStripeBrush",
+            "ThemeTableGreenHeaderBrush", "ThemeTableGreenStripeBrush",
+            "ThemeTablePurpleHeaderBrush", "ThemeTablePurpleStripeBrush",
+            "ThemeTableOrangeHeaderBrush", "ThemeTableOrangeStripeBrush",
+            "ThemeCodeBlockBrush", "ThemeCodeBlockGutterBrush"
         ];
 
         foreach (var key in aliasedBrushKeys)
