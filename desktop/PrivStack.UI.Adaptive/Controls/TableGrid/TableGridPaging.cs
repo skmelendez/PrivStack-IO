@@ -1,7 +1,7 @@
 // ============================================================================
 // File: TableGridPaging.cs
-// Description: Paging controls for the TableGrid: prev/next buttons, page info
-//              text, and state management for current page tracking.
+// Description: Paging controls for the TableGrid: prev/next buttons with
+//              PathIcon chevrons, center-aligned page info text.
 // ============================================================================
 
 using Avalonia;
@@ -23,9 +23,15 @@ internal sealed class TableGridPagingBar : Border
 
     public TableGridPagingBar()
     {
+        var prevIcon = new PathIcon
+        {
+            Data = StreamGeometry.Parse("M15 18l-6-6 6-6"),
+            Width = 12,
+            Height = 12,
+        };
         _prevButton = new Button
         {
-            Content = "\u25c0",
+            Content = prevIcon,
             Padding = new Thickness(6, 4),
             IsEnabled = false
         };
@@ -33,9 +39,15 @@ internal sealed class TableGridPagingBar : Border
             _prevButton.GetResourceObservable("ThemeFontSizeXsSm"));
         _prevButton.Click += (_, _) => PrevPageRequested?.Invoke();
 
+        var nextIcon = new PathIcon
+        {
+            Data = StreamGeometry.Parse("M9 6l6 6-6 6"),
+            Width = 12,
+            Height = 12,
+        };
         _nextButton = new Button
         {
-            Content = "\u25b6",
+            Content = nextIcon,
             Padding = new Thickness(6, 4),
             IsEnabled = false
         };
@@ -56,6 +68,7 @@ internal sealed class TableGridPagingBar : Border
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Center,
         };
         panel.Children.Add(_prevButton);
         panel.Children.Add(_pageInfoText);
