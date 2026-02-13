@@ -282,7 +282,7 @@ fn query_entities_no_filters() {
     store.save_entity(&test_entity("Q1"), &schema).unwrap();
     store.save_entity(&test_entity("Q2"), &schema).unwrap();
 
-    let results = store.query_entities("bookmark", &[], None).unwrap();
+    let results = store.query_entities("bookmark", &[], false, None).unwrap();
     assert_eq!(results.len(), 2);
 }
 
@@ -294,7 +294,7 @@ fn query_entities_with_limit() {
         store.save_entity(&test_entity(&format!("Q{i}")), &schema).unwrap();
     }
 
-    let results = store.query_entities("bookmark", &[], Some(2)).unwrap();
+    let results = store.query_entities("bookmark", &[], false, Some(2)).unwrap();
     assert_eq!(results.len(), 2);
 }
 
@@ -726,7 +726,7 @@ fn query_entities_with_single_filter() {
     store.save_entity(&e2, &schema).unwrap();
 
     let filters = vec![("/title".to_string(), serde_json::Value::String("Rust Guide".into()))];
-    let results = store.query_entities("bookmark", &filters, None).unwrap();
+    let results = store.query_entities("bookmark", &filters, false, None).unwrap();
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].id, "qf-1");
 }
@@ -749,7 +749,7 @@ fn query_entities_with_multiple_filters_empty_result() {
         ("/title".to_string(), serde_json::Value::String("Rust Guide".into())),
         ("/url".to_string(), serde_json::Value::String("https://rust.org".into())),
     ];
-    let results = store.query_entities("bookmark", &filters, None).unwrap();
+    let results = store.query_entities("bookmark", &filters, false, None).unwrap();
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].id, "qm-1");
 }
@@ -776,7 +776,7 @@ fn query_entities_with_numeric_filter() {
 
     // Numeric filter: json Value::Number.to_string() = "42", json_extract_string = "42"
     let filters = vec![("/count".to_string(), serde_json::json!(42))];
-    let results = store.query_entities("item", &filters, None).unwrap();
+    let results = store.query_entities("item", &filters, false, None).unwrap();
     // Numeric values serialize without quotes, so this should match
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].id, "nf-1");
@@ -796,7 +796,7 @@ fn query_entities_excludes_trashed() {
     store.trash_entity("qt-1").unwrap();
 
     // Even without filters, trashed entities should be excluded
-    let results = store.query_entities("bookmark", &[], None).unwrap();
+    let results = store.query_entities("bookmark", &[], false, None).unwrap();
     assert!(results.is_empty());
 }
 

@@ -3,6 +3,7 @@
              x:Class="PrivStack.Desktop.App"
              xmlns:local="using:PrivStack.Desktop"
              xmlns:converters="using:PrivStack.Desktop.Converters"
+             Name="PrivStack"
              RequestedThemeVariant="Dark">
 
     <Application.DataTemplates>

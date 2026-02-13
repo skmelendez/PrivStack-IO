@@ -23,6 +23,11 @@ internal sealed class SdkHost : IPrivStackSdk, IDisposable
     private volatile bool _isSwitching;
     private ISyncOutboundService? _syncOutbound;
 
+    /// <summary>
+    /// Raised when a mutation is blocked because the license is in read-only mode.
+    /// </summary>
+    public event EventHandler? LicenseReadOnlyBlocked;
+
     public SdkHost(IPrivStackRuntime runtime)
     {
         _runtime = runtime;
@@ -93,6 +98,8 @@ internal sealed class SdkHost : IPrivStackSdk, IDisposable
                 try
                 {
                     var response = JsonSerializer.Deserialize<SdkResponse<TResult>>(responseJson, _jsonOptions);
+                    if (response?.ErrorCode == "license_read_only")
+                        LicenseReadOnlyBlocked?.Invoke(this, EventArgs.Empty);
                     if (response?.Success == true)
                         NotifySyncIfMutation(message, responseJson);
                     return Task.FromResult(response ?? SdkResponse<TResult>.Fail("json_error", "Failed to deserialize response"));
@@ -150,6 +157,8 @@ internal sealed class SdkHost : IPrivStackSdk, IDisposable
                 }
 
                 var response = JsonSerializer.Deserialize<SdkResponse>(responseJson, _jsonOptions);
+                if (response?.ErrorCode == "license_read_only")
+                    LicenseReadOnlyBlocked?.Invoke(this, EventArgs.Empty);
                 if (response != null && !response.Success)
                 {
                     _log.Warning("SDK {EntityType}.{Action} failed: [{ErrorCode}] {ErrorMessage}",

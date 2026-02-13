@@ -81,4 +81,21 @@ public static class SystemMetricsHelper
             _ => $"{bytes} B"
         };
     }
+
+    /// <summary>
+    /// Formats actual + estimated bytes into a dual display string.
+    /// Both > 0 and differ: "X.X MB | ~Y.Y MB est."
+    /// Equal or estimated is 0: "X.X MB"
+    /// Only estimated > 0: "~X.X MB"
+    /// </summary>
+    public static string FormatBytesWithEstimate(long actual, long estimated)
+    {
+        if (actual > 0 && estimated > 0 && actual != estimated)
+            return $"{FormatBytes(actual)} | ~{FormatBytes(estimated)} est.";
+        if (actual > 0)
+            return FormatBytes(actual);
+        if (estimated > 0)
+            return $"~{FormatBytes(estimated)}";
+        return "0 B";
+    }
 }

@@ -98,7 +98,11 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
     {
         ThrowIfDisposed();
         var fromPlugins = ActivePlugins.OfType<TCapability>();
-        var fromBroker = HostFactory.CapabilityBroker.GetProviders<TCapability>();
+        // Broker providers that are IAppPlugin instances are already handled by ActivePlugins
+        // (which filters by state). Excluding them here prevents disabled plugins from being
+        // returned via stale broker registrations.
+        var fromBroker = HostFactory.CapabilityBroker.GetProviders<TCapability>()
+            .Where(p => p is not IAppPlugin);
         return fromPlugins.Concat(fromBroker).Distinct().ToList().AsReadOnly();
     }
 
@@ -186,13 +190,19 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
             }
         }
 
+        var syncWsConfig = App.Services.GetRequiredService<IAppSettingsService>().GetWorkspacePluginConfig();
         foreach (var plugin in _plugins.Where(p => p.State == PluginState.Initialized))
         {
-            if (plugin.Metadata.IsHardLocked) continue;
+            // Core shell plugins (CanDisable=false / IsHardLocked) always activate
+            if (!plugin.Metadata.CanDisable || plugin.Metadata.IsHardLocked)
+            {
+                ActivatePlugin(plugin);
+                continue;
+            }
             if (plugin.Metadata.IsExperimental &&
                 !App.Services.GetRequiredService<IAppSettingsService>().Settings.ExperimentalPluginsEnabled)
                 continue;
-            if (App.Services.GetRequiredService<IAppSettingsService>().GetWorkspacePluginConfig().DisabledPlugins.Contains(plugin.Metadata.Id))
+            if (IsPluginDisabledByConfig(syncWsConfig, plugin.Metadata.Id))
                 continue;
             ActivatePlugin(plugin);
         }
@@ -261,12 +271,14 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
             await InitializePluginAsync(plugin, cancellationToken);
         }
 
-        // Activate initialized plugins (skip disabled/locked ones)
+        // Activate initialized plugins — core plugins always, optional plugins check workspace config
+        var asyncWsConfig = App.Services.GetRequiredService<IAppSettingsService>().GetWorkspacePluginConfig();
         foreach (var plugin in _plugins.Where(p => p.State == PluginState.Initialized))
         {
-            if (plugin.Metadata.IsHardLocked)
+            // Core shell plugins (CanDisable=false / IsHardLocked) always activate
+            if (!plugin.Metadata.CanDisable || plugin.Metadata.IsHardLocked)
             {
-                _log.Debug("Skipping hard-locked plugin: {PluginId}", plugin.Metadata.Id);
+                ActivatePlugin(plugin);
                 continue;
             }
 
@@ -277,7 +289,7 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
                 continue;
             }
 
-            if (App.Services.GetRequiredService<IAppSettingsService>().GetWorkspacePluginConfig().DisabledPlugins.Contains(plugin.Metadata.Id))
+            if (IsPluginDisabledByConfig(asyncWsConfig, plugin.Metadata.Id))
             {
                 _log.Debug("Skipping user-disabled plugin: {PluginId}", plugin.Metadata.Id);
                 continue;
@@ -340,6 +352,58 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
         _log.Information("PluginRegistry reinitialized. Active: {Active}/{Total}", ActivePlugins.Count, _plugins.Count);
     }
 
+    /// <summary>
+    /// Async version of Reinitialize — runs heavy plugin work on a background thread
+    /// to avoid freezing the UI during workspace switches.
+    /// Phase 1 (caller/UI thread): teardown + clear state.
+    /// Phase 2 (background): DiscoverAndInitialize (assembly scanning, FFI, plugin init).
+    /// Phase 3 (UI thread): re-register command providers, rebuild nav.
+    /// </summary>
+    public async Task ReinitializeAsync()
+    {
+        _log.Information("ReinitializeAsync: starting (workspace switch)");
+
+        // Phase 1 — teardown on caller thread (UI)
+        foreach (var plugin in _plugins)
+        {
+            try
+            {
+                if (plugin.State == PluginState.Active)
+                    plugin.Deactivate();
+                plugin.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Error tearing down plugin during reinitialize: {PluginId}", plugin.Metadata.Id);
+            }
+        }
+
+        _plugins.Clear();
+        _pluginById.Clear();
+        _pluginByNavId.Clear();
+
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => _navigationItems.Clear());
+
+        _hostFactory = null;
+
+        // Phase 2 — heavy work on background thread
+        await Task.Run(() => DiscoverAndInitialize());
+
+        // Phase 3 — UI-bound work back on UI thread
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (_mainViewModel != null)
+            {
+                foreach (var plugin in ActivePlugins)
+                {
+                    RegisterCommandProvider(plugin, _mainViewModel);
+                }
+            }
+        });
+
+        _log.Information("ReinitializeAsync complete. Active: {Active}/{Total}", ActivePlugins.Count, _plugins.Count);
+    }
+
     public void SetMainViewModel(MainWindowViewModel mainViewModel)
     {
         ThrowIfDisposed();
@@ -379,11 +443,19 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
     {
         var plugin = GetPlugin(pluginId);
         if (plugin == null) return false;
-        if (plugin.Metadata.IsHardLocked) return false;
+
+        // Core shell plugins are always enabled
+        if (!plugin.Metadata.CanDisable || plugin.Metadata.IsHardLocked)
+            return true;
+
         if (plugin.Metadata.IsExperimental &&
             !App.Services.GetRequiredService<IAppSettingsService>().Settings.ExperimentalPluginsEnabled)
             return false;
-        return !App.Services.GetRequiredService<IAppSettingsService>().GetWorkspacePluginConfig().DisabledPlugins.Contains(pluginId);
+
+        var wsConfig = App.Services.GetRequiredService<IAppSettingsService>().GetWorkspacePluginConfig();
+        return wsConfig.IsWhitelistMode
+            ? wsConfig.EnabledPlugins!.Contains(pluginId)
+            : !wsConfig.DisabledPlugins.Contains(pluginId);
     }
 
     public bool EnablePlugin(string pluginId)
@@ -417,7 +489,11 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
         }
 
         var settingsService = App.Services.GetRequiredService<IAppSettingsService>();
-        settingsService.GetWorkspacePluginConfig().DisabledPlugins.Remove(pluginId);
+        var wsConfig = settingsService.GetWorkspacePluginConfig();
+        if (wsConfig.IsWhitelistMode)
+            wsConfig.EnabledPlugins!.Add(pluginId);
+        else
+            wsConfig.DisabledPlugins.Remove(pluginId);
         settingsService.Save();
 
         if (plugin.State == PluginState.Deactivated || plugin.State == PluginState.Initialized)
@@ -453,7 +529,11 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
         }
 
         var settingsService = App.Services.GetRequiredService<IAppSettingsService>();
-        settingsService.GetWorkspacePluginConfig().DisabledPlugins.Add(pluginId);
+        var wsConfig = settingsService.GetWorkspacePluginConfig();
+        if (wsConfig.IsWhitelistMode)
+            wsConfig.EnabledPlugins!.Remove(pluginId);
+        else
+            wsConfig.DisabledPlugins.Add(pluginId);
         settingsService.Save();
 
         if (plugin.State == PluginState.Active)
@@ -475,6 +555,13 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
 
                 plugin.Deactivate();
                 RaisePluginStateChanged(plugin, PluginState.Deactivated);
+
+                // Free ViewModel memory and evict from MainWindowViewModel cache
+                plugin.ResetViewModel();
+                if (_mainViewModel != null && plugin.NavigationItem != null)
+                {
+                    _mainViewModel.EvictPluginCache(plugin.NavigationItem.Id);
+                }
             }
             catch (Exception ex)
             {
@@ -1532,6 +1619,18 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
         }
     }
 
+    /// <summary>
+    /// Checks whether a plugin is disabled by the given workspace config.
+    /// Whitelist mode: disabled if NOT in EnabledPlugins.
+    /// Blacklist mode: disabled if IN DisabledPlugins.
+    /// </summary>
+    private static bool IsPluginDisabledByConfig(WorkspacePluginConfig config, string pluginId)
+    {
+        return config.IsWhitelistMode
+            ? !config.EnabledPlugins!.Contains(pluginId)
+            : config.DisabledPlugins.Contains(pluginId);
+    }
+
     private void ActivatePlugin(IAppPlugin plugin)
     {
         try
@@ -1694,6 +1793,13 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
 
     private void RebuildNavigationItems()
     {
+        // ObservableCollection is bound to the sidebar — must run on UI thread
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        {
+            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(RebuildNavigationItems).Wait();
+            return;
+        }
+
         _navigationItems.Clear();
 
         var savedOrder = App.Services.GetRequiredService<IAppSettingsService>().GetWorkspacePluginConfig().PluginOrder;

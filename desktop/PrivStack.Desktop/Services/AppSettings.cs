@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.Connections;
 using Serilog;
 
 namespace PrivStack.Desktop.Services;
@@ -64,10 +65,12 @@ public class AppSettings
     [JsonPropertyName("profile_image_path")]
     public string? ProfileImagePath { get; set; }
 
-    // Data & Backup settings
+    // Data & Backup settings (legacy — storage location is now per-workspace via Workspace.StorageLocation)
+    [Obsolete("Use Workspace.StorageLocation instead. Kept for JSON deserialization backward compat.")]
     [JsonPropertyName("data_directory_type")]
     public string DataDirectoryType { get; set; } = "Default";
 
+    [Obsolete("Use Workspace.StorageLocation instead. Kept for JSON deserialization backward compat.")]
     [JsonPropertyName("custom_data_directory")]
     public string? CustomDataDirectory { get; set; }
 
@@ -227,6 +230,10 @@ public class AppSettings
     [JsonPropertyName("refresh_token")]
     public string? RefreshToken { get; set; }
 
+    // Connection metadata (non-sensitive, keyed by provider e.g. "github")
+    [JsonPropertyName("connection_metadata")]
+    public Dictionary<string, ConnectionMetadataEntry> ConnectionMetadata { get; set; } = [];
+
     [JsonPropertyName("plugin_settings")]
     public Dictionary<string, string> PluginSettings { get; set; } = [];
 
@@ -246,6 +253,14 @@ public class AppSettings
 /// </summary>
 public class WorkspacePluginConfig
 {
+    /// <summary>
+    /// Whitelist of enabled plugin IDs. When non-null, takes precedence over DisabledPlugins.
+    /// Null means legacy blacklist mode (all plugins enabled except those in DisabledPlugins).
+    /// </summary>
+    [JsonPropertyName("enabled_plugins")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HashSet<string>? EnabledPlugins { get; set; }
+
     [JsonPropertyName("disabled_plugins")]
     public HashSet<string> DisabledPlugins { get; set; } = [];
 
@@ -254,6 +269,12 @@ public class WorkspacePluginConfig
 
     [JsonPropertyName("plugin_order")]
     public List<string> PluginOrder { get; set; } = [];
+
+    /// <summary>
+    /// Whether this config uses whitelist mode (EnabledPlugins != null).
+    /// </summary>
+    [JsonIgnore]
+    public bool IsWhitelistMode => EnabledPlugins != null;
 }
 
 /// <summary>
@@ -493,7 +514,7 @@ public class AppSettingsService : IAppSettingsService
 
     /// <summary>
     /// Gets the plugin config for the current workspace, creating it if needed.
-    /// On first access for a workspace, migrates from the global settings.
+    /// Existing workspaces get legacy blacklist migration; brand-new workspaces get whitelist mode.
     /// </summary>
     public WorkspacePluginConfig GetWorkspacePluginConfig()
     {
@@ -503,7 +524,7 @@ public class AppSettingsService : IAppSettingsService
 
         if (!_settings.WorkspacePluginSettings.TryGetValue(workspaceId, out var config))
         {
-            // First access for this workspace — migrate from global settings
+            // First access for this workspace — migrate from global settings (legacy blacklist mode)
             config = new WorkspacePluginConfig
             {
                 DisabledPlugins = new HashSet<string>(_settings.DisabledPlugins),
@@ -519,6 +540,33 @@ public class AppSettingsService : IAppSettingsService
             Save();
             _log.Debug("Migrated plugin settings to workspace {WorkspaceId}", workspaceId);
         }
+
+        return config;
+    }
+
+    /// <summary>
+    /// Creates a whitelist-mode plugin config for a workspace.
+    /// If no enabledPluginIds are provided, defaults to an empty set (no optional plugins).
+    /// Hard-locked plugins are always activated regardless of the whitelist.
+    /// </summary>
+    public WorkspacePluginConfig InitializeWorkspacePluginConfig(
+        string workspaceId,
+        IEnumerable<string>? enabledPluginIds = null)
+    {
+        var enabled = enabledPluginIds != null
+            ? new HashSet<string>(enabledPluginIds, StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var config = new WorkspacePluginConfig
+        {
+            EnabledPlugins = enabled,
+            PluginOrder = [],
+        };
+
+        _settings.WorkspacePluginSettings[workspaceId] = config;
+        Save();
+        _log.Debug("Initialized whitelist plugin config for workspace {WorkspaceId} with {Count} plugins",
+            workspaceId, enabled.Count);
 
         return config;
     }

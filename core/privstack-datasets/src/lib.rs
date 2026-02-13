@@ -29,8 +29,8 @@ pub use types::{
 ///
 /// Mirrors the pattern from `privstack-storage::open_duckdb_with_wal_recovery`.
 pub fn open_datasets_db(path: &std::path::Path) -> DatasetResult<duckdb::Connection> {
-    match duckdb::Connection::open(path) {
-        Ok(conn) => Ok(conn),
+    let conn = match duckdb::Connection::open(path) {
+        Ok(c) => c,
         Err(first_err) => {
             let wal_path = path.with_extension(
                 path.extension()
@@ -43,10 +43,15 @@ pub fn open_datasets_db(path: &std::path::Path) -> DatasetResult<duckdb::Connect
                     wal_path.display()
                 );
                 if std::fs::remove_file(&wal_path).is_ok() {
-                    return duckdb::Connection::open(path).map_err(Into::into);
+                    let c = duckdb::Connection::open(path)?;
+                    c.execute_batch("PRAGMA memory_limit='256MB'; PRAGMA threads=2;")?;
+                    return Ok(c);
                 }
             }
-            Err(first_err.into())
+            return Err(first_err.into());
         }
-    }
+    };
+    // Cap memory/threads — DuckDB defaults to ~80% RAM per connection
+    conn.execute_batch("PRAGMA memory_limit='256MB'; PRAGMA threads=2;")?;
+    Ok(conn)
 }

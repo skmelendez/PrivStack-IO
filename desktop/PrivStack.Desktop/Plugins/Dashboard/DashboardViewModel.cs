@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Models.PluginRegistry;
 using PrivStack.Desktop.Plugins.Dashboard.Models;
 using PrivStack.Desktop.Plugins.Dashboard.Services;
@@ -33,6 +34,7 @@ public partial class DashboardViewModel : ViewModelBase
     private readonly IPrivStackSdk _sdk;
     private readonly EntityMetadataService _entityMetadataService;
     private readonly LinkProviderCacheService _linkProviderCache;
+    private readonly IWorkspaceService _workspaceService;
     private List<OfficialPluginInfo> _serverPlugins = [];
 
     internal DashboardViewModel(
@@ -41,7 +43,8 @@ public partial class DashboardViewModel : ViewModelBase
         SystemMetricsService metricsService,
         IPrivStackSdk sdk,
         EntityMetadataService entityMetadataService,
-        LinkProviderCacheService linkProviderCache)
+        LinkProviderCacheService linkProviderCache,
+        IWorkspaceService workspaceService)
     {
         _installService = installService;
         _pluginRegistry = pluginRegistry;
@@ -49,6 +52,7 @@ public partial class DashboardViewModel : ViewModelBase
         _sdk = sdk;
         _entityMetadataService = entityMetadataService;
         _linkProviderCache = linkProviderCache;
+        _workspaceService = workspaceService;
     }
 
     // --- Tab State ---
@@ -124,6 +128,18 @@ public partial class DashboardViewModel : ViewModelBase
     private string _totalStorageSize = "—";
 
     [ObservableProperty]
+    private string _totalDatabaseEstimate = string.Empty;
+
+    [ObservableProperty]
+    private string _totalFilesEstimate = string.Empty;
+
+    [ObservableProperty]
+    private string _totalVaultEstimate = string.Empty;
+
+    [ObservableProperty]
+    private string _totalStorageEstimate = string.Empty;
+
+    [ObservableProperty]
     private bool _isRunningMaintenance;
 
     [ObservableProperty]
@@ -133,6 +149,20 @@ public partial class DashboardViewModel : ViewModelBase
     private string? _validationStatus;
 
     public ObservableCollection<PluginDataInfo> PluginDataItems { get; } = [];
+
+    // --- Workspace Plugins ---
+
+    public ObservableCollection<WorkspacePluginEntry> WorkspacePlugins { get; } = [];
+
+    [ObservableProperty]
+    private bool _isWorkspacePluginsExpanded = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasInactivePlugins))]
+    private int _activeWorkspacePluginCount;
+
+    public bool HasInactivePlugins => WorkspacePlugins.Count > 0 &&
+        WorkspacePlugins.Any(p => !p.IsActivated);
 
     // --- Computed ---
 
@@ -264,6 +294,7 @@ public partial class DashboardViewModel : ViewModelBase
             }
 
             await LoadSystemMetricsAsync();
+            LoadWorkspacePlugins();
 
             HasLoadedOnce = true;
         }
@@ -316,13 +347,68 @@ public partial class DashboardViewModel : ViewModelBase
             MemoryGcHeap = SystemMetricsHelper.FormatBytes(gcHeap);
 
             // Also refresh data storage totals for the overview card
-            var dataResult = await _metricsService.GetDataMetricsAsync(_pluginRegistry);
+            var dataResult = await _metricsService.GetDataMetricsAsync(_pluginRegistry, _workspaceService);
             DataStorageTotal = SystemMetricsHelper.FormatBytes(dataResult.TotalStorageBytes);
         }
         catch (Exception ex)
         {
             _log.Warning(ex, "Failed to load system metrics");
         }
+    }
+
+    // =========================================================================
+    // Workspace plugins
+    // =========================================================================
+
+    [RelayCommand]
+    private void ToggleWorkspacePluginsExpanded()
+    {
+        IsWorkspacePluginsExpanded = !IsWorkspacePluginsExpanded;
+    }
+
+    [RelayCommand]
+    private void LoadWorkspacePlugins()
+    {
+        WorkspacePlugins.Clear();
+
+        foreach (var plugin in _pluginRegistry.Plugins)
+        {
+            if (plugin.Metadata.IsHardLocked) continue;
+            if (!plugin.Metadata.CanDisable) continue;
+
+            WorkspacePlugins.Add(new WorkspacePluginEntry
+            {
+                Id = plugin.Metadata.Id,
+                Name = plugin.Metadata.Name,
+                Description = plugin.Metadata.Description,
+                Icon = plugin.Metadata.Icon,
+                Category = plugin.Metadata.Category,
+                IsActivated = _pluginRegistry.IsPluginEnabled(plugin.Metadata.Id),
+            });
+        }
+
+        ActiveWorkspacePluginCount = WorkspacePlugins.Count(p => p.IsActivated);
+        OnPropertyChanged(nameof(HasInactivePlugins));
+    }
+
+    [RelayCommand]
+    private void ToggleWorkspacePlugin(WorkspacePluginEntry? entry)
+    {
+        if (entry == null) return;
+
+        if (entry.IsActivated)
+        {
+            _pluginRegistry.DisablePlugin(entry.Id);
+            entry.IsActivated = false;
+        }
+        else
+        {
+            _pluginRegistry.EnablePlugin(entry.Id);
+            entry.IsActivated = true;
+        }
+
+        ActiveWorkspacePluginCount = WorkspacePlugins.Count(p => p.IsActivated);
+        OnPropertyChanged(nameof(HasInactivePlugins));
     }
 
     [RelayCommand]
@@ -343,7 +429,7 @@ public partial class DashboardViewModel : ViewModelBase
             IsLoading = true;
             StatusMessage = null;
 
-            var dataResult = await _metricsService.GetDataMetricsAsync(_pluginRegistry);
+            var dataResult = await _metricsService.GetDataMetricsAsync(_pluginRegistry, _workspaceService);
 
             PluginDataItems.Clear();
             foreach (var item in dataResult.PluginDataItems)
@@ -356,6 +442,21 @@ public partial class DashboardViewModel : ViewModelBase
             TotalVaultSize = SystemMetricsHelper.FormatBytes(dataResult.TotalVaultBytes);
             TotalStorageSize = SystemMetricsHelper.FormatBytes(dataResult.TotalStorageBytes);
             DataStorageTotal = TotalStorageSize;
+
+            // Set estimate subtitles (only shown when different from actual)
+            TotalDatabaseEstimate = dataResult.EstimatedDatabaseBytes > 0
+                && dataResult.EstimatedDatabaseBytes != dataResult.TotalDatabaseBytes
+                ? $"(~{SystemMetricsHelper.FormatBytes(dataResult.EstimatedDatabaseBytes)} uncompressed)"
+                : string.Empty;
+            TotalFilesEstimate = string.Empty; // Files are already measured from disk
+            TotalVaultEstimate = dataResult.EstimatedVaultBytes > 0
+                && dataResult.EstimatedVaultBytes != dataResult.TotalVaultBytes
+                ? $"(~{SystemMetricsHelper.FormatBytes(dataResult.EstimatedVaultBytes)} uncompressed)"
+                : string.Empty;
+            TotalStorageEstimate = dataResult.EstimatedStorageBytes > 0
+                && dataResult.EstimatedStorageBytes != dataResult.TotalStorageBytes
+                ? $"(~{SystemMetricsHelper.FormatBytes(dataResult.EstimatedStorageBytes)} uncompressed)"
+                : string.Empty;
         }
         catch (Exception ex)
         {

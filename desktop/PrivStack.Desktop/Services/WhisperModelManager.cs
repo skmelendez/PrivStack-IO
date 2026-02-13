@@ -28,7 +28,7 @@ public sealed class WhisperModelManager : INotifyPropertyChanged
         ["medium.en"] = ("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin", 1_500_000_000),
     };
 
-    private readonly string _modelsDirectory;
+    private string? _cachedModelsDirectory;
     private readonly HttpClient _httpClient;
     private bool _isDownloading;
     private double _downloadProgress;
@@ -38,6 +38,28 @@ public sealed class WhisperModelManager : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     public event EventHandler<string>? DownloadCompleted;
     public event EventHandler<Exception>? DownloadFailed;
+
+    /// <summary>
+    /// Lazy models directory: workspace-scoped if active, root fallback otherwise.
+    /// </summary>
+    private string ModelsDirectory
+    {
+        get
+        {
+            var wsDir = DataPaths.WorkspaceDataDir;
+            var target = wsDir != null
+                ? Path.Combine(wsDir, "models", "whisper")
+                : Path.Combine(DataPaths.BaseDir, "models", "whisper");
+
+            if (_cachedModelsDirectory != target)
+            {
+                _cachedModelsDirectory = target;
+                Directory.CreateDirectory(target);
+            }
+
+            return target;
+        }
+    }
 
     public bool IsDownloading
     {
@@ -80,9 +102,6 @@ public sealed class WhisperModelManager : INotifyPropertyChanged
 
     private WhisperModelManager()
     {
-        _modelsDirectory = Path.Combine(DataPaths.BaseDir, "models", "whisper");
-        Directory.CreateDirectory(_modelsDirectory);
-
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "PrivStack/1.0");
     }
@@ -119,7 +138,7 @@ public sealed class WhisperModelManager : INotifyPropertyChanged
     /// </summary>
     public string GetModelPath(string modelName)
     {
-        return Path.Combine(_modelsDirectory, $"ggml-{modelName}.bin");
+        return Path.Combine(ModelsDirectory, $"ggml-{modelName}.bin");
     }
 
     /// <summary>

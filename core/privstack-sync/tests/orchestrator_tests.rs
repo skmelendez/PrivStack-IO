@@ -2,7 +2,8 @@ use privstack_sync::transport::{
     DiscoveredPeer, DiscoveryMethod, IncomingSyncRequest, ResponseToken, SyncTransport,
 };
 use privstack_sync::{
-    create_orchestrator, OrchestratorConfig, SyncCommand, SyncEvent, SyncMessage,
+    create_orchestrator, EventApplicator, OrchestratorConfig, OrchestratorHandle,
+    SyncCommand, SyncEvent, SyncMessage,
     HelloAckMessage, SyncStateMessage, EventAckMessage, EventBatchMessage,
     PROTOCOL_VERSION,
 };
@@ -131,6 +132,30 @@ fn make_event_ack_default() -> SyncMessage {
     })
 }
 
+/// Records an event through both the entity store (so `entities_needing_sync`
+/// finds it) and the event store, then notifies the orchestrator handle.
+async fn record_event_with_stores(
+    handle: &OrchestratorHandle,
+    entity_store: &Arc<EntityStore>,
+    event_store: &Arc<EventStore>,
+    peer_id: PeerId,
+    event: Event,
+) {
+    let evs = event_store.clone();
+    let ev = event.clone();
+    tokio::task::spawn_blocking(move || evs.save_event(&ev))
+        .await.unwrap().unwrap();
+
+    if !matches!(event.payload, EventPayload::EntityDeleted { .. }) {
+        let es = entity_store.clone();
+        let ev = event.clone();
+        tokio::task::spawn_blocking(move || {
+            EventApplicator::new(peer_id).apply_event(&ev, &es, None, None)
+        }).await.unwrap().ok();
+    }
+
+    handle.record_event(event).await.unwrap();
+}
 
 // ── OrchestratorConfig ──────────────────────────────────────────
 
@@ -156,6 +181,7 @@ fn config_clone() {
         sync_interval: Duration::from_secs(60),
         discovery_interval: Duration::from_secs(10),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
     let cloned = cfg.clone();
     assert_eq!(cloned.sync_interval, Duration::from_secs(60));
@@ -397,6 +423,7 @@ async fn run_shutdown_immediately() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -434,6 +461,7 @@ async fn run_discovers_peer_and_emits_event() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_millis(50),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
@@ -476,6 +504,7 @@ async fn run_record_local_event() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -525,6 +554,7 @@ async fn run_share_entity_command() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -568,6 +598,7 @@ async fn run_sync_with_peer_full_handshake() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
@@ -627,16 +658,27 @@ async fn run_sync_with_peer_rejected() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
     handle.share_entity(entity_id).await.unwrap();
+    let event = Event::new(
+        entity_id,
+        local_peer,
+        HybridTimestamp::now(),
+        EventPayload::EntityCreated {
+            entity_type: "note".to_string(),
+            json_data: r#"{"title":"test"}"#.to_string(),
+        },
+    );
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     handle.send(SyncCommand::SyncWithPeer { peer_id: remote_peer }).await.unwrap();
@@ -683,16 +725,27 @@ async fn run_sync_with_peer_version_mismatch() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
     handle.share_entity(entity_id).await.unwrap();
+    let event = Event::new(
+        entity_id,
+        local_peer,
+        HybridTimestamp::now(),
+        EventPayload::EntityCreated {
+            entity_type: "note".to_string(),
+            json_data: r#"{"title":"test"}"#.to_string(),
+        },
+    );
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     handle.send(SyncCommand::SyncWithPeer { peer_id: remote_peer }).await.unwrap();
@@ -736,16 +789,27 @@ async fn run_sync_with_peer_unexpected_hello_response() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
     handle.share_entity(entity_id).await.unwrap();
+    let event = Event::new(
+        entity_id,
+        local_peer,
+        HybridTimestamp::now(),
+        EventPayload::EntityCreated {
+            entity_type: "note".to_string(),
+            json_data: r#"{"title":"test"}"#.to_string(),
+        },
+    );
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     handle.send(SyncCommand::SyncWithPeer { peer_id: remote_peer }).await.unwrap();
@@ -783,16 +847,27 @@ async fn run_sync_with_peer_send_request_fails() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
     handle.share_entity(entity_id).await.unwrap();
+    let event = Event::new(
+        entity_id,
+        local_peer,
+        HybridTimestamp::now(),
+        EventPayload::EntityCreated {
+            entity_type: "note".to_string(),
+            json_data: r#"{"title":"test"}"#.to_string(),
+        },
+    );
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     handle.send(SyncCommand::SyncWithPeer { peer_id: remote_peer }).await.unwrap();
@@ -828,6 +903,7 @@ async fn run_sync_no_shared_entities_is_noop() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
@@ -868,6 +944,7 @@ async fn run_incoming_request_hello() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (_handle, _event_rx, command_rx, orchestrator) =
@@ -916,6 +993,7 @@ async fn run_incoming_request_sync_request() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -963,6 +1041,7 @@ async fn run_incoming_request_event_batch() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -1022,6 +1101,7 @@ async fn run_incoming_request_unexpected_message() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -1075,17 +1155,28 @@ async fn run_auto_sync_on_discovery() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_millis(50),
         auto_sync: true,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
-    // Share an entity so auto_sync triggers
+    // Share an entity and create an entity row so auto_sync triggers
     handle.share_entity(entity_id).await.unwrap();
+    let event = Event::new(
+        entity_id,
+        local_peer,
+        HybridTimestamp::now(),
+        EventPayload::EntityCreated {
+            entity_type: "note".to_string(),
+            json_data: r#"{"title":"test"}"#.to_string(),
+        },
+    );
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
 
     // Wait for discovery + auto sync events
     let mut got_discovered = false;
@@ -1139,6 +1230,7 @@ async fn run_sync_with_peer_unexpected_sync_state_response() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
@@ -1202,16 +1294,27 @@ async fn run_sync_entity_command_with_synced_peer() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
     handle.share_entity(entity_id).await.unwrap();
+    let event = Event::new(
+        entity_id,
+        local_peer,
+        HybridTimestamp::now(),
+        EventPayload::EntityCreated {
+            entity_type: "note".to_string(),
+            json_data: r#"{"title":"test"}"#.to_string(),
+        },
+    );
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // First: sync with peer to establish them as a synced peer
@@ -1255,7 +1358,6 @@ async fn run_sync_sends_event_batches() {
     let entity_id = EntityId::new();
     let (es, ev) = make_stores();
 
-    // Store an event in the event store so the engine has something to send
     let event = Event::new(
         entity_id,
         local_peer,
@@ -1265,7 +1367,6 @@ async fn run_sync_sends_event_batches() {
             json_data: r#"{"title":"hello"}"#.to_string(),
         },
     );
-    ev.save_event(&event).unwrap();
 
     let (_incoming_tx, incoming_rx) = mpsc::channel(16);
 
@@ -1292,18 +1393,19 @@ async fn run_sync_sends_event_batches() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
-    // Share the entity and record the event via the orchestrator
+    // Share the entity and record the event via the orchestrator + stores
     handle.share_entity(entity_id).await.unwrap();
-    handle.record_event(event).await.unwrap();
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Trigger sync
@@ -1343,7 +1445,6 @@ async fn run_sync_batch_send_fails() {
             json_data: "{}".to_string(),
         },
     );
-    ev.save_event(&event).unwrap();
 
     let (_incoming_tx, incoming_rx) = mpsc::channel(16);
 
@@ -1365,17 +1466,18 @@ async fn run_sync_batch_send_fails() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
     handle.share_entity(entity_id).await.unwrap();
-    handle.record_event(event).await.unwrap();
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     handle.send(SyncCommand::SyncWithPeer { peer_id: remote_peer }).await.unwrap();
@@ -1414,7 +1516,6 @@ async fn run_sync_batch_unexpected_response() {
             json_data: "{}".to_string(),
         },
     );
-    ev.save_event(&event).unwrap();
 
     let (_incoming_tx, incoming_rx) = mpsc::channel(16);
 
@@ -1436,17 +1537,18 @@ async fn run_sync_batch_unexpected_response() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
     handle.share_entity(entity_id).await.unwrap();
-    handle.record_event(event).await.unwrap();
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     handle.send(SyncCommand::SyncWithPeer { peer_id: remote_peer }).await.unwrap();
@@ -1486,7 +1588,6 @@ async fn run_sync_ack_with_bidirectional_events() {
             json_data: r#"{"title":"local"}"#.to_string(),
         },
     );
-    ev.save_event(&local_event).unwrap();
 
     // A remote event that comes back in the ack
     let remote_event = Event::new(
@@ -1523,17 +1624,18 @@ async fn run_sync_ack_with_bidirectional_events() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
     handle.share_entity(entity_id).await.unwrap();
-    handle.record_event(local_event).await.unwrap();
+    record_event_with_stores(&handle, &es, &ev, local_peer, local_event).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     handle.send(SyncCommand::SyncWithPeer { peer_id: remote_peer }).await.unwrap();
@@ -1585,6 +1687,7 @@ async fn enterprise_orchestrator_rejects_untrusted_peer_hello() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -1640,6 +1743,7 @@ async fn enterprise_orchestrator_incoming_event_batch_filtered_by_policy() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -1702,6 +1806,7 @@ async fn personal_orchestrator_shutdown() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let personal_policy = Arc::new(PersonalSyncPolicy::new());
@@ -1737,6 +1842,7 @@ async fn run_incoming_error_message() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -1785,6 +1891,7 @@ async fn enterprise_orchestrator_creation_and_shutdown() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -1840,6 +1947,7 @@ async fn run_share_entity_with_peer_personal_policy() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let personal_policy = Arc::new(PersonalSyncPolicy::new());
@@ -1881,6 +1989,7 @@ async fn run_share_entity_with_peer_no_personal_policy() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, _event_rx, command_rx, orchestrator) =
@@ -1925,6 +2034,7 @@ async fn pairing_orchestrator_skips_untrusted_peer_on_discovery() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_millis(50),
         auto_sync: true,
+        max_entities_per_sync: 0,
     };
 
     let pm = Arc::new(std::sync::Mutex::new(PairingManager::new()));
@@ -1990,6 +2100,7 @@ async fn personal_orchestrator_filters_entities_per_peer() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let personal_policy = Arc::new(PersonalSyncPolicy::new());
@@ -2078,6 +2189,7 @@ async fn run_sync_state_request_fails() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =

@@ -22,8 +22,8 @@ use privstack_sync::transport::{
     DiscoveredPeer, DiscoveryMethod, IncomingSyncRequest, ResponseToken, SyncTransport,
 };
 use privstack_sync::{
-    create_orchestrator_with_pairing, create_personal_orchestrator, OrchestratorConfig,
-    SyncCommand, SyncEvent, SyncMessage, SyncResult,
+    create_orchestrator_with_pairing, create_personal_orchestrator, EventApplicator,
+    OrchestratorConfig, OrchestratorHandle, SyncCommand, SyncEvent, SyncMessage, SyncResult,
 };
 use privstack_storage::{EntityStore, EventStore};
 use privstack_types::{EntityId, Event, EventPayload, HybridTimestamp, PeerId};
@@ -341,11 +341,35 @@ fn make_event(entity_id: EntityId, peer_id: PeerId, payload: EventPayload) -> Ev
     Event::new(entity_id, peer_id, HybridTimestamp::now(), payload)
 }
 
+async fn record_event(
+    handle: &OrchestratorHandle,
+    entity_store: &Arc<EntityStore>,
+    event_store: &Arc<EventStore>,
+    peer_id: PeerId,
+    event: Event,
+) {
+    let evs = event_store.clone();
+    let ev = event.clone();
+    tokio::task::spawn_blocking(move || evs.save_event(&ev))
+        .await.unwrap().unwrap();
+
+    if !matches!(event.payload, EventPayload::EntityDeleted { .. }) {
+        let es = entity_store.clone();
+        let ev = event.clone();
+        tokio::task::spawn_blocking(move || {
+            EventApplicator::new(peer_id).apply_event(&ev, &es, None, None)
+        }).await.unwrap().ok();
+    }
+
+    handle.record_event(event).await.unwrap();
+}
+
 fn no_auto_config() -> OrchestratorConfig {
     OrchestratorConfig {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     }
 }
 
@@ -354,6 +378,7 @@ fn fast_discovery_config() -> OrchestratorConfig {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_millis(100),
         auto_sync: true,
+        max_entities_per_sync: 0,
     }
 }
 
@@ -468,9 +493,9 @@ async fn mdns_full_sharing_lifecycle() {
     let peer_a = PeerId::new();
     let peer_b = PeerId::new();
 
-    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, _es_a, ev_a) =
+    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, es_a, ev_a) =
         setup_personal_peer(peer_a);
-    let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, _es_b, ev_b) =
+    let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, es_b, ev_b) =
         setup_personal_peer(peer_b);
 
     // ── Step 1: Friend pairing ──
@@ -515,7 +540,7 @@ async fn mdns_full_sharing_lifecycle() {
             json_data: r#"{"title":"Shared Doc"}"#.to_string(),
         },
     );
-    handle_a.record_event(event_a_doc1.clone()).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, event_a_doc1.clone()).await;
 
     // A creates doc_2 event (private)
     let event_a_doc2 = make_event(
@@ -526,7 +551,7 @@ async fn mdns_full_sharing_lifecycle() {
             json_data: r#"{"title":"Private Doc"}"#.to_string(),
         },
     );
-    handle_a.record_event(event_a_doc2.clone()).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, event_a_doc2.clone()).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // ── Step 3: Sync — B should get doc_1, NOT doc_2 ──
@@ -548,7 +573,7 @@ async fn mdns_full_sharing_lifecycle() {
             json_data: r#"{"title":"Shared Doc","body":"B's edit"}"#.to_string(),
         },
     );
-    handle_b.record_event(edit_b.clone()).await.unwrap();
+    record_event(&handle_b, &es_b, &ev_b, peer_b, edit_b.clone()).await;
 
     let edit_a = make_event(
         doc_1,
@@ -558,7 +583,7 @@ async fn mdns_full_sharing_lifecycle() {
             json_data: r#"{"title":"Shared Doc","body":"A's edit"}"#.to_string(),
         },
     );
-    handle_a.record_event(edit_a.clone()).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, edit_a.clone()).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
@@ -589,7 +614,7 @@ async fn mdns_full_sharing_lifecycle() {
             json_data: r#"{"title":"Shared Doc","body":"Post-revoke edit"}"#.to_string(),
         },
     );
-    handle_a.record_event(post_revoke_event.clone()).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, post_revoke_event.clone()).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Sync again — B should NOT get the new event
@@ -765,7 +790,7 @@ async fn mdns_multi_peer_selective_sharing() {
                 json_data: format!(r#"{{"title":"{}"}}"#, title),
             },
         );
-        handle_a.record_event(evt).await.unwrap();
+        record_event(&handle_a, &es_a, &ev_a, peer_a, evt).await;
     }
     tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -824,20 +849,20 @@ async fn mdns_multi_editor_crdt_convergence() {
         peer_a, es_a.clone(), ev_a.clone(), no_auto_config(), policy_a.clone(), pm_a,
     );
 
-    let (_es_b, ev_b) = make_stores();
+    let (es_b, ev_b) = make_stores();
     let policy_b = Arc::new(PersonalSyncPolicy::new());
     let pm_b = Arc::new(std::sync::Mutex::new(PairingManager::new()));
     trust_peer(&pm_b, peer_a, "Alice");
     let (handle_b, mut events_b, cmd_rx_b, orch_b) = create_personal_orchestrator(
-        peer_b, _es_b.clone(), ev_b.clone(), no_auto_config(), policy_b.clone(), pm_b,
+        peer_b, es_b.clone(), ev_b.clone(), no_auto_config(), policy_b.clone(), pm_b,
     );
 
-    let (_es_c, ev_c) = make_stores();
+    let (es_c, ev_c) = make_stores();
     let policy_c = Arc::new(PersonalSyncPolicy::new());
     let pm_c = Arc::new(std::sync::Mutex::new(PairingManager::new()));
     trust_peer(&pm_c, peer_a, "Alice");
     let (handle_c, mut events_c, cmd_rx_c, orch_c) = create_personal_orchestrator(
-        peer_c, _es_c.clone(), ev_c.clone(), no_auto_config(), policy_c.clone(), pm_c,
+        peer_c, es_c.clone(), ev_c.clone(), no_auto_config(), policy_c.clone(), pm_c,
     );
 
     // Share doc with all peers
@@ -862,7 +887,7 @@ async fn mdns_multi_editor_crdt_convergence() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"Collab"}"#.to_string(),
     });
-    handle_a.record_event(create).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, create).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // Sync A → B and A → C
@@ -874,14 +899,14 @@ async fn mdns_multi_editor_crdt_convergence() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"Collab","author":"Bob"}"#.to_string(),
     });
-    handle_b.record_event(edit_b).await.unwrap();
+    record_event(&handle_b, &es_b, &ev_b, peer_b, edit_b).await;
 
     // C edits
     let edit_c = make_event(doc, peer_c, EventPayload::EntityUpdated {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"Collab","footer":"Charlie"}"#.to_string(),
     });
-    handle_c.record_event(edit_c).await.unwrap();
+    record_event(&handle_c, &es_c, &ev_c, peer_c, edit_c).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // Sync all pairs via A (hub)
@@ -929,9 +954,9 @@ async fn dht_share_and_revoke() {
     let peer_a = PeerId::new();
     let peer_b = PeerId::new();
 
-    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, _es_a, ev_a) =
+    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, es_a, ev_a) =
         setup_personal_peer(peer_a);
-    let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, _es_b, ev_b) =
+    let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, es_b, ev_b) =
         setup_personal_peer(peer_b);
 
     trust_peer(&pm_a, peer_b, "Bob-DHT");
@@ -957,7 +982,7 @@ async fn dht_share_and_revoke() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"DHT Doc"}"#.to_string(),
     });
-    handle_a.record_event(create.clone()).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, create.clone()).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Sync
@@ -971,7 +996,7 @@ async fn dht_share_and_revoke() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"DHT Doc","note":"edited"}"#.to_string(),
     });
-    handle_b.record_event(edit).await.unwrap();
+    record_event(&handle_b, &es_b, &ev_b, peer_b, edit).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     full_sync(&handle_b, &mut events_b, peer_a, &handle_a, &mut events_a, peer_b).await;
@@ -986,7 +1011,7 @@ async fn dht_share_and_revoke() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"DHT Doc","note":"post-revoke"}"#.to_string(),
     });
-    handle_a.record_event(post).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, post).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
@@ -1051,9 +1076,9 @@ async fn relay_share_edit_revoke() {
     let peer_a = PeerId::new();
     let peer_b = PeerId::new();
 
-    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, _es_a, ev_a) =
+    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, es_a, ev_a) =
         setup_personal_peer(peer_a);
-    let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, _es_b, ev_b) =
+    let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, es_b, ev_b) =
         setup_personal_peer(peer_b);
 
     trust_peer(&pm_a, peer_b, "Bob-Relay");
@@ -1085,8 +1110,8 @@ async fn relay_share_edit_revoke() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"Relay Private"}"#.to_string(),
     });
-    handle_a.record_event(ev_doc.clone()).await.unwrap();
-    handle_a.record_event(ev_private.clone()).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, ev_doc.clone()).await;
+    record_event(&handle_a, &es_a, &ev_a, peer_a, ev_private.clone()).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
@@ -1100,7 +1125,7 @@ async fn relay_share_edit_revoke() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"Relay Shared","by":"Bob"}"#.to_string(),
     });
-    handle_b.record_event(edit).await.unwrap();
+    record_event(&handle_b, &es_b, &ev_b, peer_b, edit).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     full_sync(&handle_b, &mut events_b, peer_a, &handle_a, &mut events_a, peer_b).await;
@@ -1113,7 +1138,7 @@ async fn relay_share_edit_revoke() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"Relay Shared","post":"revoke"}"#.to_string(),
     });
-    handle_a.record_event(post).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, post).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
@@ -1152,14 +1177,14 @@ async fn relay_three_peers_selective_convergence() {
         }
         let (h, erx, crx, o) =
             create_personal_orchestrator(pid, es.clone(), ev.clone(), no_auto_config(), policy.clone(), pm);
-        (h, erx, crx, o, policy, ev)
+        (h, erx, crx, o, policy, es, ev)
     };
 
-    let (handle_a, mut ev_rx_a, cmd_rx_a, orch_a, pol_a, ev_a) =
+    let (handle_a, mut ev_rx_a, cmd_rx_a, orch_a, pol_a, es_a, ev_a) =
         setup(peer_a, &[(peer_b, "Bob"), (peer_c, "Charlie")]);
-    let (handle_b, mut ev_rx_b, cmd_rx_b, orch_b, pol_b, ev_b) =
+    let (handle_b, mut ev_rx_b, cmd_rx_b, orch_b, pol_b, es_b, ev_b) =
         setup(peer_b, &[(peer_a, "Alice")]);
-    let (handle_c, mut ev_rx_c, cmd_rx_c, orch_c, pol_c, ev_c) =
+    let (handle_c, mut ev_rx_c, cmd_rx_c, orch_c, pol_c, es_c, ev_c) =
         setup(peer_c, &[(peer_a, "Alice")]);
 
     // A's sharing
@@ -1185,22 +1210,22 @@ async fn relay_three_peers_selective_convergence() {
 
     // Everyone creates an event on shared_bc
     for (peer, name) in [(peer_a, "A"), (peer_b, "B"), (peer_c, "C")] {
-        let h = match name {
-            "A" => &handle_a,
-            "B" => &handle_b,
-            _ => &handle_c,
+        let (h, es, ev): (&OrchestratorHandle, &Arc<EntityStore>, &Arc<EventStore>) = match name {
+            "A" => (&handle_a, &es_a, &ev_a),
+            "B" => (&handle_b, &es_b, &ev_b),
+            _ => (&handle_c, &es_c, &ev_c),
         };
-        h.record_event(make_event(shared_bc, peer, EventPayload::EntityCreated {
+        record_event(h, es, ev, peer, make_event(shared_bc, peer, EventPayload::EntityCreated {
             entity_type: "note".to_string(),
             json_data: format!(r#"{{"from":"{}"}}"#, name),
-        })).await.unwrap();
+        })).await;
     }
 
     // A creates event on only_b
-    handle_a.record_event(make_event(only_b, peer_a, EventPayload::EntityCreated {
+    record_event(&handle_a, &es_a, &ev_a, peer_a, make_event(only_b, peer_a, EventPayload::EntityCreated {
         entity_type: "note".to_string(),
         json_data: r#"{"secret":"B only"}"#.to_string(),
-    })).await.unwrap();
+    })).await;
 
     tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -1242,7 +1267,7 @@ async fn adversarial_peer_requests_unshared_entity() {
     let peer_a = PeerId::new();
     let peer_b = PeerId::new();
 
-    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, _es_a, ev_a) =
+    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, es_a, ev_a) =
         setup_personal_peer(peer_a);
     let (handle_b, mut events_b, cmd_rx_b, orch_b, _policy_b, pm_b, _es_b, ev_b) =
         setup_personal_peer(peer_b);
@@ -1251,6 +1276,10 @@ async fn adversarial_peer_requests_unshared_entity() {
     trust_peer(&pm_b, peer_a, "Alice");
 
     let secret_doc = EntityId::new();
+    // Activate selective sharing by sharing a different entity with B.
+    // This makes peer_entities non-empty, enabling the policy filter.
+    let other_doc = EntityId::new();
+    policy_a.share(other_doc, peer_b).await;
     // A does NOT share secret_doc with B
 
     let (transport_a, transport_b) =
@@ -1268,7 +1297,7 @@ async fn adversarial_peer_requests_unshared_entity() {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"Top Secret"}"#.to_string(),
     });
-    handle_a.record_event(secret_event).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, secret_event).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // A syncs with B — policy filters secret_doc since it's not shared with B
@@ -1289,7 +1318,7 @@ async fn revoke_then_re_grant_allows_new_events() {
     let peer_a = PeerId::new();
     let peer_b = PeerId::new();
 
-    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, _es_a, ev_a) =
+    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, es_a, ev_a) =
         setup_personal_peer(peer_a);
     let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, _es_b, ev_b) =
         setup_personal_peer(peer_b);
@@ -1317,7 +1346,7 @@ async fn revoke_then_re_grant_allows_new_events() {
         entity_type: "note".to_string(),
         json_data: r#"{"v":1}"#.to_string(),
     });
-    handle_a.record_event(ev1).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, ev1).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
     assert_eq!(ev_b.get_events_for_entity(&doc).unwrap().len(), 1);
@@ -1328,7 +1357,7 @@ async fn revoke_then_re_grant_allows_new_events() {
         entity_type: "note".to_string(),
         json_data: r#"{"v":2}"#.to_string(),
     });
-    handle_a.record_event(ev2).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, ev2).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
     assert_eq!(ev_b.get_events_for_entity(&doc).unwrap().len(), 1, "still 1 after revoke");
@@ -1339,7 +1368,7 @@ async fn revoke_then_re_grant_allows_new_events() {
         entity_type: "note".to_string(),
         json_data: r#"{"v":3}"#.to_string(),
     });
-    handle_a.record_event(ev3).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, ev3).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
 
@@ -1374,19 +1403,19 @@ async fn concurrent_edits_with_partial_access() {
     let (ha, mut ea, cra, oa) =
         create_personal_orchestrator(peer_a, es_a.clone(), ev_a.clone(), no_auto_config(), pol_a.clone(), pm_a);
 
-    let (_es_b, ev_b) = make_stores();
+    let (es_b, ev_b) = make_stores();
     let pol_b = Arc::new(PersonalSyncPolicy::new());
     let pm_b = Arc::new(std::sync::Mutex::new(PairingManager::new()));
     trust_peer(&pm_b, peer_a, "Alice");
     let (hb, mut eb, crb, ob) =
-        create_personal_orchestrator(peer_b, _es_b.clone(), ev_b.clone(), no_auto_config(), pol_b.clone(), pm_b);
+        create_personal_orchestrator(peer_b, es_b.clone(), ev_b.clone(), no_auto_config(), pol_b.clone(), pm_b);
 
-    let (_es_c, ev_c) = make_stores();
+    let (es_c, ev_c) = make_stores();
     let pol_c = Arc::new(PersonalSyncPolicy::new());
     let pm_c = Arc::new(std::sync::Mutex::new(PairingManager::new()));
     trust_peer(&pm_c, peer_a, "Alice");
     let (hc, mut ec, crc, oc) =
-        create_personal_orchestrator(peer_c, _es_c.clone(), ev_c.clone(), no_auto_config(), pol_c.clone(), pm_c);
+        create_personal_orchestrator(peer_c, es_c.clone(), ev_c.clone(), no_auto_config(), pol_c.clone(), pm_c);
 
     // Only B has access, not C
     pol_a.share(doc, peer_b).await;
@@ -1405,21 +1434,21 @@ async fn concurrent_edits_with_partial_access() {
     hc.share_entity(doc).await.unwrap(); // C tries to share it
 
     // A and B both edit
-    ha.record_event(make_event(doc, peer_a, EventPayload::EntityCreated {
+    record_event(&ha, &es_a, &ev_a, peer_a, make_event(doc, peer_a, EventPayload::EntityCreated {
         entity_type: "note".to_string(),
         json_data: r#"{"from":"A"}"#.to_string(),
-    })).await.unwrap();
+    })).await;
 
-    hb.record_event(make_event(doc, peer_b, EventPayload::EntityUpdated {
+    record_event(&hb, &es_b, &ev_b, peer_b, make_event(doc, peer_b, EventPayload::EntityUpdated {
         entity_type: "note".to_string(),
         json_data: r#"{"from":"B"}"#.to_string(),
-    })).await.unwrap();
+    })).await;
 
     // C also tries to edit
-    hc.record_event(make_event(doc, peer_c, EventPayload::EntityUpdated {
+    record_event(&hc, &es_c, &ev_c, peer_c, make_event(doc, peer_c, EventPayload::EntityUpdated {
         entity_type: "note".to_string(),
         json_data: r#"{"from":"C-sneaky"}"#.to_string(),
-    })).await.unwrap();
+    })).await;
 
     tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -1451,7 +1480,7 @@ async fn removing_trusted_peer_blocks_future_sync() {
     let peer_a = PeerId::new();
     let peer_b = PeerId::new();
 
-    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, _es_a, ev_a) =
+    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, es_a, ev_a) =
         setup_personal_peer(peer_a);
     let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, _es_b, ev_b) =
         setup_personal_peer(peer_b);
@@ -1479,7 +1508,7 @@ async fn removing_trusted_peer_blocks_future_sync() {
         entity_type: "note".to_string(),
         json_data: r#"{"v":1}"#.to_string(),
     });
-    handle_a.record_event(ev1).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, ev1).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
     assert_eq!(ev_b.get_events_for_entity(&doc).unwrap().len(), 1);
@@ -1498,7 +1527,7 @@ async fn removing_trusted_peer_blocks_future_sync() {
         entity_type: "note".to_string(),
         json_data: r#"{"v":2}"#.to_string(),
     });
-    handle_a.record_event(ev2).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, ev2).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;
 
@@ -1589,7 +1618,7 @@ async fn stress_many_entities_many_peers() {
             entity_type: "note".to_string(),
             json_data: r#"{"data":"x"}"#.to_string(),
         });
-        ha.record_event(ev).await.unwrap();
+        record_event(&ha, &es_a, &ev_a, peer_a, ev).await;
     }
 
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -1629,7 +1658,7 @@ async fn share_entity_with_peer_command_flow() {
     let peer_a = PeerId::new();
     let peer_b = PeerId::new();
 
-    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, _es_a, ev_a) =
+    let (handle_a, mut events_a, cmd_rx_a, orch_a, policy_a, pm_a, es_a, ev_a) =
         setup_personal_peer(peer_a);
     let (handle_b, mut events_b, cmd_rx_b, orch_b, policy_b, pm_b, _es_b, ev_b) =
         setup_personal_peer(peer_b);
@@ -1668,7 +1697,7 @@ async fn share_entity_with_peer_command_flow() {
         entity_type: "note".to_string(),
         json_data: r#"{"via":"command"}"#.to_string(),
     });
-    handle_a.record_event(ev).await.unwrap();
+    record_event(&handle_a, &es_a, &ev_a, peer_a, ev).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     full_sync(&handle_a, &mut events_a, peer_b, &handle_b, &mut events_b, peer_a).await;

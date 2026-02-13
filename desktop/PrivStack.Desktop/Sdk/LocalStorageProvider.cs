@@ -17,12 +17,28 @@ internal sealed class LocalStorageProvider : IStorageProvider
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif", ".svg"
     };
 
-    private readonly string _storagePath;
+    private string? _cachedStoragePath;
 
-    public LocalStorageProvider()
+    /// <summary>
+    /// Lazy storage path: workspace-scoped if active, legacy fallback otherwise.
+    /// </summary>
+    private string StoragePath
     {
-        _storagePath = Path.Combine(PrivStack.Desktop.Services.DataPaths.BaseDir, "quill-images");
-        Directory.CreateDirectory(_storagePath);
+        get
+        {
+            var wsDir = PrivStack.Desktop.Services.DataPaths.WorkspaceDataDir;
+            var target = wsDir != null
+                ? Path.Combine(wsDir, "files", "notes")
+                : Path.Combine(PrivStack.Desktop.Services.DataPaths.BaseDir, "quill-images");
+
+            if (_cachedStoragePath != target)
+            {
+                _cachedStoragePath = target;
+                Directory.CreateDirectory(target);
+            }
+
+            return target;
+        }
     }
 
     public string ProviderId => "default";
@@ -36,7 +52,7 @@ internal sealed class LocalStorageProvider : IStorageProvider
 
         // Content-addressable: SHA-256 hash the file so duplicates reuse the same ID
         var hash = HashFile(sourcePath);
-        var destPath = Path.Combine(_storagePath, hash + ext);
+        var destPath = Path.Combine(StoragePath, hash + ext);
 
         if (File.Exists(destPath))
         {
@@ -63,12 +79,12 @@ internal sealed class LocalStorageProvider : IStorageProvider
 
         // Try to find the file by ID prefix (ID stored without extension)
         var ext = Path.GetExtension(fileName);
-        var exactPath = Path.Combine(_storagePath, fileId + ext);
+        var exactPath = Path.Combine(StoragePath, fileId + ext);
         if (File.Exists(exactPath))
             return Task.FromResult<string?>(exactPath);
 
         // Fallback: scan for any file starting with the ID
-        var match = Directory.EnumerateFiles(_storagePath, fileId + ".*").FirstOrDefault();
+        var match = Directory.EnumerateFiles(StoragePath, fileId + ".*").FirstOrDefault();
         return Task.FromResult(match);
     }
 
@@ -77,7 +93,7 @@ internal sealed class LocalStorageProvider : IStorageProvider
         ct.ThrowIfCancellationRequested();
 
         var ext = Path.GetExtension(fileName);
-        var exactPath = Path.Combine(_storagePath, fileId + ext);
+        var exactPath = Path.Combine(StoragePath, fileId + ext);
         if (File.Exists(exactPath))
         {
             File.Delete(exactPath);
@@ -86,7 +102,7 @@ internal sealed class LocalStorageProvider : IStorageProvider
         }
 
         // Fallback: scan for any file starting with the ID
-        var match = Directory.EnumerateFiles(_storagePath, fileId + ".*").FirstOrDefault();
+        var match = Directory.EnumerateFiles(StoragePath, fileId + ".*").FirstOrDefault();
         if (match != null)
         {
             File.Delete(match);
@@ -101,7 +117,7 @@ internal sealed class LocalStorageProvider : IStorageProvider
     {
         ct.ThrowIfCancellationRequested();
 
-        var files = Directory.EnumerateFiles(_storagePath)
+        var files = Directory.EnumerateFiles(StoragePath)
             .Where(f => ImageExtensions.Contains(Path.GetExtension(f)))
             .Where(f => string.IsNullOrEmpty(query) ||
                         Path.GetFileName(f).Contains(query, StringComparison.OrdinalIgnoreCase))

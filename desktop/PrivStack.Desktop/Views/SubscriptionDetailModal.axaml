@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PrivStack.Desktop.ViewModels"
+             x:Class="PrivStack.Desktop.Views.SubscriptionDetailModal"
+             x:DataType="vm:SubscriptionBadgeViewModel"
+             IsVisible="{Binding IsModalOpen}">
+
+    <!-- Full-screen backdrop -->
+    <Panel>
+        <Border Background="#80000000"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                PointerPressed="OnBackdropPressed"/>
+
+        <!-- Centered card -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                Width="400"
+                Background="{DynamicResource ThemeSurfaceBrush}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                BoxShadow="0 8 32 0 #60000000"
+                Padding="0">
+            <StackPanel>
+                <!-- Header -->
+                <Border Padding="24,16"
+                        BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
+                        BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Subscription"
+                                   FontSize="{DynamicResource ThemeFontSizeLg}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                Content="×"
+                                Command="{Binding CloseModalCommand}"
+                                Background="Transparent"
+                                FontSize="{DynamicResource ThemeFontSizeXl}"
+                                Padding="8,2"
+                                Cursor="Hand"
+                                VerticalAlignment="Center">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+                                </Style>
+                            </Button.Styles>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Content -->
+                <Border Padding="24,20">
+                <StackPanel Spacing="16">
+                    <!-- Plan Row -->
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="Plan"
+                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   Width="100"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding PlanText}"
+                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                   FontWeight="Medium"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Status Row -->
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="Status"
+                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   Width="100"
+                                   VerticalAlignment="Center"/>
+                        <Border Grid.Column="1"
+                                Background="{DynamicResource ThemeSuccessMutedBrush}"
+                                CornerRadius="{DynamicResource ThemeRadiusXs}"
+                                Padding="8,3"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="{Binding StatusText}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ThemeSuccessBrush}"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- Expiration Row (hidden for perpetual) -->
+                    <Grid ColumnDefinitions="Auto,*"
+                          IsVisible="{Binding HasExpiration}">
+                        <TextBlock Text="{Binding ExpirationLabel}"
+                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   Width="100"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding ExpiresAtText}"
+                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Separator -->
+                    <Border Height="1"
+                            Background="{DynamicResource ThemeBorderSubtleBrush}"
+                            Margin="0,4"/>
+
+                    <!-- Manage Link -->
+                    <Button Command="{Binding OpenAccountPageCommand}"
+                            Background="Transparent"
+                            Padding="0" Margin="0"
+                            Cursor="Hand"
+                            HorizontalAlignment="Left"
+                            BorderThickness="0"
+                            MinHeight="0">
+                        <Button.Styles>
+                            <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                        </Button.Styles>
+                        <TextBlock Text="Manage your subscription"
+                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                   Foreground="{DynamicResource ThemePrimaryBrush}"
+                                   TextDecorations="Underline"/>
+                    </Button>
+                </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

@@ -59,4 +59,16 @@ public interface IPluginHost
     /// The running host application version.
     /// </summary>
     Version AppVersion { get; }
+
+    /// <summary>
+    /// Service for accessing authenticated external connections (e.g., GitHub).
+    /// Nullable for backward compatibility with older hosts.
+    /// </summary>
+    IConnectionService? Connections { get; }
+
+    /// <summary>
+    /// The active workspace data directory.
+    /// Plugins should store all workspace-specific files under this path.
+    /// </summary>
+    string WorkspaceDataPath { get; }
 }

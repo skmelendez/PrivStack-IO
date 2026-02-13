@@ -15,7 +15,7 @@
     <CFBundleDisplayName>PrivStack</CFBundleDisplayName>
     <AssemblyTitle>PrivStack</AssemblyTitle>
     <Product>PrivStack</Product>
-    <Version>1.11.3</Version>
+    <Version>1.20.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -66,6 +66,7 @@
     <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
     <PackageReference Include="AvaloniaEdit.TextMate" Version="11.3.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageReference Include="protobuf-net" Version="3.2.56" />
     <PackageReference Include="SmartReader" Version="0.11.0" />
     <PackageReference Include="System.ServiceModel.Syndication" Version="9.0.1" />
     <!-- Logging -->

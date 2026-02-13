@@ -8,9 +8,12 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.Connections;
 using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Sdk;
 using NativeLib = PrivStack.Desktop.Native.NativeLibrary;
@@ -213,6 +216,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly CustomThemeStore _customThemeStore;
 
     public ThemeEditorViewModel ThemeEditor { get; }
+    public ConnectionsViewModel Connections { get; }
 
     public SettingsViewModel(
         IAppSettingsService settingsService,
@@ -225,7 +229,9 @@ public partial class SettingsViewModel : ViewModelBase
         IAuthService authService,
         SeedDataService seedDataService,
         ISystemNotificationService notificationService,
-        CustomThemeStore customThemeStore)
+        CustomThemeStore customThemeStore,
+        ConnectionService connectionService,
+        GitHubDeviceFlowService gitHubDeviceFlowService)
     {
         _settingsService = settingsService;
         _backupService = backupService;
@@ -241,6 +247,7 @@ public partial class SettingsViewModel : ViewModelBase
 
         ThemeEditor = new ThemeEditorViewModel(themeService, customThemeStore, settingsService);
         ThemeEditor.EditorClosed += OnThemeEditorClosed;
+        Connections = new ConnectionsViewModel(connectionService, gitHubDeviceFlowService);
 
         LoadPluginItems();
         LoadSettings();
@@ -394,6 +401,15 @@ public partial class SettingsViewModel : ViewModelBase
         new(DataDirectoryType.ICloud, "iCloud Drive", "☁️"),
         new(DataDirectoryType.Custom, "Custom Location", "📂")
     ];
+
+    [ObservableProperty]
+    private bool _isMigratingStorage;
+
+    [ObservableProperty]
+    private double _migrationProgress;
+
+    [ObservableProperty]
+    private string _migrationStatus = string.Empty;
 
     [ObservableProperty]
     private BackupFrequency _selectedBackupFrequency = BackupFrequency.Daily;
@@ -1229,14 +1245,18 @@ public partial class SettingsViewModel : ViewModelBase
         ProfileImagePath = settings.ProfileImagePath;
         Version = $"v{Native.PrivStackService.Version}";
 
-        // Get data directory type and path
-        if (Enum.TryParse<DataDirectoryType>(settings.DataDirectoryType, out var dirType))
+        // Get storage location from active workspace (per-workspace, not global)
+        var workspaceService = App.Services.GetRequiredService<IWorkspaceService>();
+        var activeWorkspace = workspaceService.GetActiveWorkspace();
+        var storageLocation = activeWorkspace?.StorageLocation;
+
+        if (storageLocation != null && Enum.TryParse<DataDirectoryType>(storageLocation.Type, out var dirType))
             SelectedDirectoryType = dirType;
         else
             SelectedDirectoryType = DataDirectoryType.Default;
 
         var defaultDataDir = Services.DataPaths.BaseDir;
-        DataDirectory = settings.CustomDataDirectory ?? defaultDataDir;
+        DataDirectory = storageLocation?.CustomPath ?? defaultDataDir;
 
         // Backup settings
         var defaultBackupDir = Path.Combine(defaultDataDir, "backups");
@@ -1556,13 +1576,13 @@ public partial class SettingsViewModel : ViewModelBase
         if (folders.Count > 0)
         {
             var newPath = folders[0].Path.LocalPath;
-            // Note: Changing data directory requires copying data and restarting
-            // For now, we just update the setting
-            SelectedDirectoryType = DataDirectoryType.Custom;
-            _settingsService.Settings.DataDirectoryType = DataDirectoryType.Custom.ToString();
-            _settingsService.Settings.CustomDataDirectory = newPath;
-            _settingsService.Save();
             DataDirectory = newPath;
+            SelectedDirectoryType = DataDirectoryType.Custom;
+            await ChangeWorkspaceStorageAsync(new StorageLocation
+            {
+                Type = "Custom",
+                CustomPath = newPath
+            });
         }
     }
 
@@ -1771,25 +1791,76 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SelectStorageLocation(DataDirectoryType type)
+    private async Task SelectStorageLocation(DataDirectoryType type)
     {
         SelectedDirectoryType = type;
 
-        // Update the effective data directory based on selection
-        if (type != DataDirectoryType.Custom)
-        {
-            var effectivePath = type switch
-            {
-                DataDirectoryType.Default => null, // null means use default
-                DataDirectoryType.GoogleDrive => Path.Combine(GetGoogleDrivePath() ?? GetDefaultDataPath(), "PrivStack"),
-                DataDirectoryType.ICloud => Path.Combine(GetICloudPath() ?? GetDefaultDataPath(), "PrivStack"),
-                _ => null
-            };
+        if (type == DataDirectoryType.Custom)
+            return; // Custom requires folder picker via ChangeDataDirectoryAsync
 
-            _settingsService.Settings.DataDirectoryType = type.ToString();
-            _settingsService.Settings.CustomDataDirectory = effectivePath;
-            DataDirectory = effectivePath ?? GetDefaultDataPath();
-            _settingsService.Save();
+        var newLocation = type == DataDirectoryType.Default
+            ? null
+            : new StorageLocation { Type = type.ToString() };
+
+        DataDirectory = type switch
+        {
+            DataDirectoryType.GoogleDrive => GetGoogleDrivePath() ?? GetDefaultDataPath(),
+            DataDirectoryType.ICloud => GetICloudPath() ?? GetDefaultDataPath(),
+            _ => GetDefaultDataPath()
+        };
+
+        await ChangeWorkspaceStorageAsync(newLocation);
+    }
+
+    private async Task ChangeWorkspaceStorageAsync(StorageLocation? newLocation)
+    {
+        var workspaceService = App.Services.GetRequiredService<IWorkspaceService>();
+        var activeWorkspace = workspaceService.GetActiveWorkspace();
+        if (activeWorkspace == null) return;
+
+        IsMigratingStorage = true;
+        MigrationStatus = "Preparing migration...";
+        MigrationProgress = 0;
+
+        try
+        {
+            var progress = new Progress<WorkspaceMigrationProgress>(p =>
+            {
+                if (p.TotalBytes > 0)
+                    MigrationProgress = (double)p.BytesCopied / p.TotalBytes * 100;
+
+                MigrationStatus = p.Phase switch
+                {
+                    MigrationPhase.Calculating => "Calculating workspace size...",
+                    MigrationPhase.Copying => $"Copying {p.FilesCopied}/{p.TotalFiles}: {p.CurrentFile}",
+                    MigrationPhase.Verifying => "Verifying copied files...",
+                    MigrationPhase.Reloading => "Reloading workspace...",
+                    MigrationPhase.CleaningUp => "Cleaning up old location...",
+                    MigrationPhase.Complete => "Migration complete",
+                    MigrationPhase.Failed => $"Migration failed: {p.CurrentFile}",
+                    _ => MigrationStatus
+                };
+            });
+
+            await workspaceService.MigrateWorkspaceStorageAsync(
+                activeWorkspace.Id,
+                newLocation ?? new StorageLocation { Type = "Default" },
+                progress);
+        }
+        catch (Exception ex)
+        {
+            MigrationStatus = $"Migration failed: {ex.Message}";
+            // Revert UI to match actual state
+            var current = workspaceService.GetActiveWorkspace();
+            if (current?.StorageLocation != null &&
+                Enum.TryParse<DataDirectoryType>(current.StorageLocation.Type, out var revertType))
+                SelectedDirectoryType = revertType;
+            else
+                SelectedDirectoryType = DataDirectoryType.Default;
+        }
+        finally
+        {
+            IsMigratingStorage = false;
         }
     }
 
@@ -1807,71 +1878,7 @@ public partial class SettingsViewModel : ViewModelBase
         return Services.DataPaths.BaseDir;
     }
 
-    /// <summary>
-    /// Gets the Google Drive path if available.
-    /// </summary>
-    private static string? GetGoogleDrivePath()
-    {
-        if (OperatingSystem.IsMacOS())
-        {
-            var cloudStorage = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "CloudStorage");
+    private static string? GetGoogleDrivePath() => Services.CloudPathResolver.GetGoogleDrivePath();
 
-            if (Directory.Exists(cloudStorage))
-            {
-                var googleDirs = Directory.GetDirectories(cloudStorage, "GoogleDrive-*");
-                if (googleDirs.Length > 0)
-                {
-                    var myDrive = Path.Combine(googleDirs[0], "My Drive");
-                    if (Directory.Exists(myDrive))
-                        return myDrive;
-                }
-            }
-        }
-        else if (OperatingSystem.IsWindows())
-        {
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var paths = new[]
-            {
-                Path.Combine(userProfile, "Google Drive"),
-                Path.Combine(userProfile, "My Drive"),
-                Path.Combine(userProfile, "GoogleDrive")
-            };
-
-            foreach (var path in paths)
-            {
-                if (Directory.Exists(path))
-                    return path;
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Gets the iCloud Drive path if available.
-    /// </summary>
-    private static string? GetICloudPath()
-    {
-        if (OperatingSystem.IsMacOS())
-        {
-            var iCloudPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "Mobile Documents", "com~apple~CloudDocs");
-
-            if (Directory.Exists(iCloudPath))
-                return iCloudPath;
-        }
-        else if (OperatingSystem.IsWindows())
-        {
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var iCloudPath = Path.Combine(userProfile, "iCloudDrive");
-
-            if (Directory.Exists(iCloudPath))
-                return iCloudPath;
-        }
-
-        return null;
-    }
+    private static string? GetICloudPath() => Services.CloudPathResolver.GetICloudPath();
 }

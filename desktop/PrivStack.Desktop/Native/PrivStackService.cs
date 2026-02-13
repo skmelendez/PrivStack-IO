@@ -305,6 +305,8 @@ public sealed class PrivStackService : IPrivStackNative
             throw new PrivStackException($"Failed to initialize master password: {result}", result);
         }
         _log.Information("Master password initialized successfully");
+
+        EnsureStandardVaults(masterPassword);
     }
 
     /// <summary>
@@ -325,6 +327,8 @@ public sealed class PrivStackService : IPrivStackNative
             throw new PrivStackException($"Invalid master password", result);
         }
         _log.Information("App unlocked successfully");
+
+        EnsureStandardVaults(masterPassword);
     }
 
     /// <summary>
@@ -395,6 +399,54 @@ public sealed class PrivStackService : IPrivStackNative
 
         _log.Debug("Master password validation failed: {Result}", result);
         return false;
+    }
+
+    // ============================================================
+    // Standard Vault Initialization
+    // ============================================================
+
+    /// <summary>
+    /// Standard vaults that are automatically initialized and unlocked
+    /// alongside the master password. These use the same master password
+    /// as the app-level auth, unlike user-managed vaults (e.g., Files).
+    /// </summary>
+    private static readonly string[] StandardVaultIds = ["connections"];
+
+    /// <summary>
+    /// Ensures all standard vaults are created, initialized, and unlocked.
+    /// Called after successful auth init or unlock while the master password is still in scope.
+    /// </summary>
+    private void EnsureStandardVaults(string masterPassword)
+    {
+        foreach (var vaultId in StandardVaultIds)
+        {
+            try
+            {
+                if (!NativeLibrary.VaultIsInitialized(vaultId))
+                {
+                    _log.Information("Initializing standard vault: {VaultId}", vaultId);
+                    NativeLibrary.VaultCreate(vaultId); // Idempotent — creates if missing
+
+                    var initResult = NativeLibrary.VaultInitialize(vaultId, masterPassword);
+                    if (initResult != PrivStackError.Ok && initResult != PrivStackError.VaultAlreadyInitialized)
+                    {
+                        _log.Warning("Failed to initialize standard vault {VaultId}: {Result}", vaultId, initResult);
+                        continue;
+                    }
+                }
+
+                if (!NativeLibrary.VaultIsUnlocked(vaultId))
+                {
+                    var unlockResult = NativeLibrary.VaultUnlock(vaultId, masterPassword);
+                    if (unlockResult != PrivStackError.Ok)
+                        _log.Warning("Failed to unlock standard vault {VaultId}: {Result}", vaultId, unlockResult);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "Failed to ensure standard vault {VaultId}", vaultId);
+            }
+        }
     }
 
     // ============================================================

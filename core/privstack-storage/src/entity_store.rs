@@ -24,7 +24,7 @@ pub struct EntityStore {
 impl EntityStore {
     /// Opens or creates an entity store at the given path (no encryption).
     pub fn open(path: &Path) -> StorageResult<Self> {
-        let conn = crate::open_duckdb_with_wal_recovery(path)?;
+        let conn = crate::open_duckdb_with_wal_recovery(path, "256MB", 2)?;
         initialize_entity_schema(&conn)?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -47,7 +47,7 @@ impl EntityStore {
         path: &Path,
         encryptor: Arc<dyn DataEncryptor>,
     ) -> StorageResult<Self> {
-        let conn = crate::open_duckdb_with_wal_recovery(path)?;
+        let conn = crate::open_duckdb_with_wal_recovery(path, "256MB", 2)?;
         initialize_entity_schema(&conn)?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -179,7 +179,7 @@ impl EntityStore {
         let conn = self.conn.lock().unwrap();
 
         let result = conn.query_row(
-            "SELECT id, entity_type, data_json, created_at, modified_at, created_by FROM entities WHERE id = ?",
+            "SELECT id, entity_type, data_json, created_at, modified_at, created_by, is_trashed FROM entities WHERE id = ?",
             params![id],
             |row| {
                 Ok((
@@ -189,14 +189,19 @@ impl EntityStore {
                     row.get::<_, i64>(3)?,
                     row.get::<_, i64>(4)?,
                     row.get::<_, String>(5)?,
+                    row.get::<_, bool>(6)?,
                 ))
             },
         );
 
         match result {
-            Ok((id, entity_type, data_json, created_at, modified_at, created_by)) => {
+            Ok((id, entity_type, data_json, created_at, modified_at, created_by, is_trashed)) => {
                 drop(conn);
-                let data = self.decrypt_data_json(&data_json)?;
+                let mut data = self.decrypt_data_json(&data_json)?;
+                // Patch is_trashed from the authoritative DB column
+                if let Some(obj) = data.as_object_mut() {
+                    obj.insert("is_trashed".into(), serde_json::Value::Bool(is_trashed));
+                }
                 Ok(Some(Entity {
                     id,
                     entity_type,
@@ -222,7 +227,7 @@ impl EntityStore {
         let conn = self.conn.lock().unwrap();
 
         let mut sql = String::from(
-            "SELECT id, entity_type, data_json, created_at, modified_at, created_by FROM entities WHERE entity_type = ?"
+            "SELECT id, entity_type, data_json, created_at, modified_at, created_by, is_trashed FROM entities WHERE entity_type = ?"
         );
         if !include_trashed {
             sql.push_str(" AND is_trashed = FALSE");
@@ -236,7 +241,7 @@ impl EntityStore {
         }
 
         let mut stmt = conn.prepare(&sql)?;
-        let rows: Vec<(String, String, String, i64, i64, String)> = stmt
+        let rows: Vec<(String, String, String, i64, i64, String, bool)> = stmt
             .query_map(params![entity_type], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
@@ -245,6 +250,7 @@ impl EntityStore {
                     row.get::<_, i64>(3)?,
                     row.get::<_, i64>(4)?,
                     row.get::<_, String>(5)?,
+                    row.get::<_, bool>(6)?,
                 ))
             })?
             .filter_map(|r| r.ok())
@@ -254,8 +260,13 @@ impl EntityStore {
         drop(conn);
 
         let mut entities = Vec::with_capacity(rows.len());
-        for (id, entity_type, data_json, created_at, modified_at, created_by) in rows {
-            if let Ok(data) = self.decrypt_data_json(&data_json) {
+        for (id, entity_type, data_json, created_at, modified_at, created_by, is_trashed) in rows {
+            if let Ok(mut data) = self.decrypt_data_json(&data_json) {
+                // Patch is_trashed from the authoritative DB column (trash_entity
+                // only updates the column, not data_json)
+                if let Some(obj) = data.as_object_mut() {
+                    obj.insert("is_trashed".into(), serde_json::Value::Bool(is_trashed));
+                }
                 entities.push(Entity { id, entity_type, data, created_at, modified_at, created_by });
             }
         }
@@ -297,21 +308,27 @@ impl EntityStore {
         &self,
         entity_type: &str,
         filters: &[(String, serde_json::Value)],
+        include_trashed: bool,
         limit: Option<usize>,
     ) -> StorageResult<Vec<Entity>> {
         // No filters → delegate to list_entities (avoids duplicated SQL)
         if filters.is_empty() {
-            return self.list_entities(entity_type, false, limit, None);
+            return self.list_entities(entity_type, include_trashed, limit, None);
         }
 
         let conn = self.conn.lock().unwrap();
 
-        let sql = "SELECT id, entity_type, data_json, created_at, modified_at, created_by \
-                   FROM entities WHERE entity_type = ? AND is_trashed = FALSE \
-                   ORDER BY modified_at DESC";
+        let mut sql = String::from(
+            "SELECT id, entity_type, data_json, created_at, modified_at, created_by, is_trashed \
+             FROM entities WHERE entity_type = ?"
+        );
+        if !include_trashed {
+            sql.push_str(" AND is_trashed = FALSE");
+        }
+        let sql = sql + " ORDER BY modified_at DESC";
 
-        let mut stmt = conn.prepare(sql)?;
-        let rows: Vec<(String, String, String, i64, i64, String)> = stmt
+        let mut stmt = conn.prepare(&sql)?;
+        let rows: Vec<(String, String, String, i64, i64, String, bool)> = stmt
             .query_map(params![entity_type], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
@@ -320,6 +337,7 @@ impl EntityStore {
                     row.get::<_, i64>(3)?,
                     row.get::<_, i64>(4)?,
                     row.get::<_, String>(5)?,
+                    row.get::<_, bool>(6)?,
                 ))
             })?
             .filter_map(|r| r.ok())
@@ -329,8 +347,13 @@ impl EntityStore {
         drop(conn);
 
         let mut entities = Vec::new();
-        for (id, entity_type, data_json, created_at, modified_at, created_by) in rows {
-            if let Ok(data) = self.decrypt_data_json(&data_json) {
+        for (id, entity_type, data_json, created_at, modified_at, created_by, is_trashed) in rows {
+            if let Ok(mut data) = self.decrypt_data_json(&data_json) {
+                // Patch is_trashed from the authoritative DB column
+                if let Some(obj) = data.as_object_mut() {
+                    obj.insert("is_trashed".into(), serde_json::Value::Bool(is_trashed));
+                }
+
                 // Apply every filter against the decrypted JSON
                 let matches = filters.iter().all(|(field_path, expected)| {
                     let pointer = if field_path.starts_with('/') {

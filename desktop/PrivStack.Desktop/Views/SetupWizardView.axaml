@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PrivStack.Desktop.ViewModels"
+             xmlns:models="using:PrivStack.Desktop.Models"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:services="using:PrivStack.Desktop.Services"
@@ -44,50 +45,53 @@
                     <TextBlock Text="Your local-first productivity suite" FontSize="{DynamicResource ThemeFontSizeSm}"
                                Foreground="{DynamicResource ThemeTextMutedBrush}" HorizontalAlignment="Center"/>
 
-                    <Border Background="{DynamicResource ThemeBackgroundBrush}" CornerRadius="10" Padding="16" Margin="0,8,0,0">
-                        <StackPanel Spacing="14">
-                            <TextBlock Text="Here's what we'll set up:" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Border Width="28" Height="28" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="6">
-                                    <TextBlock Text="1" FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Bold" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                    <!-- Option Cards -->
+                    <StackPanel Spacing="10" Margin="0,8,0,0">
+                        <!-- Start Free Trial -->
+                        <Button Command="{Binding ChooseTrialCommand}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Background="Transparent" Padding="16" CornerRadius="10">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Border Grid.Column="0" Width="44" Height="44" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="10" VerticalAlignment="Center">
+                                    <TextBlock Text="7" FontSize="{DynamicResource ThemeFontSizeLg}" FontWeight="Bold"
+                                               Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Personalize" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                    <TextBlock Text="Workspace, theme, and accessibility preferences" FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,0,0">
+                                    <TextBlock Text="Start Free Trial" FontWeight="Bold" FontSize="{DynamicResource ThemeFontSizeMd}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <TextBlock Text="Try PrivStack free for 7 days. No credit card required."
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
-                            </StackPanel>
+                            </Grid>
+                        </Button>
 
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Border Width="28" Height="28" Background="{DynamicResource ThemeSuccessBrush}" CornerRadius="6">
-                                    <TextBlock Text="2" FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Bold" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                        <!-- I have an account with PrivStack -->
+                        <Button Command="{Binding ChooseSignInCommand}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Background="Transparent" Padding="16" CornerRadius="10">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Border Grid.Column="0" Width="44" Height="44" Background="{DynamicResource ThemeSuccessBrush}" CornerRadius="10" VerticalAlignment="Center">
+                                    <TextBlock Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}" FontWeight="Bold"
+                                               Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Data location" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                    <TextBlock Text="Local, Google Drive, iCloud, or custom" FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,0,0">
+                                    <TextBlock Text="I have an account with PrivStack" FontWeight="Bold" FontSize="{DynamicResource ThemeFontSizeMd}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <TextBlock Text="Sign in with your existing account."
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Border Width="28" Height="28" Background="{DynamicResource ThemeWarningBrush}" CornerRadius="6">
-                                    <TextBlock Text="3" FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Bold" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="License &amp; security" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                    <TextBlock Text="Activate your license and set a master password" FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
+                            </Grid>
+                        </Button>
+                    </StackPanel>
 
                     <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="8" Padding="12" Margin="0,4,0,0">
                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                             <TextBlock Text="🔒" FontSize="{DynamicResource ThemeFontSizeSm}"/>
-                            <TextBlock Text="Your data never leaves your device. No accounts, no cloud required."
+                            <TextBlock Text="Your data never leaves your device. Everything is encrypted locally."
                                        Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
@@ -164,251 +168,389 @@
                 <!-- Step 3: Data Directory                                       -->
                 <!-- ============================================================ -->
                 <StackPanel IsVisible="{Binding IsDataDirectoryStep}" Spacing="12">
-                    <TextBlock Text="Where should we store your data?" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
+                    <TextBlock Text="Set Up Device Sync" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                    <TextBlock Text="Everything stays on your device. Pick a folder."
-                               Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                    <TextBlock Text="Optionally sync workspace data across devices via a shared folder."
+                               Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeSm}" TextWrapping="Wrap"/>
 
                     <StackPanel Spacing="8" Margin="0,8,0,0">
                         <!-- Default Option -->
                         <Button Command="{Binding SelectDirectoryTypeCommand}"
-                                CommandParameter="{x:Static vm:DataDirectoryType.Default}"
-                                HorizontalContentAlignment="Stretch" Padding="0" CornerRadius="8">
-                            <Button.Background>
-                                <MultiBinding Converter="{x:Static BoolConverters.Or}">
-                                    <Binding Path="SelectedDirectoryType" Converter="{x:Static ObjectConverters.Equal}" ConverterParameter="{x:Static vm:DataDirectoryType.Default}"/>
-                                </MultiBinding>
-                            </Button.Background>
-                            <Border Padding="12" CornerRadius="8"
-                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="8" VerticalAlignment="Center">
-                                        <TextBlock Text="📁" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                        <TextBlock Text="Default Location (Recommended)" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <TextBlock Text="Local app data folder on this device"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                    </StackPanel>
-                                    <TextBlock Grid.Column="2" Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}"
-                                               Foreground="{DynamicResource ThemePrimaryBrush}"
-                                               VerticalAlignment="Center"
-                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.Default}}"/>
-                                </Grid>
-                            </Border>
+                                CommandParameter="{x:Static models:DataDirectoryType.Default}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Background="Transparent" Padding="12" CornerRadius="8">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="8" VerticalAlignment="Center">
+                                    <TextBlock Text="📁" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Local Only (Recommended)" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <TextBlock Text="Data stays on this device. P2P sync still available."
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}"
+                                           Foreground="{DynamicResource ThemePrimaryBrush}"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:DataDirectoryType.Default}}"/>
+                            </Grid>
                         </Button>
 
                         <!-- Google Drive Option -->
                         <Button Command="{Binding SelectDirectoryTypeCommand}"
-                                CommandParameter="{x:Static vm:DataDirectoryType.GoogleDrive}"
+                                CommandParameter="{x:Static models:DataDirectoryType.GoogleDrive}"
                                 IsEnabled="{Binding IsGoogleDriveAvailable}"
-                                HorizontalContentAlignment="Stretch" Padding="0" CornerRadius="8">
-                            <Border Padding="12" CornerRadius="8"
-                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Border Grid.Column="0" Width="36" Height="36" Background="#4285F4" CornerRadius="8" VerticalAlignment="Center">
-                                        <TextBlock Text="G" FontSize="{DynamicResource ThemeFontSizeLg}" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                        <TextBlock Text="Google Drive" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <TextBlock Text="Sync across devices via Google Drive"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                        <TextBlock Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}"
-                                                   Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                   IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.GoogleDrive}}"/>
-                                        <TextBlock Text="Install app" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                   ToolTip.Tip="Install Google Drive for Desktop to enable this option"
-                                                   IsVisible="{Binding !IsGoogleDriveAvailable}"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Background="Transparent" Padding="12" CornerRadius="8">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Grid.Column="0" Width="36" Height="36" Background="#4285F4" CornerRadius="8" VerticalAlignment="Center">
+                                    <TextBlock Text="G" FontSize="{DynamicResource ThemeFontSizeLg}" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Sync via Google Drive" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <TextBlock Text="Encrypted event files sync through Google Drive."
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:DataDirectoryType.GoogleDrive}}"/>
+                                    <TextBlock Text="Install app" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               ToolTip.Tip="Install Google Drive for Desktop to enable this option"
+                                               IsVisible="{Binding !IsGoogleDriveAvailable}"/>
+                                </StackPanel>
+                            </Grid>
                         </Button>
 
                         <!-- iCloud Option -->
                         <Button Command="{Binding SelectDirectoryTypeCommand}"
-                                CommandParameter="{x:Static vm:DataDirectoryType.ICloud}"
+                                CommandParameter="{x:Static models:DataDirectoryType.ICloud}"
                                 IsEnabled="{Binding IsICloudAvailable}"
-                                HorizontalContentAlignment="Stretch" Padding="0" CornerRadius="8">
-                            <Border Padding="12" CornerRadius="8"
-                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Border Grid.Column="0" Width="36" Height="36" Background="#3693F3" CornerRadius="8" VerticalAlignment="Center">
-                                        <TextBlock Text="☁️" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                        <TextBlock Text="iCloud Drive" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <TextBlock Text="Sync across Apple devices via iCloud"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                        <TextBlock Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}"
-                                                   Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                   IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.ICloud}}"/>
-                                        <TextBlock Text="Enable iCloud" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                   ToolTip.Tip="Enable iCloud Drive in System Settings to use this option"
-                                                   IsVisible="{Binding !IsICloudAvailable}"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Background="Transparent" Padding="12" CornerRadius="8">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Grid.Column="0" Width="36" Height="36" Background="#3693F3" CornerRadius="8" VerticalAlignment="Center">
+                                    <TextBlock Text="☁️" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Sync via iCloud Drive" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <TextBlock Text="Encrypted event files sync through iCloud."
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:DataDirectoryType.ICloud}}"/>
+                                    <TextBlock Text="Enable iCloud" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               ToolTip.Tip="Enable iCloud Drive in System Settings to use this option"
+                                               IsVisible="{Binding !IsICloudAvailable}"/>
+                                </StackPanel>
+                            </Grid>
                         </Button>
 
                         <!-- Custom Location Option -->
                         <Button Command="{Binding SelectDirectoryTypeCommand}"
-                                CommandParameter="{x:Static vm:DataDirectoryType.Custom}"
-                                HorizontalContentAlignment="Stretch" Padding="0" CornerRadius="8">
-                            <Border Padding="12" CornerRadius="8"
-                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemeWarningBrush}" CornerRadius="8" VerticalAlignment="Center">
-                                        <TextBlock Text="📂" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                        <TextBlock Text="Custom Location" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <TextBlock Text="Choose your own folder (e.g., NAS, external drive)"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                    </StackPanel>
-                                    <TextBlock Grid.Column="2" Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}"
-                                               Foreground="{DynamicResource ThemePrimaryBrush}"
-                                               VerticalAlignment="Center"
-                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.Custom}}"/>
-                                </Grid>
-                            </Border>
+                                CommandParameter="{x:Static models:DataDirectoryType.Custom}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Background="Transparent" Padding="12" CornerRadius="8">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemeWarningBrush}" CornerRadius="8" VerticalAlignment="Center">
+                                    <TextBlock Text="📂" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Custom Sync Folder" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <TextBlock Text="Use a NAS, Dropbox, or other shared folder."
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="✓" FontSize="{DynamicResource ThemeFontSizeLg}"
+                                           Foreground="{DynamicResource ThemePrimaryBrush}"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:DataDirectoryType.Custom}}"/>
+                            </Grid>
                         </Button>
 
                         <!-- Custom Directory Browser (shown when Custom is selected) -->
-                        <Border IsVisible="{Binding IsCustomDirectorySelected}"
-                                Background="{DynamicResource ThemeBackgroundBrush}"
-                                CornerRadius="8" Padding="12" Margin="0,4,0,0">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <Border Grid.Column="0"
-                                        Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                        CornerRadius="4" Padding="10,6">
-                                    <TextBlock Text="{Binding CustomDataDirectory}"
-                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip.Tip="{Binding CustomDataDirectory}"/>
-                                </Border>
-                                <Button Grid.Column="1" Content="Browse..."
-                                        Command="{Binding BrowseDataDirectoryCommand}"
-                                        Background="{DynamicResource ThemePrimaryBrush}"
-                                        Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                        Padding="12,6" Margin="8,0,0,0" CornerRadius="4"
-                                        FontSize="{DynamicResource ThemeFontSizeSm}"/>
-                            </Grid>
-                        </Border>
+                        <Grid IsVisible="{Binding IsCustomDirectorySelected}"
+                              ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                            <Border Grid.Column="0" MinWidth="0"
+                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                    CornerRadius="4" Padding="10,6" ClipToBounds="True">
+                                <TextBlock Text="{Binding CustomDataDirectory}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTip.Tip="{Binding CustomDataDirectory}"/>
+                            </Border>
+                            <Button Grid.Column="1" Content="Browse..."
+                                    Command="{Binding BrowseDataDirectoryCommand}"
+                                    Background="{DynamicResource ThemePrimaryBrush}"
+                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                    Padding="12,6" Margin="8,0,0,0" CornerRadius="4"
+                                    FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                        </Grid>
                     </StackPanel>
 
-                    <!-- Current Selection Info -->
-                    <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="6" Padding="10" Margin="0,4,0,0"
-                            IsVisible="{Binding !IsCustomDirectorySelected}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="📍" FontSize="{DynamicResource ThemeFontSizeSm}"/>
-                            <TextBlock Text="{Binding DataDirectoryDisplay}"
-                                       Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                    </Border>
                 </StackPanel>
 
                 <!-- ============================================================ -->
                 <!-- Step 3: License                                              -->
                 <!-- ============================================================ -->
                 <StackPanel IsVisible="{Binding IsLicenseStep}" Spacing="12">
-                    <TextBlock Text="Activate Your License" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                    <TextBlock Text="Activate your license to unlock all features."
-                               Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"/>
 
-                    <!-- Success State (Licensed) -->
-                    <Border Background="{DynamicResource ThemeBackgroundBrush}" CornerRadius="8" Padding="12"
-                            IsVisible="{Binding IsLicenseValid}">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Border Width="22" Height="22" Background="{DynamicResource ThemeSuccessBrush}" CornerRadius="11">
-                                <TextBlock Text="✓" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <!-- Success State (Licensed) — shown for both trial and sign-in -->
+                    <StackPanel Spacing="12" IsVisible="{Binding IsLicenseValid}">
+                        <TextBlock Text="License Activated" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                        <Border Background="{DynamicResource ThemeBackgroundBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Border Width="22" Height="22" Background="{DynamicResource ThemeSuccessBrush}" CornerRadius="11">
+                                    <TextBlock Text="✓" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel>
+                                    <TextBlock Text="License Activated" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeSuccessBrush}"/>
+                                    <TextBlock Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="{}{0} License">
+                                                <Binding Path="LicenseTier"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ====== Trial Mode ====== -->
+                    <StackPanel Spacing="12" IsVisible="{Binding IsTrialMode}">
+
+                        <!-- Trial input (not yet licensed) -->
+                        <StackPanel Spacing="10" IsVisible="{Binding !IsLicenseValid}">
+                            <TextBlock Text="Start Your Free Trial" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+
+                            <!-- Trial Error -->
+                            <Border Background="{DynamicResource ThemeDangerBrush}" CornerRadius="6" Padding="10" Opacity="0.9"
+                                    IsVisible="{Binding TrialError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="{Binding TrialError}" Foreground="White" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
                             </Border>
-                            <StackPanel>
-                                <TextBlock Text="License Activated" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeSuccessBrush}"/>
-                                <TextBlock Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}">
+
+                            <!-- Phase 1: Email input (before verification) -->
+                            <StackPanel Spacing="8" IsVisible="{Binding !IsAwaitingVerification}">
+                                <TextBlock Text="Enter your email to activate a 7-day free trial. No credit card required."
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeSm}" TextWrapping="Wrap"/>
+
+                                <!-- Email input + button (hidden during loading) -->
+                                <StackPanel Spacing="8" IsVisible="{Binding !IsStartingTrial}" Margin="0,20,0,0">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="Email Address" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                        <TextBox Text="{Binding TrialEmail}"
+                                                 Watermark="you@example.com"
+                                                 Background="{DynamicResource ThemeSurfaceElevatedBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderThickness="0" Padding="10" CornerRadius="6"/>
+                                    </StackPanel>
+
+                                    <Button Command="{Binding StartTrialCommand}"
+                                            Background="{DynamicResource ThemePrimaryBrush}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                            Padding="14,8" CornerRadius="6"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                            FontSize="{DynamicResource ThemeFontSizeSm}">
+                                        <TextBlock Text="Send Verification Code" FontWeight="SemiBold"/>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- Loading spinner -->
+                                <StackPanel Spacing="10" IsVisible="{Binding IsStartingTrial}" HorizontalAlignment="Center">
+                                    <ProgressBar IsIndeterminate="True" Width="120" Height="3"
+                                                 Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                                 Foreground="{DynamicResource ThemePrimaryBrush}"
+                                                 CornerRadius="2" Margin="0,4,0,0"/>
+                                    <TextBlock Text="Sending verification code..."
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Switch to sign-in link -->
+                                <Button Command="{Binding SwitchToSignInCommand}"
+                                        Background="Transparent" Padding="0" HorizontalAlignment="Center" Cursor="Hand">
+                                    <TextBlock Text="Already have an account? Sign in instead"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               TextDecorations="Underline"/>
+                                </Button>
+                            </StackPanel>
+
+                            <!-- Phase 2: Verification code input -->
+                            <StackPanel Spacing="8" IsVisible="{Binding IsAwaitingVerification}">
+                                <TextBlock Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeSm}" TextWrapping="Wrap">
                                     <TextBlock.Text>
-                                        <MultiBinding StringFormat="{}{0} License">
-                                            <Binding Path="LicenseTier"/>
+                                        <MultiBinding StringFormat="We sent a 6-digit code to {0}">
+                                            <Binding Path="TrialEmail"/>
                                         </MultiBinding>
                                     </TextBlock.Text>
                                 </TextBlock>
+
+                                <!-- Code input + verify (hidden during loading) -->
+                                <StackPanel Spacing="8" IsVisible="{Binding !IsVerifyingCode}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="Verification Code" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                        <TextBox Text="{Binding VerificationCode}"
+                                                 Watermark="000000"
+                                                 MaxLength="6"
+                                                 Background="{DynamicResource ThemeSurfaceElevatedBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderThickness="0" Padding="10" CornerRadius="6"
+                                                 FontSize="{DynamicResource ThemeFontSizeLg}" FontWeight="Bold"/>
+                                    </StackPanel>
+
+                                    <Button Command="{Binding VerifyTrialCodeCommand}"
+                                            Background="{DynamicResource ThemePrimaryBrush}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                            Padding="14,8" CornerRadius="6"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                            FontSize="{DynamicResource ThemeFontSizeSm}">
+                                        <TextBlock Text="Verify &amp; Start Trial" FontWeight="SemiBold"/>
+                                    </Button>
+
+                                    <!-- Spam reminder + Resend -->
+                                    <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="6" Padding="10">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="Don't see the email? Check your spam or junk folder."
+                                                       Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <Button Command="{Binding ResendTrialCodeCommand}"
+                                                        Background="Transparent" Padding="0" Cursor="Hand">
+                                                    <TextBlock Text="Resend code"
+                                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                                               TextDecorations="Underline"/>
+                                                </Button>
+                                                <Button Command="{Binding BackToTrialEmailCommand}"
+                                                        Background="Transparent" Padding="0" Cursor="Hand">
+                                                    <TextBlock Text="Change email"
+                                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                                               TextDecorations="Underline"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Verifying spinner -->
+                                <StackPanel Spacing="10" IsVisible="{Binding IsVerifyingCode}" HorizontalAlignment="Center">
+                                    <ProgressBar IsIndeterminate="True" Width="120" Height="3"
+                                                 Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                                 Foreground="{DynamicResource ThemePrimaryBrush}"
+                                                 CornerRadius="2" Margin="0,4,0,0"/>
+                                    <TextBlock Text="Verifying..."
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Sign In via Browser (Idle state) -->
-                    <StackPanel Spacing="8" IsVisible="{Binding !IsLicenseValid}">
-                        <!-- Idle state -->
-                        <StackPanel Spacing="8" IsVisible="{Binding !IsWaitingForBrowser}">
-                            <TextBlock Text="Sign in through your web browser to activate your license."
-                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                       TextWrapping="Wrap"/>
-
-                            <!-- Login Error -->
-                            <TextBlock Text="{Binding LoginError}" Foreground="{DynamicResource ThemeDangerBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                       TextWrapping="Wrap"
-                                       IsVisible="{Binding LoginError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                            <!-- Sign In with Browser button -->
-                            <Button Command="{Binding SignInWithBrowserCommand}"
-                                    Background="{DynamicResource ThemePrimaryBrush}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                    Padding="14,8" CornerRadius="6"
-                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                    FontSize="{DynamicResource ThemeFontSizeSm}">
-                                <TextBlock Text="Sign In with Browser" FontWeight="SemiBold"/>
-                            </Button>
-
-                            <!-- No account hint -->
-                            <TextBlock Text="Don't have an account? Sign up at privstack.io"
-                                       Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                       HorizontalAlignment="Center"/>
-                        </StackPanel>
-
-                        <!-- Waiting state -->
-                        <StackPanel Spacing="10" IsVisible="{Binding IsWaitingForBrowser}" HorizontalAlignment="Center">
-                            <ProgressBar IsIndeterminate="True" Width="120" Height="3"
-                                         Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                         Foreground="{DynamicResource ThemePrimaryBrush}"
-                                         CornerRadius="2" Margin="0,4,0,0"/>
-                            <TextBlock Text="Waiting for browser authorization..."
-                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"
-                                       FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Complete the sign-in in your web browser"
-                                       Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                       HorizontalAlignment="Center"/>
-                            <Button Command="{Binding CancelSignInCommand}"
-                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}" Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                    Padding="14,6" CornerRadius="6"
-                                    HorizontalAlignment="Center"
-                                    FontSize="{DynamicResource ThemeFontSizeSm}">
-                                <TextBlock Text="Cancel" FontWeight="SemiBold"/>
-                            </Button>
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Device Info -->
-                    <Border Background="{DynamicResource ThemeBackgroundBrush}" CornerRadius="6" Padding="10">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="Device:" Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                            <TextBlock Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}">
-                                <TextBlock.Text>
-                                    <MultiBinding StringFormat="{}{0} ({1})">
-                                        <Binding Path="DeviceInfo.Hostname"/>
-                                        <Binding Path="DeviceInfo.OsName"/>
-                                    </MultiBinding>
-                                </TextBlock.Text>
-                            </TextBlock>
+                    <!-- ====== Sign-In Mode ====== -->
+                    <StackPanel Spacing="12" IsVisible="{Binding !IsTrialMode}">
+
+                        <!-- Sign-in content (not yet licensed) -->
+                        <StackPanel Spacing="8" IsVisible="{Binding !IsLicenseValid}">
+                            <TextBlock Text="Activate Your License" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            <TextBlock Text="Sign in through your web browser to activate your license."
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeSm}" TextWrapping="Wrap"/>
+
+                            <!-- Idle state -->
+                            <StackPanel Spacing="8" IsVisible="{Binding !IsWaitingForBrowser}" Margin="0,20,0,0">
+                                <!-- Login Error -->
+                                <TextBlock Text="{Binding LoginError}" Foreground="{DynamicResource ThemeDangerBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding LoginError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                                <!-- Sign In with Browser button -->
+                                <Button Command="{Binding SignInWithBrowserCommand}"
+                                        Background="{DynamicResource ThemePrimaryBrush}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                        Padding="14,8" CornerRadius="6"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        FontSize="{DynamicResource ThemeFontSizeSm}">
+                                    <TextBlock Text="Sign In with Browser" FontWeight="SemiBold"/>
+                                </Button>
+
+                                <!-- Switch to trial link -->
+                                <Button Command="{Binding SwitchToTrialCommand}"
+                                        Background="Transparent" Padding="0" HorizontalAlignment="Center" Cursor="Hand">
+                                    <TextBlock Text="No account? Start a free trial instead"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               TextDecorations="Underline"/>
+                                </Button>
+                            </StackPanel>
+
+                            <!-- Waiting state -->
+                            <StackPanel Spacing="10" IsVisible="{Binding IsWaitingForBrowser}" HorizontalAlignment="Center">
+                                <ProgressBar IsIndeterminate="True" Width="120" Height="3"
+                                             Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                             Foreground="{DynamicResource ThemePrimaryBrush}"
+                                             CornerRadius="2" Margin="0,4,0,0"/>
+                                <TextBlock Text="Waiting for browser authorization..."
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                           FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Complete the sign-in in your web browser"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           HorizontalAlignment="Center"/>
+                                <Button Command="{Binding CancelSignInCommand}"
+                                        Background="{DynamicResource ThemeSurfaceElevatedBrush}" Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                        Padding="14,6" CornerRadius="6"
+                                        HorizontalAlignment="Center"
+                                        FontSize="{DynamicResource ThemeFontSizeSm}">
+                                    <TextBlock Text="Cancel" FontWeight="SemiBold"/>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
-                    </Border>
+                    </StackPanel>
+
+                    <!-- ====== Expired Subscription ====== -->
+                    <StackPanel Spacing="12" IsVisible="{Binding IsSubscriptionExpired}">
+                        <TextBlock Text="Subscription Expired" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+
+                        <Border Background="{DynamicResource ThemeBackgroundBrush}" CornerRadius="8" Padding="14">
+                            <StackPanel Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Border Width="22" Height="22" Background="{DynamicResource ThemeWarningBrush}" CornerRadius="11">
+                                        <TextBlock Text="!" FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Bold"
+                                                   Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding ExpiredMessage}" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               Foreground="{DynamicResource ThemeWarningBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="You can renew your subscription to restore full access, or continue in read-only mode."
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Spacing="8" Margin="0,4,0,0">
+                            <!-- Renew link -->
+                            <Button Tag="https://privstack.io/pricing"
+                                    Background="Transparent" Padding="0" HorizontalAlignment="Center" Cursor="Hand"
+                                    Click="OnRenewLinkClick">
+                                <TextBlock Text="Renew at privstack.io"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"
+                                           Foreground="{DynamicResource ThemePrimaryBrush}"
+                                           TextDecorations="Underline" FontWeight="SemiBold"/>
+                            </Button>
+
+                            <!-- Continue Read-Only button -->
+                            <Button Command="{Binding ContinueReadOnlyCommand}"
+                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                    Padding="14,8" CornerRadius="6"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    FontSize="{DynamicResource ThemeFontSizeSm}">
+                                <TextBlock Text="Continue in Read-Only Mode" FontWeight="SemiBold"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- ============================================================ -->
@@ -587,6 +729,7 @@
                         FontSize="{DynamicResource ThemeFontSizeSm}"/>
                 <Button Grid.Column="2" Content="{Binding NextButtonText}" Command="{Binding GoNextCommand}"
                         IsEnabled="{Binding CanGoNext}"
+                        IsVisible="{Binding !IsWelcomeStep}"
                         Background="{DynamicResource ThemePrimaryBrush}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                         Padding="20,8" CornerRadius="6" FontWeight="SemiBold"
                         FontSize="{DynamicResource ThemeFontSizeSm}"/>

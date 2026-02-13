@@ -51,6 +51,24 @@ macro_rules! parse_json_request {
     }};
 }
 
+/// Helper: check license for write operations in functions returning `*mut c_char`.
+/// Returns an error JSON string if the license is not writable.
+macro_rules! check_license_json {
+    () => {{
+        let handle = crate::lock_handle();
+        if let Some(h) = handle.as_ref() {
+            if let Err(e) = crate::check_license_writable(h) {
+                let msg = match e {
+                    crate::PrivStackError::LicenseExpired => "license expired — read-only mode",
+                    crate::PrivStackError::LicenseNotActivated => "no active license — read-only mode",
+                    _ => "license check failed — read-only mode",
+                };
+                return to_c_string(&$crate::datasets::error_json(msg));
+            }
+        }
+    }};
+}
+
 mod crud;
 mod mutations;
 mod queries;

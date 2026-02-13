@@ -166,6 +166,104 @@ public sealed class PrivStackApiClient
                ?? throw new PrivStackApiException("Empty response from token endpoint");
     }
 
+    /// <summary>
+    /// Starts a free trial by submitting an email to the trial endpoint.
+    /// Returns a signed license key on success.
+    /// </summary>
+    public async Task<TrialResponse> StartTrialAsync(string email, CancellationToken ct = default)
+    {
+        var payload = JsonSerializer.Serialize(new { email }, JsonOptions);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/api/trial/start")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        request.Headers.Add("X-Client-Type", "desktop");
+
+        using var response = await Http.SendAsync(request, ct);
+        var body = await response.Content.ReadAsStringAsync(ct);
+
+        var result = JsonSerializer.Deserialize<TrialResponse>(body, JsonOptions)
+                     ?? new TrialResponse();
+
+        if (!response.IsSuccessStatusCode && string.IsNullOrEmpty(result.Error))
+        {
+            var errorMsg = TryParseError(body);
+            return new TrialResponse { Error = errorMsg ?? $"Trial request failed (HTTP {(int)response.StatusCode})" };
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Verifies a 6-digit email code and completes trial activation.
+    /// </summary>
+    public async Task<TrialResponse> VerifyTrialCodeAsync(string email, string code, CancellationToken ct = default)
+    {
+        var payload = JsonSerializer.Serialize(new { email, code }, JsonOptions);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/api/trial/verify")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        request.Headers.Add("X-Client-Type", "desktop");
+
+        using var response = await Http.SendAsync(request, ct);
+        var body = await response.Content.ReadAsStringAsync(ct);
+
+        var result = JsonSerializer.Deserialize<TrialResponse>(body, JsonOptions)
+                     ?? new TrialResponse();
+
+        if (!response.IsSuccessStatusCode && string.IsNullOrEmpty(result.Error))
+        {
+            var errorMsg = TryParseError(body);
+            return new TrialResponse { Error = errorMsg ?? $"Verification failed (HTTP {(int)response.StatusCode})" };
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Validates a license key against the server.
+    /// Returns the validation response; on network/HTTP errors returns Valid = false with error detail.
+    /// </summary>
+    public async Task<LicenseValidationResponse> ValidateLicenseAsync(string licenseKey, CancellationToken ct = default)
+    {
+        try
+        {
+            var payload = JsonSerializer.Serialize(new { license_key = licenseKey }, JsonOptions);
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/api/license/activate")
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+            };
+            request.Headers.Add("X-Client-Type", "desktop");
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            using var response = await Http.SendAsync(request, cts.Token);
+            var body = await response.Content.ReadAsStringAsync(cts.Token);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var parsed = JsonSerializer.Deserialize<LicenseValidationResponse>(body, JsonOptions);
+                if (parsed != null) return parsed with { Valid = false };
+
+                var errorMsg = TryParseError(body);
+                return new LicenseValidationResponse { Valid = false, Error = errorMsg ?? $"HTTP {(int)response.StatusCode}" };
+            }
+
+            return JsonSerializer.Deserialize<LicenseValidationResponse>(body, JsonOptions)
+                   ?? new LicenseValidationResponse { Valid = false, Error = "Empty response" };
+        }
+        catch (OperationCanceledException)
+        {
+            return new LicenseValidationResponse { Valid = false, Error = "Request timed out" };
+        }
+        catch (HttpRequestException ex)
+        {
+            return new LicenseValidationResponse { Valid = false, Error = ex.Message };
+        }
+    }
+
     private static string? TryParseError(string body)
     {
         try
@@ -262,4 +360,31 @@ public record OfficialPluginsResponse
 {
     [JsonPropertyName("plugins")]
     public List<Models.PluginRegistry.OfficialPluginInfo>? Plugins { get; init; }
+}
+
+public record TrialResponse
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; init; }
+
+    [JsonPropertyName("license_key")]
+    public string? LicenseKey { get; init; }
+
+    [JsonPropertyName("trial_days")]
+    public int TrialDays { get; init; }
+
+    [JsonPropertyName("requires_verification")]
+    public bool RequiresVerification { get; init; }
+
+    [JsonPropertyName("verified")]
+    public bool Verified { get; init; }
+
+    [JsonPropertyName("error")]
+    public string? Error { get; init; }
+
+    [JsonPropertyName("message")]
+    public string? Message { get; init; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; init; }
 }

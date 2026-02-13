@@ -9,6 +9,7 @@ namespace PrivStack.Desktop.Services;
 /// Bridges local entity mutations to the P2P sync engine.
 /// Immediately registers entities for sync (cheap HashSet insert in Rust),
 /// then debounces snapshot recordings to avoid flooding during rapid edits.
+/// Also forwards events to file-based sync when active.
 /// </summary>
 internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
 {
@@ -17,11 +18,21 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
 
     private readonly ISyncService _syncService;
     private readonly ConcurrentDictionary<string, DebounceEntry> _pending = new();
+    private IFileEventSyncService? _fileEventSync;
     private bool _disposed;
 
     public SyncOutboundService(ISyncService syncService)
     {
         _syncService = syncService;
+    }
+
+    /// <summary>
+    /// Wires in the file-based event sync service for cloud/NAS sync.
+    /// Called after DI container build to resolve circular dependency.
+    /// </summary>
+    public void SetFileEventSync(IFileEventSyncService service)
+    {
+        _fileEventSync = service;
     }
 
     public void NotifyEntityChanged(string entityId, string entityType, string? payload)
@@ -86,6 +97,9 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
             entry.Timer.Dispose();
             _syncService.RecordSyncSnapshot(entityId, entry.EntityType, entry.Payload);
             _log.Debug("Recorded sync snapshot for {EntityType} {EntityId}", entry.EntityType, entityId);
+
+            // Also write to file-based event store if active (cloud/NAS sync)
+            _fileEventSync?.WriteEventFile(entityId, entry.EntityType, entry.Payload);
         }
         catch (Exception ex)
         {

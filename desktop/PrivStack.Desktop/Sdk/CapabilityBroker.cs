@@ -24,6 +24,27 @@ internal sealed class CapabilityBroker : ICapabilityBroker
         }
     }
 
+    public void Unregister<TCapability>(TCapability provider) where TCapability : class
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        if (_providers.TryGetValue(typeof(TCapability), out var list))
+        {
+            lock (_lock) { list.Remove(provider); }
+        }
+    }
+
+    public void UnregisterAll(object provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        lock (_lock)
+        {
+            foreach (var list in _providers.Values)
+            {
+                list.Remove(provider);
+            }
+        }
+    }
+
     public IReadOnlyList<TCapability> GetProviders<TCapability>() where TCapability : class
     {
         if (_providers.TryGetValue(typeof(TCapability), out var list))

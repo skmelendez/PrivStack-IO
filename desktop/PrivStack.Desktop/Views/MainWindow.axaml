@@ -77,16 +77,32 @@
     </Design.DataContext>
 
     <Panel>
-        <!-- Main layout: Title bar on top, then Sidebar + Content below -->
-        <Grid RowDefinitions="Auto,*">
+        <!-- Main layout: Title bar on top, optional license banner, then Sidebar + Content below -->
+        <Grid RowDefinitions="Auto,Auto,*">
             <!-- Title bar drag region / spacer for macOS traffic lights -->
             <Border Grid.Row="0" x:Name="TitleBarSpacer"
                     Background="{DynamicResource ThemeBackgroundBrush}"
                     Height="28"
                     IsHitTestVisible="False"/>
 
+            <!-- License expiration banner -->
+            <Border Grid.Row="1"
+                    IsVisible="{Binding IsLicenseExpiredBannerVisible}"
+                    Background="#E53E3E" Padding="8,6"
+                    HorizontalAlignment="Stretch">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Your trial has expired. Your data is safe but the app is now read-only."
+                               Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="Subscribe or Purchase"
+                            Command="{Binding OpenPricingPageCommand}"
+                            Foreground="White" Background="Transparent"
+                            BorderBrush="White" BorderThickness="1" Padding="12,4" FontSize="12"
+                            Cursor="Hand"/>
+                </Grid>
+            </Border>
+
             <!-- Sidebar + Content area -->
-            <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+            <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
                 <!-- Navigation Sidebar -->
                 <views:NavigationSidebar Grid.Column="0"
                                          Classes.collapsed="{Binding IsSidebarCollapsed}"
@@ -314,28 +330,34 @@
 
                             <!-- Right side: Sync status + branding -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
-                                <!-- Sync Status Indicator -->
-                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                    <Border Width="6" Height="6" CornerRadius="3">
-                                        <Border.Styles>
-                                            <Style Selector="Border">
-                                                <Setter Property="Background" Value="{DynamicResource ThemeTextMutedBrush}"/>
-                                            </Style>
-                                        </Border.Styles>
-                                    </Border>
-                                    <TextBlock FontSize="{DynamicResource ThemeFontSizeXsSm}" Foreground="{DynamicResource ThemeTextMutedBrush}">
-                                        <TextBlock.Text>
-                                            <MultiBinding StringFormat="{}{0}">
-                                                <Binding Path="SyncVM.SyncStatusText" FallbackValue="Offline"/>
-                                            </MultiBinding>
-                                        </TextBlock.Text>
-                                    </TextBlock>
-                                </StackPanel>
+                                <!-- Subscription Badge -->
+                                <Button IsVisible="{Binding SubscriptionBadgeVM.IsBadgeVisible}"
+                                        Command="{Binding SubscriptionBadgeVM.OpenModalCommand}"
+                                        Background="{DynamicResource ThemePrimaryMutedBrush}"
+                                        BorderThickness="0"
+                                        CornerRadius="{DynamicResource ThemeRadiusSm}"
+                                        Padding="8,3"
+                                        VerticalContentAlignment="Center"
+                                        Cursor="Hand"
+                                        MinHeight="0" MinWidth="0"
+                                        VerticalAlignment="Center">
+                                    <Button.Styles>
+                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+                                        </Style>
+                                    </Button.Styles>
+                                    <TextBlock Text="{Binding SubscriptionBadgeVM.BadgeText}"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                                               FontWeight="Medium"
+                                               Foreground="{DynamicResource ThemePrimaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                </Button>
 
-                                <!-- Branding -->
-                                <TextBlock Text="Local-First"
-                                           Foreground="{DynamicResource ThemeSuccessBrush}"
-                                           FontSize="{DynamicResource ThemeFontSizeXs}" FontWeight="Medium"
+                                <!-- Storage State Pill -->
+                                <TextBlock Text="{Binding StorageStatePillVM.PillText}"
+                                           Foreground="{Binding StorageStatePillVM.PillColor}"
+                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                           FontWeight="Medium"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </Grid>
@@ -497,6 +519,9 @@
 
         <!-- Speech Recording Overlay -->
         <views:SpeechRecordingOverlay DataContext="{Binding SpeechRecordingVM}" ZIndex="1001"/>
+
+        <!-- Subscription Detail Modal -->
+        <views:SubscriptionDetailModal DataContext="{Binding SubscriptionBadgeVM}" ZIndex="1001"/>
 
         <!-- Workspace Switcher Overlay -->
         <views:WorkspaceSwitcherOverlay DataContext="{Binding WorkspaceSwitcherVM}" ZIndex="1002"/>

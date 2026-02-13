@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
 namespace PrivStack.Desktop.ViewModels;
@@ -77,7 +78,11 @@ public partial class UnlockViewModel : ViewModelBase
 
         try
         {
-            await Task.Run(() => _service.UnlockApp(MasterPassword));
+            var password = MasterPassword;
+            await Task.Run(() => _service.UnlockApp(password));
+
+            // Cache password for seamless workspace switching before clearing
+            App.Services.GetService<IMasterPasswordCache>()?.Set(password);
 
             // Clear password from memory
             MasterPassword = string.Empty;
@@ -178,6 +183,7 @@ public partial class UnlockViewModel : ViewModelBase
         try
         {
             _service.LockApp();
+            App.Services.GetService<IMasterPasswordCache>()?.Clear();
             MasterPassword = string.Empty;
             ErrorMessage = string.Empty;
             LockRequested?.Invoke(this, EventArgs.Empty);

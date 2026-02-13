@@ -162,6 +162,94 @@
                       IsVisible="{Binding IsOverviewTab}">
             <StackPanel Spacing="20">
 
+                <!-- Workspace Plugins Section (collapsible) -->
+                <StackPanel Spacing="8">
+                    <Button Background="Transparent" Padding="0" Cursor="Hand"
+                            HorizontalAlignment="Left" HorizontalContentAlignment="Left"
+                            Command="{Binding ToggleWorkspacePluginsExpandedCommand}">
+                        <StackPanel Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="&#x25B6;"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsWorkspacePluginsExpanded}"/>
+                                <TextBlock Text="&#x25BC;"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding IsWorkspacePluginsExpanded}"/>
+                                <TextBlock Text="Workspace Plugins"
+                                           FontSize="{DynamicResource ThemeFontSizeLgXl}" FontWeight="Bold"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="Manage which plugins are active in this workspace"
+                                       FontSize="{DynamicResource ThemeFontSizeXs}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       Margin="22,0,0,0"/>
+                        </StackPanel>
+                    </Button>
+
+                    <StackPanel Spacing="8" IsVisible="{Binding IsWorkspacePluginsExpanded}">
+                        <ItemsControl ItemsSource="{Binding WorkspacePlugins}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="3" ColumnSpacing="10" RowSpacing="10"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:WorkspacePluginEntry">
+                                    <Border CornerRadius="10" Padding="14"
+                                            MinWidth="200"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource ThemeBorderBrush}"
+                                            Background="{DynamicResource ThemeSurfaceElevatedBrush}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Border Grid.Column="0" Width="32" Height="32"
+                                                    Background="{DynamicResource ThemeSurfaceBrush}"
+                                                    CornerRadius="6" Margin="0,0,10,0"
+                                                    VerticalAlignment="Center">
+                                                <controls:IconControl Icon="{Binding Icon}"
+                                                                      Size="16"
+                                                                      Stroke="{DynamicResource ThemeTextMutedBrush}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Description}"
+                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxLines="1"/>
+                                            </StackPanel>
+                                            <ToggleSwitch Grid.Column="2"
+                                                          IsChecked="{Binding IsActivated, Mode=OneWay}"
+                                                          VerticalAlignment="Center"
+                                                          Margin="8,0,0,0"
+                                                          OnContent="" OffContent=""
+                                                          Command="{Binding $parent[UserControl].((vm:DashboardViewModel)DataContext).ToggleWorkspacePluginCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Hint when some plugins are inactive -->
+                        <TextBlock IsVisible="{Binding HasInactivePlugins}"
+                                   Text="Toggle plugins on to add them to this workspace's sidebar"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   FontStyle="Italic"/>
+                    </StackPanel>
+                </StackPanel>
+
                 <!-- System Overview Cards -->
                 <StackPanel Spacing="8">
                     <TextBlock Text="System Overview"
@@ -526,6 +614,10 @@
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                                 <TextBlock Text="{Binding TotalDatabaseSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding TotalDatabaseEstimate}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           IsVisible="{Binding TotalDatabaseEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 <TextBlock Text="Entity storage" FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
@@ -550,6 +642,10 @@
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                                 <TextBlock Text="{Binding TotalVaultSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding TotalVaultEstimate}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           IsVisible="{Binding TotalVaultEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 <TextBlock Text="Encrypted blobs" FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
@@ -562,6 +658,10 @@
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                                 <TextBlock Text="{Binding TotalStorageSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding TotalStorageEstimate}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           IsVisible="{Binding TotalStorageEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 <TextBlock Text="All storage" FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>

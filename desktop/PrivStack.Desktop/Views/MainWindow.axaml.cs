@@ -366,6 +366,13 @@ public partial class MainWindow : Window
         // Escape to close overlays/menus
         if (e.Key == Key.Escape)
         {
+            if (vm.SubscriptionBadgeVM.IsModalOpen)
+            {
+                vm.SubscriptionBadgeVM.CloseModalCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+
             if (vm.WorkspaceSwitcherVM.IsOpen)
             {
                 vm.WorkspaceSwitcherVM.CloseCommand.Execute(null);

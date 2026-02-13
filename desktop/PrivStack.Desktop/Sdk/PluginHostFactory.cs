@@ -4,6 +4,7 @@ using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Sdk;
 using PrivStack.Sdk.Capabilities;
+using PrivStack.Desktop.Services.Connections;
 
 namespace PrivStack.Desktop.Sdk;
 
@@ -21,6 +22,7 @@ internal sealed class PluginHostFactory
     private readonly IUiDispatcher _dispatcher;
     private readonly InfoPanelService _infoPanelService;
     private readonly IFocusModeService _focusModeService;
+    private readonly IConnectionService _connectionService;
 
     public ICapabilityBroker CapabilityBroker => _capabilityBroker;
 
@@ -33,6 +35,7 @@ internal sealed class PluginHostFactory
         _dispatcher = App.Services.GetRequiredService<IUiDispatcher>();
         _infoPanelService = App.Services.GetRequiredService<InfoPanelService>();
         _focusModeService = App.Services.GetRequiredService<IFocusModeService>();
+        _connectionService = App.Services.GetRequiredService<IConnectionService>();
 
         // Register the default local filesystem storage provider
         _capabilityBroker.Register<IStorageProvider>(new LocalStorageProvider());
@@ -44,6 +47,6 @@ internal sealed class PluginHostFactory
 
     public IPluginHost CreateHost(string pluginId)
     {
-        return new PluginHost(_sdkHost, _capabilityBroker, pluginId, _dialogService, _appSettings, _pluginRegistry, _dispatcher, _infoPanelService, _focusModeService);
+        return new PluginHost(_sdkHost, _capabilityBroker, pluginId, _dialogService, _appSettings, _pluginRegistry, _dispatcher, _infoPanelService, _focusModeService, _connectionService);
     }
 }

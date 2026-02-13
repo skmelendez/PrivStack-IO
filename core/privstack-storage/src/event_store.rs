@@ -15,7 +15,7 @@ pub struct EventStore {
 impl EventStore {
     /// Opens or creates an event store at the given path.
     pub fn open(path: &Path) -> StorageResult<Self> {
-        let conn = crate::open_duckdb_with_wal_recovery(path)?;
+        let conn = crate::open_duckdb_with_wal_recovery(path, "128MB", 1)?;
         initialize_event_schema(&conn)?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),

@@ -267,13 +267,13 @@
                             Background="Transparent"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"
-                            Padding="20,4,12,6"
+                            Padding="20,8,12,6"
                             CornerRadius="0"
                             Cursor="Hand"
                             ToolTip.Tip="Switch Workspace (Ctrl+K W)">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="{Binding CurrentWorkspaceName}"
-                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
                                        Foreground="{DynamicResource ThemeNavTextBrush}"
                                        MaxLines="1" TextTrimming="CharacterEllipsis"
                                        VerticalAlignment="Center"/>

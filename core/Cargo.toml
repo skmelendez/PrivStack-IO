@@ -18,10 +18,10 @@ members = [
 ]
 
 [workspace.package]
-version = "1.6.2"
+version = "1.6.6"
 edition = "2024"
 license = "Proprietary"
-repository = "https://github.com/privstack/privstack"
+repository = "https://github.com/PrivStackApp/PrivStack-IO"
 rust-version = "1.85"
 
 [workspace.dependencies]
