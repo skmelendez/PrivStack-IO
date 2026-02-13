@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
@@ -103,6 +104,7 @@ public partial class DashboardViewModel : ViewModelBase
     private string _dataStorageTotal = "—";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SubtitleText))]
     private string _memoryUsage = "—";
 
     [ObservableProperty]
@@ -169,6 +171,20 @@ public partial class DashboardViewModel : ViewModelBase
     public int InstalledCount => AllPlugins.Count(p => p.IsInstalled);
     public int AvailableCount => AllPlugins.Count(p => !p.IsInstalled);
     public int UpdateCount => AllPlugins.Count(p => p.HasUpdate);
+
+    public string SubtitleText
+    {
+        get
+        {
+            var parts = new List<string>(4);
+            parts.Add($"{InstalledCount} installed");
+            parts.Add($"{AvailableCount} available");
+            if (UpdateCount > 0)
+                parts.Add($"{UpdateCount} update{(UpdateCount == 1 ? "" : "s")}");
+            parts.Add($"{MemoryUsage} RAM");
+            return string.Join(" \u00b7 ", parts);
+        }
+    }
 
     public string[] Categories { get; } =
     [
@@ -415,6 +431,30 @@ public partial class DashboardViewModel : ViewModelBase
     private void ToggleStorageExpanded()
     {
         IsStorageExpanded = !IsStorageExpanded;
+    }
+
+    [RelayCommand]
+    private void OpenPluginsFolder()
+    {
+        var bundledDir = Path.Combine(AppContext.BaseDirectory, "plugins");
+        if (Directory.Exists(bundledDir))
+        {
+            Process.Start(new ProcessStartInfo(bundledDir) { UseShellExecute = true });
+            return;
+        }
+
+        var devDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "plugins"));
+        if (Directory.Exists(devDir))
+        {
+            Process.Start(new ProcessStartInfo(devDir) { UseShellExecute = true });
+            return;
+        }
+
+        var userDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".privstack", "plugins");
+        if (Directory.Exists(userDir))
+            Process.Start(new ProcessStartInfo(userDir) { UseShellExecute = true });
     }
 
     // =========================================================================
@@ -748,6 +788,7 @@ public partial class DashboardViewModel : ViewModelBase
         OnPropertyChanged(nameof(InstalledCount));
         OnPropertyChanged(nameof(AvailableCount));
         OnPropertyChanged(nameof(UpdateCount));
+        OnPropertyChanged(nameof(SubtitleText));
         OnPropertyChanged(nameof(FilteredPlugins));
     }
 }
