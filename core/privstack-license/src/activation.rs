@@ -66,6 +66,27 @@ impl Activation {
         }
     }
 
+    /// Re-verifies the embedded license key and overwrites mutable fields
+    /// (`license_plan`, `email`, `sub`, `expires_at`) from the verified payload.
+    ///
+    /// This prevents tamper attacks where a user edits `activation.json` to
+    /// extend expiry or change plan while offline.
+    ///
+    /// Pass `None` for `verify_key` to use the embedded production public key.
+    fn revalidate_from_key(&mut self, verify_key: Option<&[u8; 32]>) -> LicenseResult<()> {
+        let parsed = match verify_key {
+            Some(key) => LicenseKey::parse_with_key(&self.license_key, key)?,
+            None => LicenseKey::parse(&self.license_key)?,
+        };
+
+        self.license_plan = parsed.license_plan();
+        self.email = parsed.payload().email.clone();
+        self.sub = parsed.payload().sub;
+        self.expires_at = parsed.expires_at_secs().and_then(|ts| DateTime::from_timestamp(ts, 0));
+
+        Ok(())
+    }
+
     /// Returns the license key.
     #[must_use]
     pub fn license_key(&self) -> &str {
@@ -199,8 +220,18 @@ impl ActivationStore {
         Ok(())
     }
 
-    /// Loads the stored activation record.
+    /// Loads the stored activation record, re-verifying the Ed25519 signature
+    /// and overwriting any tampered fields from the verified payload.
     pub fn load(&self) -> LicenseResult<Option<Activation>> {
+        self.load_with_key(None)
+    }
+
+    /// Loads the stored activation record with an optional custom verify key.
+    /// Used by tests with a generated keypair. Pass `None` for production.
+    pub fn load_with_key(
+        &self,
+        verify_key: Option<&[u8; 32]>,
+    ) -> LicenseResult<Option<Activation>> {
         if !self.path.exists() {
             return Ok(None);
         }
@@ -208,7 +239,8 @@ impl ActivationStore {
         let json = std::fs::read_to_string(&self.path)
             .map_err(|e| LicenseError::Storage(e.to_string()))?;
 
-        let activation: Activation = serde_json::from_str(&json)?;
+        let mut activation: Activation = serde_json::from_str(&json)?;
+        activation.revalidate_from_key(verify_key)?;
         Ok(Some(activation))
     }
 

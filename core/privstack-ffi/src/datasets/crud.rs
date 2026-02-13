@@ -10,6 +10,7 @@ pub unsafe extern "C" fn privstack_dataset_import_csv(
     name: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let file_path = parse_cstr!(file_path, r#"{"error":"null pointer"}"#);
         let name = parse_cstr!(name, r#"{"error":"null pointer"}"#);
 
@@ -88,6 +89,9 @@ pub unsafe extern "C" fn privstack_dataset_delete(dataset_id: *const c_char) -> 
             Some(h) => h,
             None => return PrivStackError::NotInitialized,
         };
+        if let Err(e) = crate::check_license_writable(handle) {
+            return e;
+        }
         let store = match handle.dataset_store.as_ref() {
             Some(s) => s,
             None => return PrivStackError::StorageError,
@@ -132,6 +136,9 @@ pub unsafe extern "C" fn privstack_dataset_rename(
             Some(h) => h,
             None => return PrivStackError::NotInitialized,
         };
+        if let Err(e) = crate::check_license_writable(handle) {
+            return e;
+        }
         let store = match handle.dataset_store.as_ref() {
             Some(s) => s,
             None => return PrivStackError::StorageError,

@@ -13,6 +13,17 @@ public interface ICapabilityBroker
     void Register<TCapability>(TCapability provider) where TCapability : class;
 
     /// <summary>
+    /// Removes a capability provider instance.
+    /// </summary>
+    void Unregister<TCapability>(TCapability provider) where TCapability : class;
+
+    /// <summary>
+    /// Removes a provider from all capability type registrations at once.
+    /// Used during plugin disable to cleanly remove all registrations.
+    /// </summary>
+    void UnregisterAll(object provider);
+
+    /// <summary>
     /// Gets all registered providers of the specified capability type.
     /// </summary>
     IReadOnlyList<TCapability> GetProviders<TCapability>() where TCapability : class;

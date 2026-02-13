@@ -112,3 +112,15 @@ public record DeviceInfo
     [JsonPropertyName("fingerprint")]
     public string Fingerprint { get; init; } = string.Empty;
 }
+
+/// <summary>
+/// Server-side license validation response from /api/license/activate.
+/// </summary>
+public record LicenseValidationResponse
+{
+    [JsonPropertyName("valid")] public bool Valid { get; init; }
+    [JsonPropertyName("plan")] public string Plan { get; init; } = "";
+    [JsonPropertyName("status")] public string Status { get; init; } = "";
+    [JsonPropertyName("expires_at")] public string? ExpiresAt { get; init; }
+    [JsonPropertyName("error")] public string? Error { get; init; }
+}

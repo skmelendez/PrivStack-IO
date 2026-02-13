@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.Plugin;
 
 namespace PrivStack.Desktop.ViewModels;
 
@@ -26,6 +28,23 @@ public partial class WorkspaceItem : ObservableObject
 
     [ObservableProperty]
     private bool _isConfirmingDelete;
+
+    [ObservableProperty]
+    private string _storageLabel = string.Empty;
+}
+
+/// <summary>
+/// Selectable plugin entry shown during workspace creation.
+/// </summary>
+public partial class PluginPickerItem : ObservableObject
+{
+    public string Id { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public string? Icon { get; init; }
+
+    [ObservableProperty]
+    private bool _isSelected;
 }
 
 /// <summary>
@@ -53,7 +72,55 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
     [ObservableProperty]
     private string _newWorkspaceName = string.Empty;
 
+    /// <summary>
+    /// True when the storage location picker is shown after entering workspace name.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShowingWorkspaceList))]
+    private bool _isSelectingStorageLocation;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DataDirectoryDisplay))]
+    [NotifyPropertyChangedFor(nameof(IsCustomDirectorySelected))]
+    private DataDirectoryType _selectedDirectoryType = DataDirectoryType.Default;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DataDirectoryDisplay))]
+    private string _customDataDirectory = string.Empty;
+
+    public bool IsGoogleDriveAvailable => !string.IsNullOrEmpty(Services.CloudPathResolver.GetGoogleDrivePath());
+    public bool IsICloudAvailable => !string.IsNullOrEmpty(Services.CloudPathResolver.GetICloudPath());
+    public bool IsCustomDirectorySelected => SelectedDirectoryType == DataDirectoryType.Custom;
+
+    public string DataDirectoryDisplay => SelectedDirectoryType switch
+    {
+        DataDirectoryType.Default => DataPaths.BaseDir,
+        DataDirectoryType.Custom => string.IsNullOrEmpty(CustomDataDirectory) ? "Select a folder..." : CustomDataDirectory,
+        DataDirectoryType.GoogleDrive => Services.CloudPathResolver.GetGoogleDrivePath() ?? "Not available",
+        DataDirectoryType.ICloud => Services.CloudPathResolver.GetICloudPath() ?? "Not available",
+        _ => DataPaths.BaseDir
+    };
+
+    /// <summary>
+    /// True when the plugin picker step is shown after creating a workspace.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShowingWorkspaceList))]
+    private bool _isSelectingPlugins;
+
+    /// <summary>
+    /// The workspace ID just created, pending plugin selection before switching.
+    /// </summary>
+    private string? _pendingWorkspaceId;
+
+    /// <summary>
+    /// The pending workspace name, saved between name entry and storage location steps.
+    /// </summary>
+    private string? _pendingWorkspaceName;
+
     public ObservableCollection<WorkspaceItem> Workspaces { get; } = [];
+
+    public ObservableCollection<PluginPickerItem> AvailablePlugins { get; } = [];
 
     public IEnumerable<WorkspaceItem> FilteredWorkspaces
     {
@@ -67,13 +134,19 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
         }
     }
 
+    public bool IsShowingWorkspaceList => !IsSelectingPlugins && !IsSelectingStorageLocation;
+
     [RelayCommand]
     private void Open()
     {
         RefreshWorkspaces();
         SearchQuery = string.Empty;
         IsCreating = false;
+        IsSelectingStorageLocation = false;
+        IsSelectingPlugins = false;
         NewWorkspaceName = string.Empty;
+        SelectedDirectoryType = DataDirectoryType.Default;
+        CustomDataDirectory = string.Empty;
         IsOpen = true;
     }
 
@@ -82,6 +155,8 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
     {
         IsOpen = false;
         IsCreating = false;
+        IsSelectingStorageLocation = false;
+        IsSelectingPlugins = false;
     }
 
     [RelayCommand]
@@ -96,9 +171,8 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
     [RelayCommand]
     private void SwitchWorkspace(string workspaceId)
     {
-        _workspaceService.SwitchWorkspace(workspaceId);
-        RefreshWorkspaces();
         IsOpen = false;
+        _workspaceService.SwitchWorkspace(workspaceId);
     }
 
     [RelayCommand]
@@ -121,10 +195,76 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(NewWorkspaceName))
             return;
 
-        _workspaceService.CreateWorkspace(NewWorkspaceName.Trim());
+        _pendingWorkspaceName = NewWorkspaceName.Trim();
         IsCreating = false;
         NewWorkspaceName = string.Empty;
-        RefreshWorkspaces();
+
+        // Show storage location picker before creating
+        SelectedDirectoryType = DataDirectoryType.Default;
+        CustomDataDirectory = string.Empty;
+        IsSelectingStorageLocation = true;
+    }
+
+    [RelayCommand]
+    private void SelectStorageLocationType(DataDirectoryType type)
+    {
+        SelectedDirectoryType = type;
+    }
+
+    [RelayCommand]
+    private void ConfirmStorageLocation()
+    {
+        if (_pendingWorkspaceName == null) return;
+
+        // Build storage location from selections
+        StorageLocation? storageLocation = SelectedDirectoryType == DataDirectoryType.Default
+            ? null
+            : new StorageLocation
+            {
+                Type = SelectedDirectoryType.ToString(),
+                CustomPath = SelectedDirectoryType == DataDirectoryType.Custom ? CustomDataDirectory : null
+            };
+
+        var workspace = _workspaceService.CreateWorkspace(_pendingWorkspaceName, storageLocation);
+        _pendingWorkspaceId = workspace.Id;
+        _pendingWorkspaceName = null;
+
+        // Initialize whitelist config with core-only defaults before showing picker
+        var settingsService = App.Services.GetRequiredService<IAppSettingsService>();
+        settingsService.InitializeWorkspacePluginConfig(workspace.Id);
+
+        IsSelectingStorageLocation = false;
+        PopulateAvailablePlugins();
+        IsSelectingPlugins = true;
+    }
+
+    [RelayCommand]
+    private void CancelStorageLocation()
+    {
+        IsSelectingStorageLocation = false;
+        _pendingWorkspaceName = null;
+    }
+
+    [RelayCommand]
+    private void ConfirmPluginSelection()
+    {
+        if (_pendingWorkspaceId == null) return;
+
+        var selectedIds = AvailablePlugins
+            .Where(p => p.IsSelected)
+            .Select(p => p.Id);
+
+        var settingsService = App.Services.GetRequiredService<IAppSettingsService>();
+        settingsService.InitializeWorkspacePluginConfig(_pendingWorkspaceId, selectedIds);
+
+        FinishWorkspaceCreation();
+    }
+
+    [RelayCommand]
+    private void SkipPluginSelection()
+    {
+        // Core-only config is already set — just switch
+        FinishWorkspaceCreation();
     }
 
     [RelayCommand]
@@ -150,6 +290,40 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
         RefreshWorkspaces();
     }
 
+    private void FinishWorkspaceCreation()
+    {
+        if (_pendingWorkspaceId == null) return;
+
+        var wsId = _pendingWorkspaceId;
+        _pendingWorkspaceId = null;
+        IsSelectingPlugins = false;
+        IsOpen = false;
+
+        _workspaceService.SwitchWorkspace(wsId);
+    }
+
+    private void PopulateAvailablePlugins()
+    {
+        AvailablePlugins.Clear();
+
+        var registry = App.Services.GetRequiredService<IPluginRegistry>();
+        foreach (var plugin in registry.Plugins)
+        {
+            // Skip core/hard-locked plugins — they're always enabled
+            if (plugin.Metadata.IsHardLocked) continue;
+            if (!plugin.Metadata.CanDisable) continue;
+
+            AvailablePlugins.Add(new PluginPickerItem
+            {
+                Id = plugin.Metadata.Id,
+                Name = plugin.Metadata.Name,
+                Description = plugin.Metadata.Description,
+                Icon = plugin.Metadata.Icon,
+                IsSelected = false,
+            });
+        }
+    }
+
     private void RefreshWorkspaces()
     {
         Workspaces.Clear();
@@ -162,10 +336,23 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
                 Id = ws.Id,
                 Name = ws.Name,
                 IsActive = ws.Id == active?.Id,
-                CreatedAt = ws.CreatedAt
+                CreatedAt = ws.CreatedAt,
+                StorageLabel = GetStorageLabel(ws.StorageLocation)
             });
         }
 
         OnPropertyChanged(nameof(FilteredWorkspaces));
+    }
+
+    private static string GetStorageLabel(StorageLocation? location)
+    {
+        if (location == null || location.Type == "Default") return "Local";
+        return location.Type switch
+        {
+            "GoogleDrive" => "Google Drive",
+            "ICloud" => "iCloud",
+            "Custom" => "Custom",
+            _ => "Local"
+        };
     }
 }

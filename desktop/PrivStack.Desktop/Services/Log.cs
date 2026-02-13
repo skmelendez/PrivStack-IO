@@ -94,6 +94,65 @@ public static class Log
     }
 
     /// <summary>
+    /// Reconfigures the logger to write to a workspace-specific log directory.
+    /// Called after workspace selection or switch.
+    /// </summary>
+    public static void ReconfigureForWorkspace(string workspaceId)
+    {
+        lock (_lock)
+        {
+            try
+            {
+                var logFolder = Path.Combine(DataPaths.BaseDir, "logs", workspaceId);
+                Directory.CreateDirectory(logFolder);
+
+                var logPath = Path.Combine(logFolder, "privstack-.log");
+
+                // Flush old logger
+                Serilog.Log.CloseAndFlush();
+                _isInitialized = false;
+                _logger = null;
+
+                var config = new LoggerConfiguration()
+                    .MinimumLevel.Debug()
+                    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                    .MinimumLevel.Override("System", LogEventLevel.Warning)
+                    .Enrich.WithThreadId()
+                    .Enrich.WithMachineName()
+                    .Enrich.FromLogContext()
+                    .WriteTo.File(
+                        logPath,
+                        rollingInterval: RollingInterval.Day,
+                        retainedFileCountLimit: 10,
+                        fileSizeLimitBytes: 10 * 1024 * 1024,
+                        rollOnFileSizeLimit: true,
+                        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] [{ThreadId}] {SourceContext}: {Message:lj}{NewLine}{Exception}",
+                        shared: true
+                    );
+
+#if DEBUG
+                config = config.WriteTo.Console(
+                    outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}"
+                );
+#endif
+
+                _logger = config.CreateLogger();
+                Serilog.Log.Logger = _logger;
+                _isInitialized = true;
+
+                _logger.Information("Logger reconfigured for workspace: {WorkspaceId}, path: {LogPath}", workspaceId, logPath);
+            }
+            catch (Exception ex)
+            {
+                // If reconfiguration fails, re-initialize default logger
+                _isInitialized = false;
+                Initialize();
+                Logger.Error(ex, "Failed to reconfigure logger for workspace {WorkspaceId}", workspaceId);
+            }
+        }
+    }
+
+    /// <summary>
     /// Flushes and closes the logging system. Call on application shutdown.
     /// </summary>
     public static void Shutdown()

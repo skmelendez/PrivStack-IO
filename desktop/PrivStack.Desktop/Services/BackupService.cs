@@ -30,26 +30,28 @@ public class BackupService : IBackupService
     }
 
     /// <summary>
-    /// Gets the data directory to backup.
+    /// Gets the data directory to backup (workspace-scoped).
     /// </summary>
     public string DataDirectory
     {
         get
         {
-            var defaultDataDir = DataPaths.BaseDir;
-            return _settings.Settings.CustomDataDirectory ?? defaultDataDir;
+            // Prefer workspace-scoped directory; fall back to root for pre-migration compat
+            return DataPaths.WorkspaceDataDir ?? DataPaths.BaseDir;
         }
     }
 
     /// <summary>
-    /// Gets the backup destination directory.
+    /// Gets the backup destination directory (workspace-scoped).
     /// </summary>
     public string BackupDirectory
     {
         get
         {
-            var defaultBackupDir = Path.Combine(DataDirectory, "backups");
-            return _settings.Settings.BackupDirectory ?? defaultBackupDir;
+            if (_settings.Settings.BackupDirectory != null)
+                return _settings.Settings.BackupDirectory;
+
+            return Path.Combine(DataDirectory, "backups");
         }
     }
 

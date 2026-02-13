@@ -100,7 +100,7 @@ fn activation_store_save_load() {
     store.save(&activation).unwrap();
     assert!(store.has_activation());
 
-    let loaded = store.load().unwrap().unwrap();
+    let loaded = store.load_with_key(Some(&pk)).unwrap().unwrap();
     assert_eq!(loaded.license_key(), activation.license_key());
     assert_eq!(loaded.license_plan(), LicensePlan::Perpetual);
 }
@@ -180,7 +180,7 @@ fn activation_store_overwrite() {
     let a2 = activate_offline(&parsed2).unwrap();
     store.save(&a2).unwrap();
 
-    let loaded = store.load().unwrap().unwrap();
+    let loaded = store.load_with_key(Some(&pk)).unwrap().unwrap();
     assert_eq!(loaded.license_plan(), LicensePlan::Perpetual);
 }
 
@@ -265,7 +265,7 @@ fn save_creates_deeply_nested_directories() {
 
     store.save(&activation).unwrap();
     assert!(store.has_activation());
-    let loaded = store.load().unwrap().unwrap();
+    let loaded = store.load_with_key(Some(&pk)).unwrap().unwrap();
     assert_eq!(loaded.license_plan(), LicensePlan::Perpetual);
 }
 
@@ -297,7 +297,7 @@ fn save_overwrites_existing_file() {
     let activation = activate_offline(&parsed).unwrap();
 
     store.save(&activation).unwrap();
-    let loaded = store.load().unwrap().unwrap();
+    let loaded = store.load_with_key(Some(&pk)).unwrap().unwrap();
     assert_eq!(loaded.license_plan(), LicensePlan::Perpetual);
 }
 
@@ -483,4 +483,88 @@ fn is_valid_with_future_expiry_returns_true() {
 
     assert!(future.is_valid());
     assert_eq!(future.status(), LicenseStatus::Active);
+}
+
+// ── Tamper-proofing tests ────────────────────────────────────────
+
+#[test]
+fn load_overwrites_tampered_expires_at() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("activation.json");
+    let store = ActivationStore::new(&path);
+    let (sk, pk) = test_keypair();
+    let now = chrono::Utc::now().timestamp();
+
+    // Create a monthly key and activate
+    let key_str = make_monthly_key_at(&sk, now);
+    let parsed = LicenseKey::parse_with_key(&key_str, &pk).unwrap();
+    let activation = activate_offline(&parsed).unwrap();
+    store.save(&activation).unwrap();
+
+    // Tamper: set expires_at far into the future
+    let json = std::fs::read_to_string(&path).unwrap();
+    let mut val: serde_json::Value = serde_json::from_str(&json).unwrap();
+    val["expires_at"] = serde_json::json!("2099-12-31T23:59:59Z");
+    std::fs::write(&path, serde_json::to_string_pretty(&val).unwrap()).unwrap();
+
+    // Load should overwrite the tampered expiry from the signed payload
+    let loaded = store.load_with_key(Some(&pk)).unwrap().unwrap();
+    // Monthly key issued at `now` should expire at now + 30 days, NOT 2099
+    let expected_exp = chrono::DateTime::from_timestamp(now + 30 * 24 * 60 * 60, 0).unwrap();
+    assert_eq!(loaded.status(), activation.status());
+    // Verify the loaded expiry is close to the original (not the tampered 2099 value)
+    let loaded_json = serde_json::to_value(&loaded).unwrap();
+    let loaded_exp_str = loaded_json["expires_at"].as_str().unwrap();
+    let loaded_exp: chrono::DateTime<chrono::Utc> = loaded_exp_str.parse().unwrap();
+    let diff = (loaded_exp - expected_exp).num_seconds().abs();
+    assert!(diff < 2, "expiry should match signed payload, diff was {diff}s");
+}
+
+#[test]
+fn load_overwrites_tampered_license_plan() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("activation.json");
+    let store = ActivationStore::new(&path);
+    let (sk, pk) = test_keypair();
+    let now = chrono::Utc::now().timestamp();
+
+    // Create a monthly key
+    let key_str = make_monthly_key_at(&sk, now);
+    let parsed = LicenseKey::parse_with_key(&key_str, &pk).unwrap();
+    let activation = activate_offline(&parsed).unwrap();
+    store.save(&activation).unwrap();
+
+    // Tamper: change plan to perpetual
+    let json = std::fs::read_to_string(&path).unwrap();
+    let mut val: serde_json::Value = serde_json::from_str(&json).unwrap();
+    val["license_plan"] = serde_json::json!("perpetual");
+    val["expires_at"] = serde_json::Value::Null;
+    std::fs::write(&path, serde_json::to_string_pretty(&val).unwrap()).unwrap();
+
+    // Load should restore the real plan from the signed key
+    let loaded = store.load_with_key(Some(&pk)).unwrap().unwrap();
+    assert_eq!(loaded.license_plan(), LicensePlan::Monthly);
+}
+
+#[test]
+fn load_rejects_tampered_license_key() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("activation.json");
+    let store = ActivationStore::new(&path);
+    let (sk, pk) = test_keypair();
+
+    let key_str = make_perpetual_key(&sk);
+    let parsed = LicenseKey::parse_with_key(&key_str, &pk).unwrap();
+    let activation = activate_offline(&parsed).unwrap();
+    store.save(&activation).unwrap();
+
+    // Tamper: corrupt the license_key field
+    let json = std::fs::read_to_string(&path).unwrap();
+    let mut val: serde_json::Value = serde_json::from_str(&json).unwrap();
+    val["license_key"] = serde_json::json!("completely-invalid-key");
+    std::fs::write(&path, serde_json::to_string_pretty(&val).unwrap()).unwrap();
+
+    // Load should fail — signature verification will reject the corrupted key
+    let result = store.load_with_key(Some(&pk));
+    assert!(result.is_err());
 }

@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Sdk;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.Connections;
+using PrivStack.Desktop.Services.FileSync;
 using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Desktop.Services.Update;
 using PrivStack.Desktop.ViewModels;
@@ -32,6 +34,7 @@ public static class ServiceRegistration
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
         services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<ISensitiveLockService, SensitiveLockService>();
+        services.AddSingleton<IMasterPasswordCache, MasterPasswordCache>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IFontScaleService, FontScaleService>();
         services.AddSingleton<IResponsiveLayoutService, ResponsiveLayoutService>();
@@ -45,17 +48,26 @@ public static class ServiceRegistration
         services.AddSingleton<SdkHost>();
         services.AddSingleton<IPrivStackSdk>(sp => sp.GetRequiredService<SdkHost>());
         services.AddSingleton<ISyncOutboundService, SyncOutboundService>();
+        services.AddSingleton<IFileEventSyncService, FileEventSyncService>();
+        services.AddSingleton<ISnapshotSyncService, SnapshotSyncService>();
         services.AddSingleton<SeedDataService>();
         services.AddSingleton<InfoPanelService>();
         services.AddSingleton<BacklinkService>();
         services.AddSingleton<EntityMetadataService>();
 
+        services.AddSingleton<LicenseExpirationService>();
+        services.AddSingleton<SubscriptionValidationService>();
         services.AddSingleton<ISystemNotificationService, SystemNotificationService>();
         services.AddSingleton<ReminderSchedulerService>();
         services.AddSingleton<PrivStackApiClient>();
         services.AddSingleton<OAuthLoginService>();
         services.AddSingleton<IPluginInstallService, PluginInstallService>();
         services.AddSingleton<IUpdateService, RegistryUpdateService>();
+
+        // External connections (GitHub, etc.)
+        services.AddSingleton<GitHubDeviceFlowService>();
+        services.AddSingleton<ConnectionService>();
+        services.AddSingleton<IConnectionService>(sp => sp.GetRequiredService<ConnectionService>());
 
         // Services without interfaces (used directly)
         services.AddSingleton<CustomThemeStore>();
@@ -74,8 +86,16 @@ public static class ServiceRegistration
         var provider = services.BuildServiceProvider();
 
         // Wire SyncOutbound into SdkHost (cross-singleton dependency resolved after build)
-        provider.GetRequiredService<SdkHost>()
-            .SetSyncOutbound(provider.GetRequiredService<ISyncOutboundService>());
+        var sdkHost = provider.GetRequiredService<SdkHost>();
+        sdkHost.SetSyncOutbound(provider.GetRequiredService<ISyncOutboundService>());
+
+        // Wire file-based event sync into outbound service
+        if (provider.GetRequiredService<ISyncOutboundService>() is SyncOutboundService outbound)
+            outbound.SetFileEventSync(provider.GetRequiredService<IFileEventSyncService>());
+
+        // Wire license read-only detection from SdkHost into the expiration service
+        var expirationService = provider.GetRequiredService<LicenseExpirationService>();
+        sdkHost.LicenseReadOnlyBlocked += (_, _) => expirationService.OnMutationBlocked();
 
         return provider;
     }

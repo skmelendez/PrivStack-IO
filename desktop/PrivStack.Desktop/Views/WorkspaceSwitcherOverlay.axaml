@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PrivStack.Desktop.ViewModels"
              xmlns:controls="using:PrivStack.Desktop.Controls"
+             xmlns:models="using:PrivStack.Desktop.Models"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
@@ -33,6 +34,14 @@
             <Setter Property="Opacity" Value="1"/>
             <Setter Property="Background" Value="{DynamicResource ThemeDangerBrush}"/>
         </Style>
+        <!-- Plugin picker card -->
+        <Style Selector="Border.plugin-card">
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
+        </Style>
     </UserControl.Styles>
 
     <!-- Full-screen backdrop -->
@@ -51,7 +60,8 @@
                 BorderThickness="1"
                 CornerRadius="12"
                 BoxShadow="0 8 32 0 #60000000"
-                ClipToBounds="True">
+                ClipToBounds="True"
+                IsVisible="{Binding IsShowingWorkspaceList}">
             <Grid RowDefinitions="Auto,*,Auto">
                 <!-- Search bar -->
                 <Border Grid.Row="0" Padding="16,12"
@@ -66,14 +76,16 @@
                                  Watermark="Search workspaces..."
                                  Background="Transparent"
                                  BorderThickness="0"
+                                 Padding="0,6"
+                                 VerticalContentAlignment="Center"
                                  Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                  FontSize="{DynamicResource ThemeFontSizeMd}"/>
                     </Grid>
                 </Border>
 
                 <!-- Workspace list -->
-                <ScrollViewer Grid.Row="1" Padding="8">
-                    <ItemsControl ItemsSource="{Binding FilteredWorkspaces}">
+                <ScrollViewer Grid.Row="1">
+                    <ItemsControl ItemsSource="{Binding FilteredWorkspaces}" Margin="8">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:WorkspaceItem">
                                 <Panel>
@@ -93,10 +105,20 @@
                                             <Border Grid.Column="0" Width="16" Margin="0,0,12,0"
                                                     IsVisible="{Binding !IsActive}"/>
 
-                                            <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                       FontSize="{DynamicResource ThemeFontSizeMd}"
-                                                       VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                           FontSize="{DynamicResource ThemeFontSizeMd}"
+                                                           VerticalAlignment="Center"/>
+                                                <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                                        CornerRadius="4" Padding="6,2"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding StorageLabel}"
+                                                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                                </Border>
+                                            </StackPanel>
 
                                             <!-- Delete button (hidden for active) -->
                                             <Button Grid.Column="3" Classes="ws-delete"
@@ -191,6 +213,290 @@
                                     FontSize="{DynamicResource ThemeFontSizeSm}"/>
                         </Grid>
                     </Panel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ==================== STORAGE LOCATION PICKER STEP ==================== -->
+        <Border HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,80,0,0"
+                Width="480"
+                Background="{DynamicResource ThemeSurfaceBrush}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                BoxShadow="0 8 32 0 #60000000"
+                ClipToBounds="True"
+                IsVisible="{Binding IsSelectingStorageLocation}">
+            <StackPanel>
+                <!-- Header -->
+                <Border Padding="24,20,24,16"
+                        BorderBrush="{DynamicResource ThemeBorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Choose storage location"
+                                   FontSize="{DynamicResource ThemeFontSizeLg}"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                        <TextBlock Text="Where should this workspace store its data?"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Storage options -->
+                <StackPanel Margin="16" Spacing="4">
+                    <!-- Default -->
+                    <Button Classes="ws-item"
+                            Command="{Binding SelectStorageLocationTypeCommand}"
+                            CommandParameter="{x:Static models:DataDirectoryType.Default}">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <controls:IconControl Grid.Column="0" Icon="HardDrive" Size="18"
+                                                  Stroke="{DynamicResource ThemeTextMutedBrush}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Default (Local)"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                <TextBlock Text="Store on this device"
+                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            </StackPanel>
+                            <controls:IconControl Grid.Column="2" Icon="Check" Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  VerticalAlignment="Center">
+                                <controls:IconControl.IsVisible>
+                                    <Binding Path="SelectedDirectoryType"
+                                             Converter="{x:Static ObjectConverters.Equal}"
+                                             ConverterParameter="{x:Static models:DataDirectoryType.Default}"/>
+                                </controls:IconControl.IsVisible>
+                            </controls:IconControl>
+                        </Grid>
+                    </Button>
+
+                    <!-- Google Drive -->
+                    <Button Classes="ws-item"
+                            IsEnabled="{Binding IsGoogleDriveAvailable}"
+                            Command="{Binding SelectStorageLocationTypeCommand}"
+                            CommandParameter="{x:Static models:DataDirectoryType.GoogleDrive}">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <controls:IconControl Grid.Column="0" Icon="Cloud" Size="18"
+                                                  Stroke="{DynamicResource ThemeTextMutedBrush}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Google Drive"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                <TextBlock Text="Sync across devices via Google Drive"
+                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            </StackPanel>
+                            <controls:IconControl Grid.Column="2" Icon="Check" Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  VerticalAlignment="Center">
+                                <controls:IconControl.IsVisible>
+                                    <Binding Path="SelectedDirectoryType"
+                                             Converter="{x:Static ObjectConverters.Equal}"
+                                             ConverterParameter="{x:Static models:DataDirectoryType.GoogleDrive}"/>
+                                </controls:IconControl.IsVisible>
+                            </controls:IconControl>
+                        </Grid>
+                    </Button>
+
+                    <!-- iCloud -->
+                    <Button Classes="ws-item"
+                            IsEnabled="{Binding IsICloudAvailable}"
+                            Command="{Binding SelectStorageLocationTypeCommand}"
+                            CommandParameter="{x:Static models:DataDirectoryType.ICloud}">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <controls:IconControl Grid.Column="0" Icon="Cloud" Size="18"
+                                                  Stroke="{DynamicResource ThemeTextMutedBrush}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="iCloud Drive"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                <TextBlock Text="Sync across Apple devices"
+                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            </StackPanel>
+                            <controls:IconControl Grid.Column="2" Icon="Check" Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  VerticalAlignment="Center">
+                                <controls:IconControl.IsVisible>
+                                    <Binding Path="SelectedDirectoryType"
+                                             Converter="{x:Static ObjectConverters.Equal}"
+                                             ConverterParameter="{x:Static models:DataDirectoryType.ICloud}"/>
+                                </controls:IconControl.IsVisible>
+                            </controls:IconControl>
+                        </Grid>
+                    </Button>
+
+                    <!-- Custom -->
+                    <Button Classes="ws-item"
+                            Command="{Binding SelectStorageLocationTypeCommand}"
+                            CommandParameter="{x:Static models:DataDirectoryType.Custom}">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <controls:IconControl Grid.Column="0" Icon="Folder" Size="18"
+                                                  Stroke="{DynamicResource ThemeTextMutedBrush}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Custom Location"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                <TextBlock Text="Choose a specific folder (NAS, external drive, etc.)"
+                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            </StackPanel>
+                            <controls:IconControl Grid.Column="2" Icon="Check" Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  VerticalAlignment="Center">
+                                <controls:IconControl.IsVisible>
+                                    <Binding Path="SelectedDirectoryType"
+                                             Converter="{x:Static ObjectConverters.Equal}"
+                                             ConverterParameter="{x:Static models:DataDirectoryType.Custom}"/>
+                                </controls:IconControl.IsVisible>
+                            </controls:IconControl>
+                        </Grid>
+                    </Button>
+
+                    <!-- Custom path display -->
+                    <Border IsVisible="{Binding IsCustomDirectorySelected}"
+                            Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                            CornerRadius="6" Padding="12,8" Margin="0,4,0,0">
+                        <TextBlock Text="{Binding DataDirectoryDisplay}"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Footer -->
+                <Border Padding="16,12"
+                        BorderBrush="{DynamicResource ThemeBorderBrush}"
+                        BorderThickness="0,1,0,0">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Button Grid.Column="0"
+                                Command="{Binding CancelStorageLocationCommand}"
+                                Background="Transparent"
+                                Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                Padding="12,8" CornerRadius="6"
+                                FontSize="{DynamicResource ThemeFontSizeSm}"
+                                Cursor="Hand"
+                                Content="Back"/>
+                        <Button Grid.Column="2"
+                                Command="{Binding ConfirmStorageLocationCommand}"
+                                Background="{DynamicResource ThemePrimaryBrush}"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                Padding="20,10" CornerRadius="6"
+                                FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                FontWeight="SemiBold"
+                                Cursor="Hand"
+                                Content="Continue"/>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ==================== PLUGIN PICKER STEP ==================== -->
+        <Border HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,60,0,0"
+                Width="560"
+                MaxHeight="600"
+                Background="{DynamicResource ThemeSurfaceBrush}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                BoxShadow="0 8 32 0 #60000000"
+                ClipToBounds="True"
+                IsVisible="{Binding IsSelectingPlugins}">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <!-- Header -->
+                <Border Grid.Row="0" Padding="24,20,24,16"
+                        BorderBrush="{DynamicResource ThemeBorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Choose plugins for this workspace"
+                                   FontSize="{DynamicResource ThemeFontSizeLg}"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                        <TextBlock Text="You can change these anytime from the Dashboard"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Plugin list -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding AvailablePlugins}" Margin="16">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="4"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PluginPickerItem">
+                                <Border Classes="plugin-card">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <Border Grid.Column="0" Width="32" Height="32"
+                                                Background="{DynamicResource ThemeSurfaceBrush}"
+                                                CornerRadius="6" Margin="0,0,10,0"
+                                                VerticalAlignment="Center">
+                                            <controls:IconControl Icon="{Binding Icon}"
+                                                                  Size="16"
+                                                                  Stroke="{DynamicResource ThemeTextMutedBrush}"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Description}"
+                                                       FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxLines="1"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2"
+                                                      IsChecked="{Binding IsSelected}"
+                                                      VerticalAlignment="Center"
+                                                      Margin="8,0,0,0"
+                                                      OnContent="" OffContent=""/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Footer -->
+                <Border Grid.Row="2" Padding="16,12"
+                        BorderBrush="{DynamicResource ThemeBorderBrush}"
+                        BorderThickness="0,1,0,0">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Button Grid.Column="0"
+                                Command="{Binding SkipPluginSelectionCommand}"
+                                Background="Transparent"
+                                Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                Padding="12,8" CornerRadius="6"
+                                FontSize="{DynamicResource ThemeFontSizeSm}"
+                                Cursor="Hand"
+                                Content="Skip"/>
+                        <Button Grid.Column="2"
+                                Command="{Binding ConfirmPluginSelectionCommand}"
+                                Background="{DynamicResource ThemePrimaryBrush}"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                Padding="20,10" CornerRadius="6"
+                                FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                FontWeight="SemiBold"
+                                Cursor="Hand"
+                                Content="Get Started"/>
+                    </Grid>
                 </Border>
             </Grid>
         </Border>

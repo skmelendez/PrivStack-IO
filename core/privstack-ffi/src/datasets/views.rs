@@ -9,6 +9,7 @@ pub unsafe extern "C" fn privstack_dataset_create_view(
     request_json: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let req = parse_json_request!(request_json, CreateViewRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
@@ -57,6 +58,9 @@ pub unsafe extern "C" fn privstack_dataset_update_view(
             Some(h) => h,
             None => return PrivStackError::NotInitialized,
         };
+        if let Err(e) = crate::check_license_writable(handle) {
+            return e;
+        }
         let store = match handle.dataset_store.as_ref() {
             Some(s) => s,
             None => return PrivStackError::StorageError,
@@ -90,6 +94,9 @@ pub unsafe extern "C" fn privstack_dataset_delete_view(
             Some(h) => h,
             None => return PrivStackError::NotInitialized,
         };
+        if let Err(e) = crate::check_license_writable(handle) {
+            return e;
+        }
         let store = match handle.dataset_store.as_ref() {
             Some(s) => s,
             None => return PrivStackError::StorageError,

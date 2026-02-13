@@ -19,6 +19,7 @@ public sealed class GraphPlugin : PluginBase<GraphViewModel>
         NavigationOrder = 105,
         Category = PluginCategory.Productivity,
         Tags = ["graph", "visualization", "knowledge", "links", "backlinks"],
+        CanDisable = false,
         SupportsInfoPanel = true
     };
 

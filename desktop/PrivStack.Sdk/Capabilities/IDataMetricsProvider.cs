@@ -51,6 +51,9 @@ public record DataTableInfo
     /// <summary>Estimated size in bytes for this table (0 if unknown).</summary>
     public long EstimatedSizeBytes { get; init; }
 
+    /// <summary>Actual on-disk size in bytes, proportionally allocated from DuckDB file (0 if unknown).</summary>
+    public long ActualSizeBytes { get; init; }
+
     /// <summary>Parent item name (e.g., the note title this table belongs to).</summary>
     public string? ParentName { get; init; }
 
@@ -66,18 +69,29 @@ public record DataTableInfo
     /// <summary>Whether this table has a parent item for navigation.</summary>
     public bool HasParent => !string.IsNullOrEmpty(ParentId);
 
-    /// <summary>Human-readable size.</summary>
+    /// <summary>Human-readable size with dual display when both actual and estimated are available.</summary>
     public string FormattedSize
     {
         get
         {
-            if (EstimatedSizeBytes <= 0) return "";
-            string[] suffixes = ["B", "KB", "MB", "GB"];
-            int idx = 0;
-            double size = EstimatedSizeBytes;
-            while (size >= 1024 && idx < suffixes.Length - 1) { size /= 1024; idx++; }
-            return $"~{size:0.#} {suffixes[idx]}";
+            if (ActualSizeBytes > 0 && EstimatedSizeBytes > 0)
+                return $"{FormatSize(ActualSizeBytes)} | ~{FormatSize(EstimatedSizeBytes)} est.";
+            if (ActualSizeBytes > 0)
+                return FormatSize(ActualSizeBytes);
+            if (EstimatedSizeBytes > 0)
+                return $"~{FormatSize(EstimatedSizeBytes)}";
+            return "";
         }
+    }
+
+    /// <summary>Formats a byte count into a human-readable string (e.g., "34.2 MB").</summary>
+    public static string FormatSize(long bytes)
+    {
+        string[] suffixes = ["B", "KB", "MB", "GB"];
+        int idx = 0;
+        double size = bytes;
+        while (size >= 1024 && idx < suffixes.Length - 1) { size /= 1024; idx++; }
+        return $"{size:0.#} {suffixes[idx]}";
     }
 
     /// <summary>Formatted row count with thousands separator.</summary>

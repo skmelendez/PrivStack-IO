@@ -9,6 +9,7 @@ using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Sdk;
 
 namespace PrivStack.Desktop.ViewModels;
@@ -27,17 +28,6 @@ public enum SetupStep
 }
 
 /// <summary>
-/// Type of data storage location.
-/// </summary>
-public enum DataDirectoryType
-{
-    Default,
-    Custom,
-    GoogleDrive,
-    ICloud
-}
-
-/// <summary>
 /// ViewModel for the first-run setup wizard.
 /// </summary>
 public partial class SetupWizardViewModel : ViewModelBase
@@ -52,6 +42,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     private readonly PrivStackApiClient _apiClient;
     private readonly OAuthLoginService _oauthService;
     private CancellationTokenSource? _oauthCts;
+    private string? _setupWorkspaceId;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsWelcomeStep))]
@@ -99,12 +90,46 @@ public partial class SetupWizardViewModel : ViewModelBase
     [ObservableProperty]
     private string _licenseTier = string.Empty;
 
+    // Trial mode properties
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    private bool _isTrialMode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    private string _trialEmail = string.Empty;
+
+    [ObservableProperty]
+    private string _trialError = string.Empty;
+
+    [ObservableProperty]
+    private bool _isStartingTrial;
+
+    [ObservableProperty]
+    private int _trialDaysRemaining;
+
+    [ObservableProperty]
+    private bool _isAwaitingVerification;
+
+    [ObservableProperty]
+    private string _verificationCode = string.Empty;
+
+    [ObservableProperty]
+    private bool _isVerifyingCode;
+
     // OAuth login properties
     [ObservableProperty]
     private bool _isWaitingForBrowser;
 
     [ObservableProperty]
     private string _loginError = string.Empty;
+
+    // Expired subscription properties
+    [ObservableProperty]
+    private bool _isSubscriptionExpired;
+
+    [ObservableProperty]
+    private string _expiredMessage = string.Empty;
 
     // Data Directory step
     [ObservableProperty]
@@ -133,7 +158,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     public string EffectiveDataDirectory => SelectedDirectoryType switch
     {
         DataDirectoryType.Default => GetDefaultDataPath(),
-        DataDirectoryType.Custom => CustomDataDirectory,
+        DataDirectoryType.Custom => Path.Combine(CustomDataDirectory, "PrivStack"),
         DataDirectoryType.GoogleDrive => Path.Combine(GetGoogleDrivePath() ?? GetDefaultDataPath(), "PrivStack"),
         DataDirectoryType.ICloud => Path.Combine(GetICloudPath() ?? GetDefaultDataPath(), "PrivStack"),
         _ => GetDefaultDataPath()
@@ -233,7 +258,7 @@ public partial class SetupWizardViewModel : ViewModelBase
 
     public bool CanGoNext => CurrentStep switch
     {
-        SetupStep.Welcome => true,
+        SetupStep.Welcome => false, // Welcome uses ChooseTrial/ChooseSignIn commands
         SetupStep.DataDirectory => SelectedDirectoryType != DataDirectoryType.Custom ||
                                    !string.IsNullOrWhiteSpace(CustomDataDirectory),
         SetupStep.Workspace => !string.IsNullOrWhiteSpace(WorkspaceName) && !string.IsNullOrWhiteSpace(DisplayName) && SelectedTheme != null,
@@ -402,9 +427,11 @@ public partial class SetupWizardViewModel : ViewModelBase
             if (status is "expired" or "cancelled")
             {
                 Log.Warning("[OAuth] Subscription status disqualified: {Status}", status);
-                LoginError = status == "expired"
-                    ? "Your subscription has expired. Renew at privstack.io"
-                    : "Your subscription has been cancelled. Resubscribe at privstack.io";
+                LicenseKey = licenseResult.License.Key;
+                IsSubscriptionExpired = true;
+                ExpiredMessage = status == "expired"
+                    ? "Your subscription has expired."
+                    : "Your subscription has been cancelled.";
                 return;
             }
 
@@ -466,6 +493,201 @@ public partial class SetupWizardViewModel : ViewModelBase
         _oauthCts?.Cancel();
     }
 
+    [RelayCommand]
+    private void ChooseTrial()
+    {
+        IsTrialMode = true;
+        CurrentStep = SetupStep.Workspace;
+    }
+
+    [RelayCommand]
+    private void ChooseSignIn()
+    {
+        IsTrialMode = false;
+        CurrentStep = SetupStep.Workspace;
+    }
+
+    [RelayCommand]
+    private async Task StartTrialAsync()
+    {
+        if (string.IsNullOrWhiteSpace(TrialEmail) || !TrialEmail.Contains('@'))
+        {
+            TrialError = "Please enter a valid email address.";
+            return;
+        }
+
+        IsStartingTrial = true;
+        TrialError = string.Empty;
+
+        try
+        {
+            Log.Information("[Trial] Requesting trial for: {Email}", TrialEmail);
+            var result = await _apiClient.StartTrialAsync(TrialEmail.Trim());
+
+            if (result.Success && result.RequiresVerification)
+            {
+                // Step 1 complete — code sent to email, show verification input
+                Log.Information("[Trial] Verification code sent to email");
+                IsAwaitingVerification = true;
+            }
+            else if (result.Success && !string.IsNullOrEmpty(result.LicenseKey))
+            {
+                // Returning user with active trial — license returned directly
+                Log.Information("[Trial] Existing trial — {Days} days remaining", result.TrialDays);
+                TrialDaysRemaining = result.TrialDays;
+                LicenseKey = result.LicenseKey;
+                ValidateLicense();
+
+                if (!IsLicenseValid)
+                {
+                    TrialError = "License validation failed. Please try again or contact support.";
+                }
+            }
+            else
+            {
+                Log.Warning("[Trial] Trial start failed — Error: {Error}", result.Error);
+                TrialError = result.Message ?? result.Error ?? "Failed to start trial.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            TrialError = "Could not reach the server. Check your internet connection.";
+        }
+        catch (TaskCanceledException)
+        {
+            TrialError = "Request timed out. Please try again.";
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[Trial] Unexpected error starting trial");
+            TrialError = "An unexpected error occurred. Please try again.";
+        }
+        finally
+        {
+            IsStartingTrial = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task VerifyTrialCodeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(VerificationCode) || VerificationCode.Trim().Length != 6)
+        {
+            TrialError = "Please enter the 6-digit code from your email.";
+            return;
+        }
+
+        IsVerifyingCode = true;
+        TrialError = string.Empty;
+
+        try
+        {
+            Log.Information("[Trial] Verifying code for: {Email}", TrialEmail);
+            var result = await _apiClient.VerifyTrialCodeAsync(TrialEmail.Trim(), VerificationCode.Trim());
+
+            if (result.Success && !string.IsNullOrEmpty(result.LicenseKey))
+            {
+                Log.Information("[Trial] Trial verified — {Days} days", result.TrialDays);
+                TrialDaysRemaining = result.TrialDays;
+                LicenseKey = result.LicenseKey;
+                ValidateLicense();
+
+                if (!IsLicenseValid)
+                {
+                    TrialError = "License validation failed. Please try again or contact support.";
+                }
+            }
+            else
+            {
+                Log.Warning("[Trial] Verification failed — Error: {Error}", result.Error);
+                TrialError = result.Error ?? "Verification failed. Please try again.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            TrialError = "Could not reach the server. Check your internet connection.";
+        }
+        catch (TaskCanceledException)
+        {
+            TrialError = "Request timed out. Please try again.";
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[Trial] Unexpected error verifying code");
+            TrialError = "An unexpected error occurred. Please try again.";
+        }
+        finally
+        {
+            IsVerifyingCode = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ResendTrialCodeAsync()
+    {
+        IsStartingTrial = true;
+        TrialError = string.Empty;
+        VerificationCode = string.Empty;
+
+        try
+        {
+            Log.Information("[Trial] Resending verification code for: {Email}", TrialEmail);
+            var result = await _apiClient.StartTrialAsync(TrialEmail.Trim());
+
+            if (result.Success && result.RequiresVerification)
+            {
+                TrialError = string.Empty;
+            }
+            else
+            {
+                TrialError = result.Message ?? result.Error ?? "Failed to resend code.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[Trial] Error resending code");
+            TrialError = "Could not resend code. Please try again.";
+        }
+        finally
+        {
+            IsStartingTrial = false;
+        }
+    }
+
+    [RelayCommand]
+    private void BackToTrialEmail()
+    {
+        IsAwaitingVerification = false;
+        VerificationCode = string.Empty;
+        TrialError = string.Empty;
+    }
+
+    [RelayCommand]
+    private void SwitchToSignIn()
+    {
+        IsTrialMode = false;
+        TrialError = string.Empty;
+    }
+
+    [RelayCommand]
+    private void SwitchToTrial()
+    {
+        IsTrialMode = true;
+        LoginError = string.Empty;
+    }
+
+    [RelayCommand]
+    private void ContinueReadOnly()
+    {
+        IsSubscriptionExpired = false;
+        IsLicenseValid = true;
+        LicenseTier = "Read-Only";
+        LicenseError = string.Empty;
+        LoginError = string.Empty;
+        TrialError = string.Empty;
+        CurrentStep = SetupStep.Password;
+    }
+
     private void ValidateLicense()
     {
         if (string.IsNullOrWhiteSpace(LicenseKey))
@@ -486,9 +708,10 @@ public partial class SetupWizardViewModel : ViewModelBase
             if (licenseInfo.Status is "expired" or "readonly")
             {
                 Log.Warning("[Activate] License status disqualified: {Status}", licenseInfo.Status);
-                LicenseError = licenseInfo.Status == "readonly"
-                    ? "This license is in read-only mode (grace period expired)"
-                    : "This license key has expired";
+                IsSubscriptionExpired = true;
+                ExpiredMessage = licenseInfo.Status == "readonly"
+                    ? "Your license is in read-only mode (grace period expired)."
+                    : "Your license key has expired.";
                 IsLicenseValid = false;
                 return;
             }
@@ -516,7 +739,7 @@ public partial class SetupWizardViewModel : ViewModelBase
             {
                 PrivStackError.LicenseInvalidFormat => "Invalid license key format",
                 PrivStackError.LicenseInvalidSignature => "License key signature invalid",
-                PrivStackError.LicenseExpired => "This license has expired",
+                PrivStackError.LicenseExpired => HandleExpiredLicenseError(),
                 PrivStackError.LicenseActivationFailed => "Activation failed - device limit may be exceeded",
                 _ => $"License validation failed: {ex.Message}"
             };
@@ -594,67 +817,9 @@ public partial class SetupWizardViewModel : ViewModelBase
         return DataPaths.BaseDir;
     }
 
-    private static string? GetGoogleDrivePath()
-    {
-        if (OperatingSystem.IsMacOS())
-        {
-            var cloudStorage = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "CloudStorage");
+    private static string? GetGoogleDrivePath() => CloudPathResolver.GetGoogleDrivePath();
 
-            if (Directory.Exists(cloudStorage))
-            {
-                var googleDirs = Directory.GetDirectories(cloudStorage, "GoogleDrive-*");
-                if (googleDirs.Length > 0)
-                {
-                    var myDrive = Path.Combine(googleDirs[0], "My Drive");
-                    if (Directory.Exists(myDrive))
-                        return myDrive;
-                }
-            }
-        }
-        else if (OperatingSystem.IsWindows())
-        {
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var paths = new[]
-            {
-                Path.Combine(userProfile, "Google Drive"),
-                Path.Combine(userProfile, "My Drive"),
-                Path.Combine(userProfile, "GoogleDrive")
-            };
-
-            foreach (var path in paths)
-            {
-                if (Directory.Exists(path))
-                    return path;
-            }
-        }
-
-        return null;
-    }
-
-    private static string? GetICloudPath()
-    {
-        if (OperatingSystem.IsMacOS())
-        {
-            var iCloudPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "Mobile Documents", "com~apple~CloudDocs");
-
-            if (Directory.Exists(iCloudPath))
-                return iCloudPath;
-        }
-        else if (OperatingSystem.IsWindows())
-        {
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var iCloudPath = Path.Combine(userProfile, "iCloudDrive");
-
-            if (Directory.Exists(iCloudPath))
-                return iCloudPath;
-        }
-
-        return null;
-    }
+    private static string? GetICloudPath() => CloudPathResolver.GetICloudPath();
 
     private SetupStep InitializeServiceAndContinue()
     {
@@ -662,38 +827,68 @@ public partial class SetupWizardViewModel : ViewModelBase
 
         try
         {
-            _appSettings.Settings.DataDirectoryType = SelectedDirectoryType.ToString();
-            if (SelectedDirectoryType != DataDirectoryType.Default)
-            {
-                _appSettings.Settings.CustomDataDirectory = EffectiveDataDirectory;
-            }
-            else
-            {
-                _appSettings.Settings.CustomDataDirectory = null;
-            }
-            _appSettings.Save();
+            // 1. Build per-workspace storage location from wizard selections
+            var storageLocation = SelectedDirectoryType == DataDirectoryType.Default
+                ? null
+                : new StorageLocation
+                {
+                    Type = SelectedDirectoryType.ToString(),
+                    CustomPath = SelectedDirectoryType == DataDirectoryType.Custom ? CustomDataDirectory : null
+                };
 
+            // 2. Ensure the sync directories exist (event store, snapshots, shared files)
             var dataDir = EffectiveDataDirectory;
-            var dbPath = Path.Combine(dataDir, "data.duckdb");
+            Directory.CreateDirectory(dataDir);
+            Log.Information("Data directory set: {Path}", dataDir);
 
-            var dbExists = File.Exists(dbPath);
-            Log.Information("Data directory: {Path}, DB exists: {Exists}", dataDir, dbExists);
+            // 3. Create workspace with storage location (directory only, no DB yet)
+            //    makeActive: true ensures the registry points to this workspace,
+            //    even on retry when a previous failed workspace was already active.
+            var name = WorkspaceName.Trim();
+            var workspace = _workspaceService.CreateWorkspace(name, storageLocation, makeActive: true);
+            Log.Information("Initial workspace created: {Name} ({Id})", name, workspace.Id);
 
-            if (!_runtime.IsInitialized)
+            // Clean up previously failed setup workspace (now non-active, safe to delete)
+            if (_setupWorkspaceId != null && _setupWorkspaceId != workspace.Id)
             {
-                Log.Information("Initializing service at user-chosen directory: {Path}", dataDir);
-                Directory.CreateDirectory(dataDir);
-                _runtime.Initialize(dbPath);
-                Log.Information("Service initialized successfully at: {Path}", dbPath);
+                try
+                {
+                    _workspaceService.DeleteWorkspace(_setupWorkspaceId);
+                    Log.Information("Cleaned up failed setup workspace: {Id}", _setupWorkspaceId);
+                }
+                catch (Exception ex)
+                {
+                    Log.Logger.Warning(ex, "Could not clean up failed setup workspace: {Id}", _setupWorkspaceId);
+                }
+            }
+            _setupWorkspaceId = workspace.Id;
 
-                LoadDeviceInfo();
+            // 4. Set DataPaths so all workspace-scoped paths resolve correctly
+            var resolvedDir = _workspaceService.ResolveWorkspaceDir(workspace);
+            DataPaths.SetActiveWorkspace(workspace.Id, resolvedDir);
+
+            // 5. Initialize runtime directly at workspace DB path — derived from
+            //    the workspace we just created, not from GetActiveDataPath()
+            var dbPath = Path.Combine(resolvedDir, "data.duckdb");
+            var dbDir = Path.GetDirectoryName(dbPath)!;
+            Directory.CreateDirectory(dbDir);
+
+            if (_runtime.IsInitialized)
+            {
+                _runtime.Shutdown();
             }
 
+            Log.Information("Initializing service at workspace path: {Path}", dbPath);
+            _runtime.Initialize(dbPath);
+            Log.Information("Service initialized successfully at: {Path}", dbPath);
+
+            LoadDeviceInfo();
+
+            // 5. Check for existing auth data
             IsExistingData = _authService.IsAuthInitialized();
             Log.Information("Auth initialized (existing data): {IsExisting}", IsExistingData);
 
-            // Now create the workspace (needs service initialized first)
-            return CreateWorkspaceAndContinue();
+            return SetupStep.License;
         }
         catch (DllNotFoundException dllEx)
         {
@@ -726,39 +921,9 @@ public partial class SetupWizardViewModel : ViewModelBase
             }
             else
             {
-                SetupError = $"Failed to initialize data directory: {ex.Message}";
+                SetupError = $"Failed to initialize: {ex.Message}";
             }
             return SetupStep.DataDirectory;
-        }
-    }
-
-    private SetupStep CreateWorkspaceAndContinue()
-    {
-        try
-        {
-            var name = WorkspaceName.Trim();
-            _workspaceService.CreateWorkspace(name);
-            Log.Information("Initial workspace created: {Name}", name);
-
-            var dbPath = _workspaceService.GetActiveDataPath();
-            var dir = Path.GetDirectoryName(dbPath)!;
-            Directory.CreateDirectory(dir);
-
-            if (_runtime.IsInitialized)
-            {
-                _runtime.Shutdown();
-            }
-            _runtime.Initialize(dbPath);
-
-            IsExistingData = _authService.IsAuthInitialized();
-
-            return SetupStep.License;
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Failed to create workspace");
-            SetupError = $"Failed to create workspace: {ex.Message}";
-            return SetupStep.Workspace;
         }
     }
 
@@ -839,6 +1004,9 @@ public partial class SetupWizardViewModel : ViewModelBase
                 Log.Information("Master password initialized successfully");
             }
 
+            // Cache password for seamless workspace switching
+            App.Services.GetService<IMasterPasswordCache>()?.Set(MasterPassword);
+
             SavePreferences();
 
             return SetupStep.Complete;
@@ -871,6 +1039,7 @@ public partial class SetupWizardViewModel : ViewModelBase
         var settingsDir = DataPaths.BaseDir;
         Directory.CreateDirectory(settingsDir);
 
+        #pragma warning disable CS0618 // Obsolete fields kept for backward compat
         var settings = new UserSettings
         {
             DisplayName = DisplayName,
@@ -879,23 +1048,20 @@ public partial class SetupWizardViewModel : ViewModelBase
             DataDirectoryType = SelectedDirectoryType.ToString(),
             CustomDataDirectory = SelectedDirectoryType == DataDirectoryType.Custom ? CustomDataDirectory : null
         };
+        #pragma warning restore CS0618
 
         var json = System.Text.Json.JsonSerializer.Serialize(settings);
         File.WriteAllText(Path.Combine(settingsDir, "settings.json"), json);
 
         _appSettings.Settings.UserDisplayName = DisplayName;
-        _appSettings.Settings.DataDirectoryType = SelectedDirectoryType.ToString();
-
-        if (SelectedDirectoryType != DataDirectoryType.Default)
-        {
-            _appSettings.Settings.CustomDataDirectory = EffectiveDataDirectory;
-        }
-        else
-        {
-            _appSettings.Settings.CustomDataDirectory = null;
-        }
-
         _appSettings.Save();
+    }
+
+    private string HandleExpiredLicenseError()
+    {
+        IsSubscriptionExpired = true;
+        ExpiredMessage = "Your license has expired.";
+        return "This license has expired";
     }
 
     private static string FormatLicensePlan(string plan) => plan.ToLower() switch
@@ -934,6 +1100,10 @@ public record UserSettings
     public string DisplayName { get; init; } = string.Empty;
     public string Theme { get; init; } = "Dark";
     public bool SetupComplete { get; init; }
+
+    [Obsolete("Storage location is now per-workspace. Kept for deserialization backward compat.")]
     public string DataDirectoryType { get; init; } = "Default";
+
+    [Obsolete("Storage location is now per-workspace. Kept for deserialization backward compat.")]
     public string? CustomDataDirectory { get; init; }
 }

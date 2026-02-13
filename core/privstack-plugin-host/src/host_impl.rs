@@ -387,7 +387,7 @@ impl PluginState {
 
         match self
             .entity_store
-            .query_entities(entity_type, &filters, Some(limit))
+            .query_entities(entity_type, &filters, false, Some(limit))
         {
             Ok(entities) => {
                 let json = serde_json::to_string(&entities).unwrap_or_else(|_| "[]".into());

@@ -282,6 +282,7 @@ async fn real_p2p_a_writes_b_receives() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) = create_orchestrator(
@@ -408,6 +409,7 @@ async fn real_p2p_bidirectional_sync() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) = create_orchestrator(
@@ -523,6 +525,7 @@ async fn real_p2p_multiple_events() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) = create_orchestrator(
@@ -701,6 +704,7 @@ async fn dht_sync_code_a_writes_b_receives() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) = create_orchestrator(
@@ -834,6 +838,7 @@ async fn dht_sync_code_bidirectional() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) = create_orchestrator(
@@ -1053,6 +1058,7 @@ async fn setup_mdns_pair(
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, events_a, cmd_rx_a, orch_a) = create_orchestrator(
@@ -1945,6 +1951,7 @@ async fn dht_late_joiner_discovers_and_syncs() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let entity_id = EntityId::new();

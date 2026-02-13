@@ -63,6 +63,16 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool ShowInfoPanelTab => IsInfoPanelAvailable && !(InfoPanelVM?.IsOpen ?? false);
 
     // ============================================================
+    // License Expiration Banner
+    // ============================================================
+
+    [ObservableProperty]
+    private bool _isLicenseExpiredBannerVisible;
+
+    [RelayCommand]
+    private void OpenPricingPage() => LicenseExpirationService.OpenPricingPage();
+
+    // ============================================================
     // Timer Forwarding — discovered via IMultiTimerBehavior / ITimerBehavior
     // ============================================================
 
@@ -143,6 +153,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private WorkspaceSwitcherViewModel? _workspaceSwitcherVM;
     public WorkspaceSwitcherViewModel WorkspaceSwitcherVM => _workspaceSwitcherVM ??= new WorkspaceSwitcherViewModel(_workspaceService);
+
+    private SubscriptionBadgeViewModel? _subscriptionBadgeVM;
+    public SubscriptionBadgeViewModel SubscriptionBadgeVM => _subscriptionBadgeVM ??=
+        new SubscriptionBadgeViewModel(App.Services.GetRequiredService<SubscriptionValidationService>());
+
+    private StorageStatePillViewModel? _storageStatePillVM;
+    public StorageStatePillViewModel StorageStatePillVM => _storageStatePillVM ??=
+        new StorageStatePillViewModel(_appSettings, SyncVM,
+            App.Services.GetRequiredService<IFileEventSyncService>());
 
     private EmojiPickerViewModel? _emojiPickerVM;
     public EmojiPickerViewModel EmojiPickerVM => _emojiPickerVM ??= new EmojiPickerViewModel(_ => { });
@@ -291,6 +310,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _pluginRegistry.SetMainViewModel(this);
 
+        // Wire license expiration banner
+        var expirationService = App.Services.GetRequiredService<LicenseExpirationService>();
+        expirationService.ExpiredChanged += () =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => IsLicenseExpiredBannerVisible = expirationService.IsExpired);
+        IsLicenseExpiredBannerVisible = expirationService.IsExpired;
+
         // Subscribe to profile changes (display name or image updated in settings)
         _appSettings.ProfileChanged += OnProfileChanged;
 
@@ -343,6 +368,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Start auto-check for updates (checks setting internally)
         UpdateVM.StartAutoCheck(TimeSpan.FromHours(4));
+
+        // Validate subscription status in the background
+        _ = Task.Run(async () =>
+        {
+            var subService = App.Services.GetRequiredService<SubscriptionValidationService>();
+            await subService.ValidateAsync();
+        });
     }
 
     private void WireCommandPaletteDelegates(CommandPaletteViewModel palette)
@@ -938,6 +970,15 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Evicts a plugin's cached ViewModel without re-navigation.
+    /// Called when a plugin is disabled to free memory.
+    /// </summary>
+    public void EvictPluginCache(string navItemId)
+    {
+        _pluginViewModelCache.Remove(navItemId);
+    }
+
+    /// <summary>
     /// Evicts a plugin's cached ViewModel and re-navigates to it if it's the active tab.
     /// Used after a plugin reset to force a full reload.
     /// </summary>
@@ -957,7 +998,7 @@ public partial class MainWindowViewModel : ViewModelBase
         WorkspaceSwitcherVM.OpenCommand.Execute(null);
     }
 
-    private void OnWorkspaceChanged(object? sender, Workspace workspace)
+    private async void OnWorkspaceChanged(object? sender, Workspace workspace)
     {
         // Stop reminder timer before teardown — prevents polls against uninitialized native lib
         try { App.Services.GetRequiredService<ReminderSchedulerService>().Stop(); }
@@ -965,6 +1006,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _pluginViewModelCache.Clear();
         _syncVM = null;
+        _storageStatePillVM = null;
 
         // Clear prefetch cache on workspace change
         App.Services.GetService<ViewStatePrefetchService>()?.Clear();
@@ -976,7 +1018,8 @@ public partial class MainWindowViewModel : ViewModelBase
         App.Services.GetService<LinkProviderCacheService>()?.Invalidate();
 
         // Full teardown and rediscovery — Rust core was re-initialized with new DB
-        _pluginRegistry.Reinitialize();
+        // Runs heavy plugin init on background thread to avoid UI freeze
+        await _pluginRegistry.ReinitializeAsync();
 
         // Re-bind timer behavior after workspace switch
         BindTimerBehavior();
@@ -985,7 +1028,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_pluginRegistry.NavigationItems.Count > 0)
         {
-            _ = SelectTab(_pluginRegistry.NavigationItems[0].Id);
+            await SelectTab(_pluginRegistry.NavigationItems[0].Id);
         }
 
         // Restart reminder timer with fresh state for new workspace
@@ -1016,6 +1059,17 @@ public partial class MainWindowViewModel : ViewModelBase
         _userProfileImage?.Dispose();
         _userProfileImage = null;
 
+        // Export full snapshot to shared dir before shutdown (blocking — SDK must still be alive)
+        try
+        {
+            var snapshotService = App.Services.GetRequiredService<ISnapshotSyncService>();
+            snapshotService.ExportSnapshotAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Snapshot export on shutdown failed");
+        }
+
         // Notify all IShutdownAware providers (this logs time for active timers)
         foreach (var aware in _pluginRegistry.GetCapabilityProviders<IShutdownAware>())
         {
@@ -1033,6 +1087,12 @@ public partial class MainWindowViewModel : ViewModelBase
         // Stop reminder scheduler
         try { App.Services.GetRequiredService<ReminderSchedulerService>().Dispose(); }
         catch { /* Ignore if not registered */ }
+
+        // Stop file sync services
+        try { App.Services.GetRequiredService<IFileEventSyncService>().Dispose(); }
+        catch { /* Ignore */ }
+        try { App.Services.GetRequiredService<ISnapshotSyncService>().Dispose(); }
+        catch { /* Ignore */ }
 
         _infoPanelVM?.Cleanup();
         _syncVM?.StopRefreshTimer();

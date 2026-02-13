@@ -18,6 +18,13 @@ public record Workspace
 
     [JsonPropertyName("has_password")]
     public bool HasPassword { get; init; }
+
+    /// <summary>
+    /// Per-workspace sync location. Determines where encrypted event files are written.
+    /// Null = local only (no file-based sync). DB always stays at local path.
+    /// </summary>
+    [JsonPropertyName("storage_location")]
+    public StorageLocation? StorageLocation { get; init; }
 }
 
 /// <summary>

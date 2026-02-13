@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:PrivStack.Desktop.ViewModels"
+             xmlns:models="using:PrivStack.Desktop.Models"
              xmlns:svc="using:PrivStack.Desktop.Services"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
              x:Class="PrivStack.Desktop.Views.SettingsPanel"
@@ -458,7 +459,7 @@
                         <StackPanel Spacing="4">
                             <!-- Default -->
                             <Button Command="{Binding SelectStorageLocationCommand}"
-                                    CommandParameter="{x:Static vm:DataDirectoryType.Default}"
+                                    CommandParameter="{x:Static models:DataDirectoryType.Default}"
                                     HorizontalContentAlignment="Stretch"
                                     Padding="8,6" CornerRadius="4">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
@@ -466,13 +467,13 @@
                                     <TextBlock Grid.Column="1" Text="Default (Local)" FontSize="{DynamicResource ThemeFontSizeXsSm}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
                                                Foreground="{DynamicResource ThemePrimaryBrush}"
-                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.Default}}"/>
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:DataDirectoryType.Default}}"/>
                                 </Grid>
                             </Button>
 
                             <!-- Google Drive -->
                             <Button Command="{Binding SelectStorageLocationCommand}"
-                                    CommandParameter="{x:Static vm:DataDirectoryType.GoogleDrive}"
+                                    CommandParameter="{x:Static models:DataDirectoryType.GoogleDrive}"
                                     IsEnabled="{Binding IsGoogleDriveAvailable}"
                                     HorizontalContentAlignment="Stretch"
                                     Padding="8,6" CornerRadius="4">
@@ -485,13 +486,13 @@
                                     </StackPanel>
                                     <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
                                                Foreground="{DynamicResource ThemePrimaryBrush}"
-                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.GoogleDrive}}"/>
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:DataDirectoryType.GoogleDrive}}"/>
                                 </Grid>
                             </Button>
 
                             <!-- iCloud -->
                             <Button Command="{Binding SelectStorageLocationCommand}"
-                                    CommandParameter="{x:Static vm:DataDirectoryType.ICloud}"
+                                    CommandParameter="{x:Static models:DataDirectoryType.ICloud}"
                                     IsEnabled="{Binding IsICloudAvailable}"
                                     HorizontalContentAlignment="Stretch"
                                     Padding="8,6" CornerRadius="4">
@@ -504,13 +505,13 @@
                                     </StackPanel>
                                     <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
                                                Foreground="{DynamicResource ThemePrimaryBrush}"
-                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.ICloud}}"/>
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:DataDirectoryType.ICloud}}"/>
                                 </Grid>
                             </Button>
 
                             <!-- Custom -->
                             <Button Command="{Binding SelectStorageLocationCommand}"
-                                    CommandParameter="{x:Static vm:DataDirectoryType.Custom}"
+                                    CommandParameter="{x:Static models:DataDirectoryType.Custom}"
                                     HorizontalContentAlignment="Stretch"
                                     Padding="8,6" CornerRadius="4">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
@@ -518,7 +519,7 @@
                                     <TextBlock Grid.Column="1" Text="Custom Location" FontSize="{DynamicResource ThemeFontSizeXsSm}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
                                                Foreground="{DynamicResource ThemePrimaryBrush}"
-                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:DataDirectoryType.Custom}}"/>
+                                               IsVisible="{Binding SelectedDirectoryType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:DataDirectoryType.Custom}}"/>
                                 </Grid>
                             </Button>
                         </StackPanel>
@@ -549,6 +550,21 @@
                                     FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
                         </StackPanel>
                     </StackPanel>
+
+                    <!-- Migration progress -->
+                    <Border IsVisible="{Binding IsMigratingStorage}"
+                            Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                            CornerRadius="6" Padding="12,10" Margin="0,4">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding MigrationStatus}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            <ProgressBar Value="{Binding MigrationProgress}"
+                                         Minimum="0" Maximum="100"
+                                         Height="4"
+                                         Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                        </StackPanel>
+                    </Border>
 
                     <Separator Background="{DynamicResource ThemeBorderBrush}" Margin="0,4"/>
 
@@ -641,6 +657,130 @@
                                    Foreground="{DynamicResource ThemeTextMutedBrush}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
+                </StackPanel>
+            </Expander>
+
+            <!-- Connections Section -->
+            <Expander IsExpanded="False" Classes="settings-section"
+                      x:DataType="vm:SettingsViewModel">
+                <Expander.Header>
+                    <TextBlock Text="Connections" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                </Expander.Header>
+                <StackPanel Spacing="12" Margin="16,0,16,16"
+                            DataContext="{Binding Connections}"
+                            x:DataType="vm:ConnectionsViewModel">
+                    <TextBlock Text="Connect external services to sync data with PrivStack."
+                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                               TextWrapping="Wrap"/>
+
+                    <!-- GitHub: Not Connected -->
+                    <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                            CornerRadius="6" Padding="12"
+                            IsVisible="{Binding !IsGitHubConnected}">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <TextBlock Grid.Column="0" Text="GitHub"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Grid.Column="1" Text="Not connected"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           VerticalAlignment="Center"/>
+                                <Button Grid.Column="2"
+                                        Content="Connect"
+                                        Command="{Binding ConnectGitHubCommand}"
+                                        IsEnabled="{Binding !IsConnecting}"
+                                        Padding="12,6"
+                                        Background="{DynamicResource ThemePrimaryBrush}"
+                                        Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                        CornerRadius="4"/>
+                            </Grid>
+
+                            <!-- Device Flow: user code + link -->
+                            <Border IsVisible="{Binding IsConnecting}"
+                                    Background="{DynamicResource ThemePrimaryMutedBrush}"
+                                    CornerRadius="4" Padding="12">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Enter this code on GitHub:"
+                                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                    <TextBlock Text="{Binding DeviceUserCode}"
+                                               FontSize="{DynamicResource ThemeFontSizeLg}"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource ThemeFontMono}"
+                                               HorizontalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                HorizontalAlignment="Center">
+                                        <Button Content="Open GitHub"
+                                                Command="{Binding OpenVerificationUriCommand}"
+                                                Padding="12,6"
+                                                Background="{DynamicResource ThemePrimaryBrush}"
+                                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                                CornerRadius="4"/>
+                                        <Button Content="Cancel"
+                                                Command="{Binding CancelConnectCommand}"
+                                                Padding="12,6"
+                                                CornerRadius="4"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                HorizontalAlignment="Center">
+                                        <ProgressBar IsIndeterminate="True" Width="80" Height="4"/>
+                                        <TextBlock Text="Waiting for authorization..."
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- GitHub: Connected -->
+                    <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                            CornerRadius="6" Padding="12"
+                            IsVisible="{Binding IsGitHubConnected}">
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <TextBlock Grid.Column="0" Text="GitHub"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock FontSize="{DynamicResource ThemeFontSizeSm}">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="{}Connected as @{0}">
+                                                <Binding Path="GitHubUsername"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                    <TextBlock FontSize="{DynamicResource ThemeFontSizeXs}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="{}Scopes: {0}">
+                                                <Binding Path="GitHubScopes"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </StackPanel>
+                                <Button Grid.Column="2"
+                                        Content="Disconnect"
+                                        Command="{Binding DisconnectGitHubCommand}"
+                                        Padding="12,6"
+                                        Foreground="{DynamicResource ThemeDangerBrush}"
+                                        CornerRadius="4"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Error display -->
+                    <TextBlock Text="{Binding ConnectionError}"
+                               IsVisible="{Binding ConnectionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               Foreground="{DynamicResource ThemeDangerBrush}"
+                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
             </Expander>
 

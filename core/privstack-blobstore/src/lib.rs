@@ -62,6 +62,12 @@ impl BlobStore {
         }
         .map_err(|e| BlobStoreError::Storage(e.to_string()))?;
 
+        // Cap memory/threads — DuckDB defaults to ~80% RAM per connection
+        if db_path.to_str() != Some(":memory:") {
+            conn.execute_batch("PRAGMA memory_limit='128MB'; PRAGMA threads=1;")
+                .map_err(|e| BlobStoreError::Storage(e.to_string()))?;
+        }
+
         let store = Self {
             conn: Arc::new(Mutex::new(conn)),
             encryptor: Arc::new(privstack_crypto::PassthroughEncryptor),
@@ -103,6 +109,12 @@ impl BlobStore {
             Connection::open(db_path)
         }
         .map_err(|e| BlobStoreError::Storage(e.to_string()))?;
+
+        // Cap memory/threads — DuckDB defaults to ~80% RAM per connection
+        if db_path.to_str() != Some(":memory:") {
+            conn.execute_batch("PRAGMA memory_limit='128MB'; PRAGMA threads=1;")
+                .map_err(|e| BlobStoreError::Storage(e.to_string()))?;
+        }
 
         let store = Self {
             conn: Arc::new(Mutex::new(conn)),

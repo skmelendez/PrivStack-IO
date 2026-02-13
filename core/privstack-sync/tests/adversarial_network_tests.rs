@@ -16,7 +16,8 @@ use privstack_sync::transport::{
     DiscoveredPeer, DiscoveryMethod, IncomingSyncRequest, ResponseToken, SyncTransport,
 };
 use privstack_sync::{
-    create_orchestrator, OrchestratorConfig, SyncCommand, SyncEvent, SyncMessage, SyncResult,
+    create_orchestrator, EventApplicator, OrchestratorConfig, SyncCommand, SyncEvent, SyncMessage,
+    SyncResult,
 };
 use privstack_storage::{EntityStore, EventStore};
 use privstack_types::{EntityId, Event, EventPayload, HybridTimestamp, PeerId};
@@ -391,6 +392,7 @@ impl TestHarness {
             sync_interval: Duration::from_secs(3600),
             discovery_interval: Duration::from_secs(3600),
             auto_sync: false,
+            max_entities_per_sync: 0,
         };
 
         let (handle_a, events_a, cmd_rx_a, orch_a) = create_orchestrator(
@@ -425,6 +427,64 @@ impl TestHarness {
             join_a,
             join_b,
         }
+    }
+
+    /// Applies an event to peer A's entity store and records it for sync.
+    /// In production the FFI layer creates the entity first, then records the
+    /// event. Tests must replicate both steps so `entities_needing_sync` finds
+    /// the entity row.
+    async fn record_event_a(&self, event: Event) -> SyncResult<()> {
+        // Save event to event store first — prevents the orchestrator startup
+        // scan from creating a duplicate FullSnapshot for an entity that exists
+        // in the entity store but has no events yet.
+        let evs = self.stores_a.1.clone();
+        let ev = event.clone();
+        tokio::task::spawn_blocking(move || evs.save_event(&ev))
+            .await
+            .unwrap()
+            .unwrap();
+
+        // Apply to entity store (creates the entity row for entities_needing_sync).
+        // Skip EntityDeleted — apply_entity_deleted hard-deletes the row, which
+        // would cause entities_needing_sync to miss it entirely.
+        if !matches!(event.payload, EventPayload::EntityDeleted { .. }) {
+            let es = self.stores_a.0.clone();
+            let ev = event.clone();
+            let pid = self.peer_a;
+            tokio::task::spawn_blocking(move || {
+                EventApplicator::new(pid).apply_event(&ev, &es, None, None)
+            })
+            .await
+            .unwrap()
+            .ok();
+        }
+
+        // Record via orchestrator (also saves event — INSERT OR IGNORE is idempotent)
+        self.handle_a.record_event(event).await
+    }
+
+    /// Applies an event to peer B's entity store and records it for sync.
+    async fn record_event_b(&self, event: Event) -> SyncResult<()> {
+        let evs = self.stores_b.1.clone();
+        let ev = event.clone();
+        tokio::task::spawn_blocking(move || evs.save_event(&ev))
+            .await
+            .unwrap()
+            .unwrap();
+
+        if !matches!(event.payload, EventPayload::EntityDeleted { .. }) {
+            let es = self.stores_b.0.clone();
+            let ev = event.clone();
+            let pid = self.peer_b;
+            tokio::task::spawn_blocking(move || {
+                EventApplicator::new(pid).apply_event(&ev, &es, None, None)
+            })
+            .await
+            .unwrap()
+            .ok();
+        }
+
+        self.handle_b.record_event(event).await
     }
 
     /// Partition peer A (its outgoing requests fail).
@@ -499,7 +559,7 @@ async fn sync_fails_during_partition() {
     h.handle_b.share_entity(entity_id).await.unwrap();
 
     let event = make_note_create(entity_id, h.peer_a, "test");
-    h.handle_a.record_event(event).await.unwrap();
+    h.record_event_a(event).await.unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // Partition A — its requests will fail
@@ -545,10 +605,10 @@ async fn split_brain_write_then_heal_and_sync() {
 
     // Both peers write independently
     let event_a = make_note_create(entity_id, h.peer_a, "A's version");
-    h.handle_a.record_event(event_a.clone()).await.unwrap();
+    h.record_event_a(event_a.clone()).await.unwrap();
 
     let event_b = make_note_create(entity_id, h.peer_b, "B's version");
-    h.handle_b.record_event(event_b.clone()).await.unwrap();
+    h.record_event_b(event_b.clone()).await.unwrap();
 
     tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -590,7 +650,7 @@ async fn deep_divergence_burst_reconciliation() {
 
     // Create initial entity on both sides
     let create = make_note_create(entity_id, h.peer_a, "Initial");
-    h.handle_a.record_event(create.clone()).await.unwrap();
+    h.record_event_a(create.clone()).await.unwrap();
 
     // Sync initial state
     let mut events_a = h.events_a.take().unwrap();
@@ -608,14 +668,14 @@ async fn deep_divergence_burst_reconciliation() {
     // Peer A writes 10 updates
     for i in 0..10 {
         let update = make_note_update(entity_id, h.peer_a, &format!("A_edit_{i}"));
-        h.handle_a.record_event(update).await.unwrap();
+        h.record_event_a(update).await.unwrap();
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
 
     // Peer B writes 10 updates
     for i in 0..10 {
         let update = make_note_update(entity_id, h.peer_b, &format!("B_edit_{i}"));
-        h.handle_b.record_event(update).await.unwrap();
+        h.record_event_b(update).await.unwrap();
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
 
@@ -659,7 +719,7 @@ async fn sync_succeeds_with_high_latency() {
     h.handle_b.share_entity(entity_id).await.unwrap();
 
     let event = make_note_create(entity_id, h.peer_a, "High latency test");
-    h.handle_a.record_event(event.clone()).await.unwrap();
+    h.record_event_a(event.clone()).await.unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // Add 200ms latency to A's outgoing messages
@@ -699,10 +759,10 @@ async fn asymmetric_latency_bidirectional_sync() {
     h.handle_b.share_entity(entity_id).await.unwrap();
 
     let event_a = make_note_create(entity_id, h.peer_a, "From fast peer A");
-    h.handle_a.record_event(event_a).await.unwrap();
+    h.record_event_a(event_a).await.unwrap();
 
     let event_b = make_note_create(entity_id, h.peer_b, "From slow peer B");
-    h.handle_b.record_event(event_b).await.unwrap();
+    h.record_event_b(event_b).await.unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // A is fast, B has 150ms delay
@@ -752,7 +812,7 @@ async fn flapping_network_eventual_sync() {
     h.handle_b.share_entity(entity_id).await.unwrap();
 
     let event = make_note_create(entity_id, h.peer_a, "Flapping test");
-    h.handle_a.record_event(event).await.unwrap();
+    h.record_event_a(event).await.unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     let mut events_a = h.events_a.take().unwrap();
@@ -815,7 +875,7 @@ async fn repeated_sync_is_idempotent() {
     h.handle_b.share_entity(entity_id).await.unwrap();
 
     let event = make_note_create(entity_id, h.peer_a, "Idempotent test");
-    h.handle_a.record_event(event).await.unwrap();
+    h.record_event_a(event).await.unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     let mut events_a = h.events_a.take().unwrap();
@@ -865,22 +925,18 @@ async fn multi_entity_split_brain_reconciliation() {
     h.full_partition();
 
     // Peer A writes to entities 1 and 2
-    h.handle_a
-        .record_event(make_note_create(entity1, h.peer_a, "A note 1"))
+    h.record_event_a(make_note_create(entity1, h.peer_a, "A note 1"))
         .await
         .unwrap();
-    h.handle_a
-        .record_event(make_note_create(entity2, h.peer_a, "A note 2"))
+    h.record_event_a(make_note_create(entity2, h.peer_a, "A note 2"))
         .await
         .unwrap();
 
     // Peer B writes to entities 2 and 3
-    h.handle_b
-        .record_event(make_note_create(entity2, h.peer_b, "B note 2"))
+    h.record_event_b(make_note_create(entity2, h.peer_b, "B note 2"))
         .await
         .unwrap();
-    h.handle_b
-        .record_event(make_note_create(entity3, h.peer_b, "B note 3"))
+    h.record_event_b(make_note_create(entity3, h.peer_b, "B note 3"))
         .await
         .unwrap();
 
@@ -938,7 +994,7 @@ async fn multiple_partition_heal_cycles() {
 
     // Phase 1: Both connected, A writes and syncs
     let e1 = make_note_create(entity_id, h.peer_a, "Phase 1");
-    h.handle_a.record_event(e1).await.unwrap();
+    h.record_event_a(e1).await.unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     h.handle_a
@@ -952,9 +1008,9 @@ async fn multiple_partition_heal_cycles() {
     h.full_partition();
 
     let e2 = make_note_update(entity_id, h.peer_a, "Phase 2 A");
-    h.handle_a.record_event(e2).await.unwrap();
+    h.record_event_a(e2).await.unwrap();
     let e3 = make_note_update(entity_id, h.peer_b, "Phase 2 B");
-    h.handle_b.record_event(e3).await.unwrap();
+    h.record_event_b(e3).await.unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // Phase 3: Heal, sync
@@ -977,9 +1033,9 @@ async fn multiple_partition_heal_cycles() {
     h.full_partition();
 
     let e4 = make_note_update(entity_id, h.peer_a, "Phase 4 A");
-    h.handle_a.record_event(e4).await.unwrap();
+    h.record_event_a(e4).await.unwrap();
     let e5 = make_note_update(entity_id, h.peer_b, "Phase 4 B");
-    h.handle_b.record_event(e5).await.unwrap();
+    h.record_event_b(e5).await.unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // Phase 5: Final heal and sync
@@ -1047,7 +1103,7 @@ async fn rapid_writes_during_flapping_partition() {
             } else {
                 make_note_update(entity_id, h.peer_a, &format!("A_p{phase}_e{i}"))
             };
-            h.handle_a.record_event(e).await.unwrap();
+            h.record_event_a(e).await.unwrap();
             total_a += 1;
         }
 
@@ -1057,7 +1113,7 @@ async fn rapid_writes_during_flapping_partition() {
             } else {
                 make_note_update(entity_id, h.peer_b, &format!("B_p{phase}_e{i}"))
             };
-            h.handle_b.record_event(e).await.unwrap();
+            h.record_event_b(e).await.unwrap();
             total_b += 1;
         }
 
@@ -1119,14 +1175,12 @@ async fn batch_sync_under_latency() {
     h.handle_b.share_entity(entity_id).await.unwrap();
 
     // A writes 20 events
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "Initial"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "Initial"))
         .await
         .unwrap();
 
     for i in 1..20 {
-        h.handle_a
-            .record_event(make_note_update(entity_id, h.peer_a, &format!("Update_{i}")))
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("Update_{i}")))
             .await
             .unwrap();
     }
@@ -1176,8 +1230,7 @@ async fn subway_commuter_micro_partitions() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "initial"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "initial"))
         .await
         .unwrap();
 
@@ -1201,10 +1254,10 @@ async fn subway_commuter_micro_partitions() {
         }
 
         let e_a = make_note_update(entity_id, h.peer_a, &format!("A_subway_{cycle}"));
-        h.handle_a.record_event(e_a).await.unwrap();
+        h.record_event_a(e_a).await.unwrap();
 
         let e_b = make_note_update(entity_id, h.peer_b, &format!("B_subway_{cycle}"));
-        h.handle_b.record_event(e_b).await.unwrap();
+        h.record_event_b(e_b).await.unwrap();
 
         h.handle_a
             .send(SyncCommand::SyncWithPeer { peer_id: h.peer_b })
@@ -1263,7 +1316,7 @@ async fn delete_vs_edit_conflict_during_partition() {
     h.handle_b.share_entity(entity_id).await.unwrap();
 
     let create = make_note_create(entity_id, h.peer_a, "Doomed note");
-    h.handle_a.record_event(create).await.unwrap();
+    h.record_event_a(create).await.unwrap();
 
     let mut events_a = h.events_a.take().unwrap();
     let mut events_b = h.events_b.take().unwrap();
@@ -1279,7 +1332,7 @@ async fn delete_vs_edit_conflict_during_partition() {
 
     for i in 0..3 {
         let update = make_note_update(entity_id, h.peer_a, &format!("A edit {i}"));
-        h.handle_a.record_event(update).await.unwrap();
+        h.record_event_a(update).await.unwrap();
     }
 
     let delete = make_event(
@@ -1289,7 +1342,7 @@ async fn delete_vs_edit_conflict_during_partition() {
             entity_type: "note".to_string(),
         },
     );
-    h.handle_b.record_event(delete).await.unwrap();
+    h.record_event_b(delete).await.unwrap();
 
     tokio::time::sleep(Duration::from_millis(50)).await;
 
@@ -1324,7 +1377,7 @@ async fn concurrent_delete_same_entity_during_partition() {
     h.handle_b.share_entity(entity_id).await.unwrap();
 
     let create = make_note_create(entity_id, h.peer_a, "Double-delete target");
-    h.handle_a.record_event(create).await.unwrap();
+    h.record_event_a(create).await.unwrap();
 
     let mut events_a = h.events_a.take().unwrap();
     let mut events_b = h.events_b.take().unwrap();
@@ -1341,12 +1394,12 @@ async fn concurrent_delete_same_entity_during_partition() {
     let del_a = make_event(entity_id, h.peer_a, EventPayload::EntityDeleted {
         entity_type: "note".to_string(),
     });
-    h.handle_a.record_event(del_a).await.unwrap();
+    h.record_event_a(del_a).await.unwrap();
 
     let del_b = make_event(entity_id, h.peer_b, EventPayload::EntityDeleted {
         entity_type: "note".to_string(),
     });
-    h.handle_b.record_event(del_b).await.unwrap();
+    h.record_event_b(del_b).await.unwrap();
 
     tokio::time::sleep(Duration::from_millis(50)).await;
 
@@ -1389,13 +1442,11 @@ async fn entity_created_and_edited_during_partition() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "Born offline"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "Born offline"))
         .await
         .unwrap();
     for i in 0..5 {
-        h.handle_a
-            .record_event(make_note_update(entity_id, h.peer_a, &format!("offline edit {i}")))
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("offline edit {i}")))
             .await
             .unwrap();
     }
@@ -1431,28 +1482,23 @@ async fn both_peers_create_different_entities_during_partition() {
     let entity_x = EntityId::new();
     h.handle_a.share_entity(entity_x).await.unwrap();
     h.handle_b.share_entity(entity_x).await.unwrap();
-    h.handle_a
-        .record_event(make_note_create(entity_x, h.peer_a, "Entity X"))
+    h.record_event_a(make_note_create(entity_x, h.peer_a, "Entity X"))
         .await
         .unwrap();
-    h.handle_a
-        .record_event(make_note_update(entity_x, h.peer_a, "X updated"))
+    h.record_event_a(make_note_update(entity_x, h.peer_a, "X updated"))
         .await
         .unwrap();
 
     let entity_y = EntityId::new();
     h.handle_a.share_entity(entity_y).await.unwrap();
     h.handle_b.share_entity(entity_y).await.unwrap();
-    h.handle_b
-        .record_event(make_note_create(entity_y, h.peer_b, "Entity Y"))
+    h.record_event_b(make_note_create(entity_y, h.peer_b, "Entity Y"))
         .await
         .unwrap();
-    h.handle_b
-        .record_event(make_note_update(entity_y, h.peer_b, "Y updated"))
+    h.record_event_b(make_note_update(entity_y, h.peer_b, "Y updated"))
         .await
         .unwrap();
-    h.handle_b
-        .record_event(make_note_update(entity_y, h.peer_b, "Y again"))
+    h.record_event_b(make_note_update(entity_y, h.peer_b, "Y again"))
         .await
         .unwrap();
 
@@ -1489,12 +1535,10 @@ async fn rapid_alternating_bidirectional_sync() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "A's note"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "A's note"))
         .await
         .unwrap();
-    h.handle_b
-        .record_event(make_note_create(entity_id, h.peer_b, "B's note"))
+    h.record_event_b(make_note_create(entity_id, h.peer_b, "B's note"))
         .await
         .unwrap();
 
@@ -1540,19 +1584,16 @@ async fn rapid_sequential_sync_storm() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "Storm note"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "Storm note"))
         .await
         .unwrap();
     for i in 0..4 {
-        h.handle_a
-            .record_event(make_note_update(entity_id, h.peer_a, &format!("Storm A {i}")))
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("Storm A {i}")))
             .await
             .unwrap();
     }
     for i in 0..3 {
-        h.handle_b
-            .record_event(make_note_create(entity_id, h.peer_b, &format!("Storm B {i}")))
+        h.record_event_b(make_note_create(entity_id, h.peer_b, &format!("Storm B {i}")))
             .await
             .unwrap();
     }
@@ -1610,26 +1651,22 @@ async fn week_long_divergence_massive_reconciliation() {
     h.full_partition();
 
     for (idx, &eid) in entities.iter().enumerate() {
-        h.handle_a
-            .record_event(make_note_create(eid, h.peer_a, &format!("A entity {idx}")))
+        h.record_event_a(make_note_create(eid, h.peer_a, &format!("A entity {idx}")))
             .await
             .unwrap();
         for i in 1..10 {
-            h.handle_a
-                .record_event(make_note_update(eid, h.peer_a, &format!("A_e{idx}_u{i}")))
+            h.record_event_a(make_note_update(eid, h.peer_a, &format!("A_e{idx}_u{i}")))
                 .await
                 .unwrap();
         }
     }
 
     for (idx, &eid) in entities.iter().enumerate() {
-        h.handle_b
-            .record_event(make_note_create(eid, h.peer_b, &format!("B entity {idx}")))
+        h.record_event_b(make_note_create(eid, h.peer_b, &format!("B entity {idx}")))
             .await
             .unwrap();
         for i in 1..10 {
-            h.handle_b
-                .record_event(make_note_update(eid, h.peer_b, &format!("B_e{idx}_u{i}")))
+            h.record_event_b(make_note_update(eid, h.peer_b, &format!("B_e{idx}_u{i}")))
                 .await
                 .unwrap();
         }
@@ -1671,8 +1708,7 @@ async fn write_during_active_sync() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "Sync-race note"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "Sync-race note"))
         .await
         .unwrap();
     tokio::time::sleep(Duration::from_millis(50)).await;
@@ -1689,8 +1725,7 @@ async fn write_during_active_sync() {
         .unwrap();
 
     for i in 0..3 {
-        h.handle_a
-            .record_event(make_note_update(entity_id, h.peer_a, &format!("During sync {i}")))
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("During sync {i}")))
             .await
             .unwrap();
         tokio::time::sleep(Duration::from_millis(20)).await;
@@ -1739,12 +1774,10 @@ async fn asymmetric_partition_one_way_push() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "A's data"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "A's data"))
         .await
         .unwrap();
-    h.handle_b
-        .record_event(make_note_create(entity_id, h.peer_b, "B's data"))
+    h.record_event_b(make_note_create(entity_id, h.peer_b, "B's data"))
         .await
         .unwrap();
 
@@ -1809,13 +1842,11 @@ async fn stale_peer_catches_up_with_delta() {
     let mut events_a = h.events_a.take().unwrap();
     let _events_b = h.events_b.take().unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "Initial"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "Initial"))
         .await
         .unwrap();
     for i in 0..3 {
-        h.handle_a
-            .record_event(make_note_update(entity_id, h.peer_a, &format!("Phase1 {i}")))
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("Phase1 {i}")))
             .await
             .unwrap();
     }
@@ -1833,8 +1864,7 @@ async fn stale_peer_catches_up_with_delta() {
     h.partition_b();
 
     for i in 0..15 {
-        h.handle_a
-            .record_event(make_note_update(entity_id, h.peer_a, &format!("Stale {i}")))
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("Stale {i}")))
             .await
             .unwrap();
     }
@@ -1873,12 +1903,10 @@ async fn empty_sync_after_convergence() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "Converge test"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "Converge test"))
         .await
         .unwrap();
-    h.handle_b
-        .record_event(make_note_create(entity_id, h.peer_b, "B side"))
+    h.record_event_b(make_note_create(entity_id, h.peer_b, "B side"))
         .await
         .unwrap();
 
@@ -1942,13 +1970,13 @@ async fn sync_storm_many_entities_after_partition() {
     h.full_partition();
 
     for &eid in &entities {
-        h.handle_a.record_event(make_note_create(eid, h.peer_a, "A")).await.unwrap();
-        h.handle_a.record_event(make_note_update(eid, h.peer_a, "A1")).await.unwrap();
-        h.handle_a.record_event(make_note_update(eid, h.peer_a, "A2")).await.unwrap();
+        h.record_event_a(make_note_create(eid, h.peer_a, "A")).await.unwrap();
+        h.record_event_a(make_note_update(eid, h.peer_a, "A1")).await.unwrap();
+        h.record_event_a(make_note_update(eid, h.peer_a, "A2")).await.unwrap();
 
-        h.handle_b.record_event(make_note_create(eid, h.peer_b, "B")).await.unwrap();
-        h.handle_b.record_event(make_note_update(eid, h.peer_b, "B1")).await.unwrap();
-        h.handle_b.record_event(make_note_update(eid, h.peer_b, "B2")).await.unwrap();
+        h.record_event_b(make_note_create(eid, h.peer_b, "B")).await.unwrap();
+        h.record_event_b(make_note_update(eid, h.peer_b, "B1")).await.unwrap();
+        h.record_event_b(make_note_update(eid, h.peer_b, "B2")).await.unwrap();
     }
 
     tokio::time::sleep(Duration::from_millis(50)).await;
@@ -1985,15 +2013,13 @@ async fn one_peer_readonly_consumer() {
 
     let mut events_a = h.events_a.take().unwrap();
 
-    h.handle_a
-        .record_event(make_note_create(entity_id, h.peer_a, "Producer note"))
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "Producer note"))
         .await
         .unwrap();
 
     for round in 0..5 {
         for i in 0..4 {
-            h.handle_a
-                .record_event(make_note_update(entity_id, h.peer_a, &format!("R{round}_U{i}")))
+            h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("R{round}_U{i}")))
                 .await
                 .unwrap();
         }
@@ -2048,7 +2074,7 @@ async fn escalating_partition_heal_phases() {
             } else {
                 make_note_update(entity_id, h.peer_a, &format!("A_P{phase}_{i}"))
             };
-            h.handle_a.record_event(e).await.unwrap();
+            h.record_event_a(e).await.unwrap();
         }
 
         for i in 0..n {
@@ -2058,7 +2084,7 @@ async fn escalating_partition_heal_phases() {
             } else {
                 make_note_update(entity_id, h.peer_b, &format!("B_P{phase}_{i}"))
             };
-            h.handle_b.record_event(e).await.unwrap();
+            h.record_event_b(e).await.unwrap();
         }
 
         total += n * 2;
@@ -2102,10 +2128,9 @@ async fn latency_then_partition_then_heal() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a.record_event(make_note_create(entity_id, h.peer_a, "LP")).await.unwrap();
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "LP")).await.unwrap();
     for i in 0..5 {
-        h.handle_a
-            .record_event(make_note_update(entity_id, h.peer_a, &format!("LP {i}")))
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("LP {i}")))
             .await
             .unwrap();
     }
@@ -2161,8 +2186,8 @@ async fn full_entity_lifecycle_create_edit_delete_recreate() {
     let mut events_a = h.events_a.take().unwrap();
     let mut events_b = h.events_b.take().unwrap();
 
-    h.handle_a.record_event(make_note_create(entity1, h.peer_a, "Original")).await.unwrap();
-    h.handle_a.record_event(make_note_update(entity1, h.peer_a, "Edit")).await.unwrap();
+    h.record_event_a(make_note_create(entity1, h.peer_a, "Original")).await.unwrap();
+    h.record_event_a(make_note_update(entity1, h.peer_a, "Edit")).await.unwrap();
 
     h.handle_a.send(SyncCommand::SyncWithPeer { peer_id: h.peer_b }).await.unwrap();
     wait_for_sync(&mut events_a, Duration::from_secs(5)).await;
@@ -2170,12 +2195,12 @@ async fn full_entity_lifecycle_create_edit_delete_recreate() {
 
     h.full_partition();
 
-    h.handle_a.record_event(make_event(entity1, h.peer_a, EventPayload::EntityDeleted {
+    h.record_event_a(make_event(entity1, h.peer_a, EventPayload::EntityDeleted {
         entity_type: "note".to_string(),
     })).await.unwrap();
 
-    h.handle_b.record_event(make_note_update(entity1, h.peer_b, "B edit 1")).await.unwrap();
-    h.handle_b.record_event(make_note_update(entity1, h.peer_b, "B edit 2")).await.unwrap();
+    h.record_event_b(make_note_update(entity1, h.peer_b, "B edit 1")).await.unwrap();
+    h.record_event_b(make_note_update(entity1, h.peer_b, "B edit 2")).await.unwrap();
 
     tokio::time::sleep(Duration::from_millis(50)).await;
 
@@ -2192,8 +2217,8 @@ async fn full_entity_lifecycle_create_edit_delete_recreate() {
     h.full_partition();
     h.handle_a.share_entity(entity2).await.unwrap();
     h.handle_b.share_entity(entity2).await.unwrap();
-    h.handle_a.record_event(make_note_create(entity2, h.peer_a, "Replacement")).await.unwrap();
-    h.handle_a.record_event(make_note_update(entity2, h.peer_a, "Replacement edit")).await.unwrap();
+    h.record_event_a(make_note_create(entity2, h.peer_a, "Replacement")).await.unwrap();
+    h.record_event_a(make_note_update(entity2, h.peer_a, "Replacement edit")).await.unwrap();
 
     h.heal_all();
 
@@ -2221,8 +2246,8 @@ async fn flapping_with_latency_spikes() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
-    h.handle_a.record_event(make_note_create(entity_id, h.peer_a, "Flap")).await.unwrap();
-    h.handle_b.record_event(make_note_create(entity_id, h.peer_b, "B Flap")).await.unwrap();
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "Flap")).await.unwrap();
+    h.record_event_b(make_note_create(entity_id, h.peer_b, "B Flap")).await.unwrap();
 
     let mut events_a = h.events_a.take().unwrap();
     let mut events_b = h.events_b.take().unwrap();
@@ -2246,9 +2271,9 @@ async fn flapping_with_latency_spikes() {
         if phase.partition { h.full_partition(); } else { h.heal_all(); }
 
         for i in 0..2 {
-            h.handle_a.record_event(make_note_update(entity_id, h.peer_a, &format!("A_ph{idx}_{i}"))).await.unwrap();
+            h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("A_ph{idx}_{i}"))).await.unwrap();
             cnt_a += 1;
-            h.handle_b.record_event(make_note_update(entity_id, h.peer_b, &format!("B_ph{idx}_{i}"))).await.unwrap();
+            h.record_event_b(make_note_update(entity_id, h.peer_b, &format!("B_ph{idx}_{i}"))).await.unwrap();
             cnt_b += 1;
         }
 
@@ -2300,12 +2325,12 @@ async fn near_simultaneous_timestamps_no_loss() {
     let mut events_a = h.events_a.take().unwrap();
     let mut events_b = h.events_b.take().unwrap();
 
-    h.handle_a.record_event(make_note_create(entity_id, h.peer_a, "A")).await.unwrap();
-    h.handle_b.record_event(make_note_create(entity_id, h.peer_b, "B")).await.unwrap();
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "A")).await.unwrap();
+    h.record_event_b(make_note_create(entity_id, h.peer_b, "B")).await.unwrap();
 
     for i in 0..20 {
-        h.handle_a.record_event(make_note_update(entity_id, h.peer_a, &format!("A{i}"))).await.unwrap();
-        h.handle_b.record_event(make_note_update(entity_id, h.peer_b, &format!("B{i}"))).await.unwrap();
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("A{i}"))).await.unwrap();
+        h.record_event_b(make_note_update(entity_id, h.peer_b, &format!("B{i}"))).await.unwrap();
     }
 
     tokio::time::sleep(Duration::from_millis(50)).await;
@@ -2354,27 +2379,27 @@ async fn mixed_entity_types_during_partition() {
 
     h.full_partition();
 
-    h.handle_a.record_event(make_event(note_id, h.peer_a, EventPayload::EntityCreated {
+    h.record_event_a(make_event(note_id, h.peer_a, EventPayload::EntityCreated {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"A note"}"#.to_string(),
     })).await.unwrap();
 
-    h.handle_a.record_event(make_event(task_id, h.peer_a, EventPayload::EntityCreated {
+    h.record_event_a(make_event(task_id, h.peer_a, EventPayload::EntityCreated {
         entity_type: "task".to_string(),
         json_data: r#"{"title":"A task"}"#.to_string(),
     })).await.unwrap();
 
-    h.handle_b.record_event(make_event(cal_id, h.peer_b, EventPayload::EntityCreated {
+    h.record_event_b(make_event(cal_id, h.peer_b, EventPayload::EntityCreated {
         entity_type: "calendar".to_string(),
         json_data: r#"{"title":"B meeting"}"#.to_string(),
     })).await.unwrap();
 
-    h.handle_b.record_event(make_event(note_id, h.peer_b, EventPayload::EntityCreated {
+    h.record_event_b(make_event(note_id, h.peer_b, EventPayload::EntityCreated {
         entity_type: "note".to_string(),
         json_data: r#"{"title":"B note"}"#.to_string(),
     })).await.unwrap();
 
-    h.handle_b.record_event(make_event(task_id, h.peer_b, EventPayload::EntityUpdated {
+    h.record_event_b(make_event(task_id, h.peer_b, EventPayload::EntityUpdated {
         entity_type: "task".to_string(),
         json_data: r#"{"title":"B task","done":true}"#.to_string(),
     })).await.unwrap();
@@ -2411,6 +2436,10 @@ async fn partition_during_first_sync_attempt() {
     h.handle_a.share_entity(entity_id).await.unwrap();
     h.handle_b.share_entity(entity_id).await.unwrap();
 
+    // Create entity on A before partition so the sync attempt has something to send.
+    h.record_event_a(make_note_create(entity_id, h.peer_a, "A cold")).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
     let mut events_a = h.events_a.take().unwrap();
     let mut events_b = h.events_b.take().unwrap();
 
@@ -2420,14 +2449,15 @@ async fn partition_during_first_sync_attempt() {
     let first = wait_for_sync_or_fail(&mut events_a, Duration::from_secs(3)).await;
     assert!(matches!(first, Some(SyncEvent::SyncFailed { .. })));
 
-    h.handle_a.record_event(make_note_create(entity_id, h.peer_a, "A cold")).await.unwrap();
+    // A writes updates during partition
     for i in 0..5 {
-        h.handle_a.record_event(make_note_update(entity_id, h.peer_a, &format!("A {i}"))).await.unwrap();
+        h.record_event_a(make_note_update(entity_id, h.peer_a, &format!("A {i}"))).await.unwrap();
     }
 
-    h.handle_b.record_event(make_note_create(entity_id, h.peer_b, "B cold")).await.unwrap();
+    // B writes its own create + updates during partition
+    h.record_event_b(make_note_create(entity_id, h.peer_b, "B cold")).await.unwrap();
     for i in 0..3 {
-        h.handle_b.record_event(make_note_update(entity_id, h.peer_b, &format!("B {i}"))).await.unwrap();
+        h.record_event_b(make_note_update(entity_id, h.peer_b, &format!("B {i}"))).await.unwrap();
     }
 
     tokio::time::sleep(Duration::from_millis(50)).await;
@@ -2436,6 +2466,7 @@ async fn partition_during_first_sync_attempt() {
 
     converge(&h.handle_a, &h.handle_b, h.peer_a, h.peer_b, &mut events_a, &mut events_b).await;
 
+    // 1 A create + 5 A updates + 1 B create + 3 B updates = 10
     let a_events = h.stores_a.1.get_events_for_entity(&entity_id).unwrap();
     let b_events = h.stores_b.1.get_events_for_entity(&entity_id).unwrap();
     assert_eq!(a_events.len(), 10);
@@ -2468,12 +2499,12 @@ async fn large_snapshot_payload_sync() {
         .join("\\n");
     let large_json = format!(r#"{{"title":"Large","body":"{large_body}"}}"#);
 
-    h.handle_a.record_event(make_event(entity_id, h.peer_a, EventPayload::EntityCreated {
+    h.record_event_a(make_event(entity_id, h.peer_a, EventPayload::EntityCreated {
         entity_type: "note".to_string(),
         json_data: large_json.clone(),
     })).await.unwrap();
 
-    h.handle_a.record_event(make_event(entity_id, h.peer_a, EventPayload::FullSnapshot {
+    h.record_event_a(make_event(entity_id, h.peer_a, EventPayload::FullSnapshot {
         entity_type: "note".to_string(),
         json_data: large_json.clone(),
     })).await.unwrap();

@@ -28,6 +28,14 @@ public interface IAppSettingsService
     WorkspacePluginConfig GetWorkspacePluginConfig();
 
     /// <summary>
+    /// Creates a whitelist-mode plugin config for a workspace.
+    /// Defaults to core-only plugins if no enabledPluginIds provided.
+    /// </summary>
+    WorkspacePluginConfig InitializeWorkspacePluginConfig(
+        string workspaceId,
+        IEnumerable<string>? enabledPluginIds = null);
+
+    /// <summary>
     /// Raised when the user's profile (display name or image) changes.
     /// </summary>
     event Action? ProfileChanged;

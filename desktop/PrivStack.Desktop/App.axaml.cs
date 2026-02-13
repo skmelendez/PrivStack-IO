@@ -9,7 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.FileSync;
 using PrivStack.Desktop.Services.Plugin;
+using PrivStack.Sdk.Capabilities;
 using PrivStack.Desktop.ViewModels;
 using PrivStack.Desktop.Views;
 using PrivStack.Sdk;
@@ -66,12 +68,13 @@ public partial class App : Application
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
             DisableAvaloniaDataAnnotationValidation();
 
-            // Check if first-run setup is needed
-            if (!SetupWizardViewModel.IsSetupComplete())
+            // Check if first-run setup is needed, or if workspaces are missing
+            var workspaceService = Services.GetRequiredService<IWorkspaceService>();
+            if (!SetupWizardViewModel.IsSetupComplete() || !workspaceService.HasWorkspaces)
             {
-                // For first-run, DON'T initialize service yet.
+                // For first-run or missing workspaces, DON'T initialize service yet.
                 // Setup wizard will initialize it after user picks data directory.
-                Log.Information("First-run setup required, showing setup wizard");
+                Log.Information("Setup required (first-run or no workspaces), showing setup wizard");
                 ShowSetupWizard(desktop);
             }
             else
@@ -93,23 +96,24 @@ public partial class App : Application
     {
         try
         {
-            string dbPath;
-
-            // Use workspace system if workspaces exist
             var workspaceService = Services.GetRequiredService<IWorkspaceService>();
-            if (workspaceService.HasWorkspaces)
+            var active = workspaceService.GetActiveWorkspace();
+
+            if (active != null)
             {
-                dbPath = workspaceService.GetActiveDataPath();
-                Log.Information("Using workspace database path: {DbPath}", dbPath);
+                // Ensure DataPaths is workspace-aware before anything touches paths
+                var resolvedDir = workspaceService.ResolveWorkspaceDir(active);
+                DataPaths.SetActiveWorkspace(active.Id, resolvedDir);
+
+                // Reconfigure logger to write to workspace-specific log directory
+                Log.ReconfigureForWorkspace(active.Id);
+
+                // Run one-time data migration for existing installs
+                WorkspaceDataMigration.MigrateIfNeeded(active.Id, resolvedDir);
             }
-            else
-            {
-                // Legacy path for pre-workspace installations
-                var dataDir = GetConfiguredDataDirectory();
-                dbPath = Path.Combine(dataDir, "data.duckdb");
-                Log.Information("Using legacy database path: {DbPath}", dbPath);
-                Directory.CreateDirectory(dataDir);
-            }
+
+            var dbPath = workspaceService.GetActiveDataPath();
+            Log.Information("Using workspace database path: {DbPath}", dbPath);
 
             var dir = Path.GetDirectoryName(dbPath)!;
             Directory.CreateDirectory(dir);
@@ -119,11 +123,47 @@ public partial class App : Application
 
             Services.GetRequiredService<IPrivStackRuntime>().Initialize(dbPath);
             Log.Information("Native service initialized successfully");
+
+            // Clean up orphaned root-level DB files from pre-workspace-scoping
+            CleanupOrphanedRootFiles();
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to initialize native service");
             Serilog.Log.CloseAndFlush();
+        }
+    }
+
+    /// <summary>
+    /// Removes orphaned data.*.duckdb and data.peer_id files from the root BaseDir
+    /// that were created by the old setup wizard initializing at root level.
+    /// </summary>
+    private static void CleanupOrphanedRootFiles()
+    {
+        try
+        {
+            var baseDir = DataPaths.BaseDir;
+            var orphanPatterns = new[] { "data.*.duckdb", "data.*.duckdb.wal", "data.peer_id" };
+
+            foreach (var pattern in orphanPatterns)
+            {
+                foreach (var file in Directory.GetFiles(baseDir, pattern))
+                {
+                    try
+                    {
+                        File.Delete(file);
+                        Log.Information("Cleaned up orphaned root file: {File}", Path.GetFileName(file));
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Logger.Warning(ex, "Could not delete orphaned root file: {File}", file);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Logger.Warning(ex, "Failed to clean up orphaned root files");
         }
     }
 
@@ -212,24 +252,6 @@ public partial class App : Application
         }
     }
 
-    /// <summary>
-    /// Gets the configured data directory, or the default if not configured.
-    /// </summary>
-    private static string GetConfiguredDataDirectory()
-    {
-        var defaultDir = DataPaths.BaseDir;
-
-        var customDir = Services.GetRequiredService<IAppSettingsService>().Settings.CustomDataDirectory;
-        if (!string.IsNullOrEmpty(customDir))
-        {
-            Log.Information("Using custom data directory: {Dir}", customDir);
-            return customDir;
-        }
-
-        Log.Information("Using default data directory: {Dir}", defaultDir);
-        return defaultDir;
-    }
-
     private void ShowSetupWizard(IClassicDesktopStyleApplicationLifetime desktop)
     {
         var setupVm = Services.GetRequiredService<SetupWizardViewModel>();
@@ -305,6 +327,8 @@ public partial class App : Application
     {
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
 
+        Services.GetService<Services.Abstractions.IMasterPasswordCache>()?.Clear();
+
         var currentWindow = desktop.MainWindow;
         ShowUnlockScreen(desktop);
         currentWindow?.Close();
@@ -350,8 +374,23 @@ public partial class App : Application
         // Do NOT auto-unlock - user must explicitly unlock sensitive features
         Log.Information("Sensitive lock service initialized with {Minutes} minute lockout (locked)", lockoutMinutes);
 
+        // Start file-based event sync (cloud/NAS — no-op if workspace is local-only)
+        Services.GetRequiredService<IFileEventSyncService>().Start();
+
+        // Start snapshot sync: imports latest peer snapshot, then exports on close
+        _ = Services.GetRequiredService<ISnapshotSyncService>().StartAsync();
+
+        // Scan shared files dir for dataset imports from other peers
+        _ = Task.Run(() => DatasetFileSyncHelper.ScanAndImportAsync(
+            Services.GetRequiredService<IWorkspaceService>(),
+            Services.GetRequiredService<IDatasetService>()));
+
         // Start the reminder scheduler for OS notifications
         Services.GetRequiredService<ReminderSchedulerService>().Start();
+
+        // Check license expiration state for read-only enforcement banner
+        var licensing = Services.GetRequiredService<ILicensingService>();
+        Services.GetRequiredService<LicenseExpirationService>().CheckLicenseStatus(licensing);
 
         var mainWindow = new MainWindow
         {

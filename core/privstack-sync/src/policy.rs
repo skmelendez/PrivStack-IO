@@ -874,9 +874,8 @@ impl PersonalSyncPolicy {
         let mut map = self.peer_entities.write().await;
         if let Some(set) = map.get_mut(&peer_id) {
             set.remove(&entity_id);
-            if set.is_empty() {
-                map.remove(&peer_id);
-            }
+            // Keep the empty set — an empty set means "no access for this peer",
+            // whereas a missing key means "no policy configured" (allow all).
         }
     }
 
@@ -963,12 +962,22 @@ impl SyncPolicy for PersonalSyncPolicy {
 
     async fn on_event_receive(
         &self,
-        _peer: &PeerId,
-        _entity: &EntityId,
+        peer: &PeerId,
+        entity: &EntityId,
         events: &[Event],
     ) -> Result<Vec<Event>, SyncError> {
-        // If we received it, the sender shared it with us
-        Ok(events.to_vec())
+        let map = self.peer_entities.read().await;
+        // No selective sharing configured → accept all events
+        if map.is_empty() {
+            return Ok(events.to_vec());
+        }
+        // Only accept events for entities we share with this peer
+        let allowed = map.get(peer).is_some_and(|s| s.contains(entity));
+        if allowed {
+            Ok(events.to_vec())
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     fn entities_for_peer(&self, _peer: &PeerId) -> Option<Vec<EntityId>> {

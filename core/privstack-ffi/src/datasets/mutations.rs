@@ -14,6 +14,7 @@ pub unsafe extern "C" fn privstack_dataset_create_empty(
     request_json: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let req = parse_json_request!(request_json, CreateEmptyRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
@@ -38,6 +39,7 @@ pub unsafe extern "C" fn privstack_dataset_duplicate(
     request_json: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let req = parse_json_request!(request_json, DuplicateRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
@@ -67,6 +69,7 @@ pub unsafe extern "C" fn privstack_dataset_import_content(
     request_json: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let req = parse_json_request!(request_json, ImportContentRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
@@ -91,6 +94,7 @@ pub unsafe extern "C" fn privstack_dataset_insert_row(
     request_json: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let req = parse_json_request!(request_json, InsertRowRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
@@ -122,6 +126,7 @@ pub unsafe extern "C" fn privstack_dataset_update_cell(
     request_json: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let req = parse_json_request!(request_json, UpdateCellRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
@@ -147,6 +152,7 @@ pub unsafe extern "C" fn privstack_dataset_delete_rows(
     request_json: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let req = parse_json_request!(request_json, DeleteRowsRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
@@ -172,6 +178,7 @@ pub unsafe extern "C" fn privstack_dataset_add_column(
     request_json: *const c_char,
 ) -> *mut c_char {
     unsafe {
+        check_license_json!();
         let req = parse_json_request!(request_json, ColumnModifyRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
@@ -221,6 +228,9 @@ pub unsafe extern "C" fn privstack_dataset_drop_column(
             Some(h) => h,
             None => return PrivStackError::NotInitialized,
         };
+        if let Err(e) = crate::check_license_writable(handle) {
+            return e;
+        }
         let store = match handle.dataset_store.as_ref() {
             Some(s) => s,
             None => return PrivStackError::StorageError,
@@ -269,6 +279,9 @@ pub unsafe extern "C" fn privstack_dataset_rename_column(
             Some(h) => h,
             None => return PrivStackError::NotInitialized,
         };
+        if let Err(e) = crate::check_license_writable(handle) {
+            return e;
+        }
         let store = match handle.dataset_store.as_ref() {
             Some(s) => s,
             None => return PrivStackError::StorageError,

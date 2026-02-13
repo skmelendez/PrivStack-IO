@@ -3788,7 +3788,46 @@ fn flatten_entities(entities: &[Entity]) -> serde_json::Value {
     serde_json::Value::Array(entities.iter().map(flatten_entity).collect())
 }
 
+/// Check if the license allows write operations. Returns `Ok(())` if writable,
+/// or an appropriate `PrivStackError` if the license is expired/missing.
+/// Fail-open: if the activation file can't be read, writes are allowed.
+pub(crate) fn check_license_writable(handle: &PrivStackHandle) -> Result<(), PrivStackError> {
+    match handle.activation_store.load() {
+        Ok(Some(activation)) if activation.status().is_usable() => Ok(()),
+        Ok(Some(_)) => Err(PrivStackError::LicenseExpired),
+        Ok(None) => Err(PrivStackError::LicenseNotActivated),
+        Err(_) => Ok(()), // fail-open
+    }
+}
+
 fn execute_generic(handle: &PrivStackHandle, req: &SdkRequest) -> SdkResponse {
+    // Block write operations when license is not usable (expired trial, past grace period)
+    let is_mutation = matches!(
+        req.action.as_str(),
+        "create" | "update" | "delete" | "trash" | "restore" | "link" | "unlink"
+    );
+    if is_mutation {
+        match handle.activation_store.load() {
+            Ok(Some(activation)) => {
+                if !activation.status().is_usable() {
+                    return SdkResponse::err(
+                        "license_read_only",
+                        "Your license has expired. The app is in read-only mode.",
+                    );
+                }
+            }
+            Ok(None) => {
+                return SdkResponse::err(
+                    "license_read_only",
+                    "No active license. The app is in read-only mode.",
+                );
+            }
+            Err(_) => {
+                // If we can't read activation, allow the operation (fail-open for robustness)
+            }
+        }
+    }
+
     let schema = match handle.entity_registry.get_schema(&req.entity_type) {
         Some(s) => s,
         None => return SdkResponse::err("unknown_entity", &format!("No schema for: {}", req.entity_type)),
@@ -3953,6 +3992,10 @@ fn execute_generic(handle: &PrivStackHandle, req: &SdkRequest) -> SdkResponse {
             let limit = req.parameters.as_ref()
                 .and_then(|p| p.get("limit"))
                 .and_then(|v| v.parse().ok());
+            let include_trashed = req.parameters.as_ref()
+                .and_then(|p| p.get("include_trashed"))
+                .map(|v| v == "true")
+                .unwrap_or(false);
 
             // Also extract field-level filters from parameters (excluding reserved keys)
             const RESERVED: &[&str] = &["limit", "offset", "query", "search", "action", "include_trashed"];
@@ -3964,7 +4007,7 @@ fn execute_generic(handle: &PrivStackHandle, req: &SdkRequest) -> SdkResponse {
                 }
             }
 
-            match handle.entity_store.query_entities(&req.entity_type, &filters, limit) {
+            match handle.entity_store.query_entities(&req.entity_type, &filters, include_trashed, limit) {
                 Ok(mut entities) => {
                     if let Some(h) = handler {
                         for entity in &mut entities {
@@ -5244,18 +5287,56 @@ mod tests {
     use std::ffi::CString;
     use std::ptr;
 
+    /// Returns the temp path used for the test activation store.
+    fn test_activation_path() -> std::path::PathBuf {
+        std::env::temp_dir()
+            .join("privstack-ffi-tests")
+            .join("activation.json")
+    }
+
+    /// Replaces the activation store in the global handle with one pointing
+    /// to a temp directory, isolating tests from the real activation file.
+    /// Writes a dummy activation JSON so that `ActivationStore::load()` hits
+    /// a signature-verification error → `Err(...)` → fail-open for mutations.
+    fn setup_test_activation_store() {
+        let act_path = test_activation_path();
+        let _ = std::fs::create_dir_all(act_path.parent().unwrap());
+        let _ = std::fs::write(
+            &act_path,
+            r#"{"license_key":"test.dummy","license_plan":"perpetual","email":"test@test.com","sub":1,"activated_at":"2025-01-01T00:00:00Z","device_fingerprint":{"id":"test","generated_at":"2025-01-01T00:00:00Z"},"activation_token":"test"}"#,
+        );
+        let mut handle = HANDLE.lock().unwrap();
+        if let Some(h) = handle.as_mut() {
+            h.activation_store = ActivationStore::new(act_path);
+        }
+    }
+
+    /// Removes the dummy activation file so `load()` returns `Ok(None)`.
+    /// Use in tests that verify "not activated" behavior.
+    fn test_clear_activation() {
+        let _ = std::fs::remove_file(test_activation_path());
+    }
+
     /// Initializes the runtime with an in-memory policy (no filesystem I/O).
     #[cfg(feature = "wasm-plugins")]
     fn test_init() -> PrivStackError {
-        init_with_plugin_host_builder(":memory:", |es, ev| {
+        let r = init_with_plugin_host_builder(":memory:", |es, ev| {
             PluginHostManager::with_policy(es, ev, PolicyEngine::with_config(PolicyConfig::default()))
-        })
+        });
+        if r == PrivStackError::Ok {
+            setup_test_activation_store();
+        }
+        r
     }
 
     /// Initializes the runtime without plugin host (no wasm-plugins feature).
     #[cfg(not(feature = "wasm-plugins"))]
     fn test_init() -> PrivStackError {
-        init_core(":memory:")
+        let r = init_core(":memory:");
+        if r == PrivStackError::Ok {
+            setup_test_activation_store();
+        }
+        r
     }
 
     #[test]
@@ -7054,6 +7135,7 @@ mod tests {
     #[serial]
     fn license_check_not_activated() {
         test_init();
+        test_clear_activation();
 
         let mut out_json: *mut c_char = ptr::null_mut();
         let r = unsafe { privstack_license_check(&mut out_json) };
@@ -7066,6 +7148,7 @@ mod tests {
     #[serial]
     fn license_status_not_activated() {
         test_init();
+        test_clear_activation();
 
         let mut out_status = FfiLicenseStatus::Active;
         let r = unsafe { privstack_license_status(&mut out_status) };
@@ -7079,6 +7162,7 @@ mod tests {
     #[serial]
     fn license_activated_plan_not_activated() {
         test_init();
+        test_clear_activation();
 
         let mut out_plan = FfiLicensePlan::Perpetual;
         let r = unsafe { privstack_license_activated_plan(&mut out_plan) };
@@ -7091,6 +7175,7 @@ mod tests {
     #[serial]
     fn license_deactivate_when_none() {
         test_init();
+        test_clear_activation();
 
         let r = privstack_license_deactivate();
         assert_eq!(r, PrivStackError::Ok);

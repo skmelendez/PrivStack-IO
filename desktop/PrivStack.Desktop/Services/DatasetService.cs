@@ -1,5 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using PrivStack.Desktop.Native;
+using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.FileSync;
 using PrivStack.Sdk.Capabilities;
 using Serilog;
 using NativeLib = PrivStack.Desktop.Native.NativeLibrary;
@@ -20,6 +23,15 @@ public sealed partial class DatasetService : IDatasetService
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         PropertyNameCaseInsensitive = true,
     };
+
+    private readonly IWorkspaceService _workspaceService;
+    private readonly ISyncService _syncService;
+
+    public DatasetService(IWorkspaceService workspaceService, ISyncService syncService)
+    {
+        _workspaceService = workspaceService;
+        _syncService = syncService;
+    }
 
     // ── Phase 1: Core CRUD ──────────────────────────────────────────────
 
@@ -71,12 +83,31 @@ public sealed partial class DatasetService : IDatasetService
 
             var info = JsonSerializer.Deserialize<DatasetInfo>(json, JsonOptions)
                        ?? throw new InvalidOperationException("Deserialize returned null");
+
+            // Copy CSV + sidecar to shared files dir for cloud/NAS sync
+            CopyImportToSharedDir(filePath, info);
+
             return Task.FromResult(info);
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
             Log.Error(ex, "ImportCsvAsync failed for {FilePath}", filePath);
             throw;
+        }
+    }
+
+    private void CopyImportToSharedDir(string sourceCsvPath, DatasetInfo info)
+    {
+        try
+        {
+            var peerId = _syncService.GetLocalPeerId();
+            if (string.IsNullOrEmpty(peerId)) return;
+
+            DatasetFileSyncHelper.CopyToSharedDir(sourceCsvPath, info, _workspaceService, peerId);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to copy dataset import to shared dir — will sync via snapshot");
         }
     }
 

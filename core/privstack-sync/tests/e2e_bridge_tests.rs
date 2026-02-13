@@ -8,7 +8,8 @@ use privstack_sync::transport::{
     DiscoveredPeer, DiscoveryMethod, IncomingSyncRequest, ResponseToken, SyncTransport,
 };
 use privstack_sync::{
-    create_orchestrator, OrchestratorConfig, SyncCommand, SyncEvent, SyncMessage, SyncResult,
+    create_orchestrator, EventApplicator, OrchestratorConfig, OrchestratorHandle, SyncCommand,
+    SyncEvent, SyncMessage, SyncResult,
 };
 use privstack_storage::{EntityStore, EventStore};
 use privstack_types::{EntityId, Event, EventPayload, HybridTimestamp, PeerId};
@@ -167,6 +168,38 @@ fn make_event(entity_id: EntityId, peer_id: PeerId, payload: EventPayload) -> Ev
     Event::new(entity_id, peer_id, HybridTimestamp::now(), payload)
 }
 
+/// Records an event by saving to event store, materializing in entity store
+/// (so `entities_needing_sync` can find it), then recording via orchestrator.
+async fn record_event(
+    handle: &OrchestratorHandle,
+    entity_store: &Arc<EntityStore>,
+    event_store: &Arc<EventStore>,
+    peer_id: PeerId,
+    event: Event,
+) {
+    // Save to event store first (prevents orchestrator startup scan FullSnapshot race)
+    let evs = event_store.clone();
+    let ev = event.clone();
+    tokio::task::spawn_blocking(move || evs.save_event(&ev))
+        .await
+        .unwrap()
+        .unwrap();
+
+    // Apply to entity store (skip deletes — they remove the row)
+    if !matches!(event.payload, EventPayload::EntityDeleted { .. }) {
+        let es = entity_store.clone();
+        let ev = event.clone();
+        tokio::task::spawn_blocking(move || {
+            EventApplicator::new(peer_id).apply_event(&ev, &es, None, None)
+        })
+        .await
+        .unwrap()
+        .ok();
+    }
+
+    handle.record_event(event).await.unwrap();
+}
+
 /// Drains the event channel looking for a specific event variant within a timeout.
 async fn wait_for_event(
     rx: &mut mpsc::Receiver<SyncEvent>,
@@ -201,6 +234,7 @@ async fn a_writes_b_receives() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) =
@@ -225,7 +259,7 @@ async fn a_writes_b_receives() {
             json_data: r#"{"title":"Hello from A"}"#.to_string(),
         },
     );
-    handle_a.record_event(event.clone()).await.unwrap();
+    record_event(&handle_a, &stores_a_entity, &stores_a_event, peer_a, event.clone()).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // A syncs with B
@@ -284,6 +318,7 @@ async fn b_writes_a_pulls() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) =
@@ -306,7 +341,7 @@ async fn b_writes_a_pulls() {
             json_data: r#"{"title":"Hello from B"}"#.to_string(),
         },
     );
-    handle_b.record_event(event.clone()).await.unwrap();
+    record_event(&handle_b, &stores_b_entity, &stores_b_event, peer_b, event.clone()).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // A initiates sync with B — A sends Hello, B responds, then A sends SyncRequest,
@@ -364,6 +399,7 @@ async fn bidirectional_sync() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) =
@@ -386,7 +422,7 @@ async fn bidirectional_sync() {
             json_data: r#"{"title":"From A"}"#.to_string(),
         },
     );
-    handle_a.record_event(event_a.clone()).await.unwrap();
+    record_event(&handle_a, &stores_a_entity, &stores_a_event, peer_a, event_a.clone()).await;
 
     // B writes
     let event_b = make_event(
@@ -397,7 +433,7 @@ async fn bidirectional_sync() {
             json_data: r#"{"title":"From B"}"#.to_string(),
         },
     );
-    handle_b.record_event(event_b.clone()).await.unwrap();
+    record_event(&handle_b, &stores_b_entity, &stores_b_event, peer_b, event_b.clone()).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // A syncs with B (pushes A's event to B)
@@ -456,6 +492,7 @@ async fn multiple_events_propagate() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) =
@@ -478,7 +515,7 @@ async fn multiple_events_propagate() {
             json_data: r#"{"title":"Note"}"#.to_string(),
         },
     );
-    handle_a.record_event(create_event).await.unwrap();
+    record_event(&handle_a, &stores_a_entity, &stores_a_event, peer_a, create_event).await;
 
     for i in 1..5 {
         let update = make_event(
@@ -489,7 +526,7 @@ async fn multiple_events_propagate() {
                 json_data: format!(r#"{{"title":"Note v{}"}}"#, i),
             },
         );
-        handle_a.record_event(update).await.unwrap();
+        record_event(&handle_a, &stores_a_entity, &stores_a_event, peer_a, update).await;
     }
     tokio::time::sleep(Duration::from_millis(150)).await;
 
@@ -532,12 +569,14 @@ async fn discovery_triggers_auto_sync() {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_millis(100),
         auto_sync: true,
+        max_entities_per_sync: 0,
     };
     // B: just needs to be running to respond
     let config_b = OrchestratorConfig {
         sync_interval: Duration::from_secs(3600),
         discovery_interval: Duration::from_secs(3600),
         auto_sync: false,
+        max_entities_per_sync: 0,
     };
 
     let (handle_a, mut events_a, cmd_rx_a, orch_a) =
@@ -557,7 +596,7 @@ async fn discovery_triggers_auto_sync() {
             json_data: r#"{"title":"auto-sync test"}"#.to_string(),
         },
     );
-    handle_a.record_event(event).await.unwrap();
+    record_event(&handle_a, &stores_a_entity, &stores_a_event, peer_a, event).await;
 
     // Enable peer reporting on A's transport so discovery finds B
     {

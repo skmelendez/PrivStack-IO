@@ -393,14 +393,20 @@ impl SyncOrchestrator {
                 })
                 .await;
 
-            // Track as known so we don't re-emit PeerDiscovered every tick.
-            // periodic_sync will still sync with this peer once entities are shared.
-            self.synced_peers.insert(peer.peer_id);
-
             if self.config.auto_sync && !self.shared_entities.is_empty() {
+                // Mark as synced so we don't re-emit PeerDiscovered or re-sync every tick.
+                self.synced_peers.insert(peer.peer_id);
                 let peer_id = peer.peer_id;
                 self.sync_with_peer(transport, peer_id).await;
                 return;
+            }
+
+            // No auto_sync or no entities yet — track as known so periodic_sync
+            // picks up this peer once entities are shared.
+            // Don't add to synced_peers yet: if auto_sync is enabled, we want
+            // to re-check on the next discovery tick once entities exist.
+            if !self.config.auto_sync {
+                self.synced_peers.insert(peer.peer_id);
             }
         }
     }
@@ -724,6 +730,13 @@ impl SyncOrchestrator {
                         _ => {}
                     }
 
+                    // Invalidate sync ledger so this event propagates to other peers.
+                    let entity_store = self.entity_store.clone();
+                    let eid_str = event.entity_id.to_string();
+                    let _ = tokio::task::spawn_blocking(move || {
+                        entity_store.invalidate_sync_ledger_for_entity(&eid_str)
+                    }).await;
+
                     let _ = self.event_tx.send(SyncEvent::EntityUpdated {
                         entity_id: event.entity_id,
                     }).await;
@@ -780,9 +793,19 @@ impl SyncOrchestrator {
                     &self.event_store,
                 ).await;
 
-                for eid in updated_entities {
+                for eid in &updated_entities {
+                    // Invalidate sync ledger so received events propagate to other peers.
+                    // EventApplicator sets modified_at to the event's wall_time which may
+                    // be older than the sync ledger's synced_at, so explicit invalidation
+                    // is needed to ensure forwarding.
+                    let entity_store = self.entity_store.clone();
+                    let eid_str = eid.to_string();
+                    let _ = tokio::task::spawn_blocking(move || {
+                        entity_store.invalidate_sync_ledger_for_entity(&eid_str)
+                    }).await;
+
                     let _ = self.event_tx.send(SyncEvent::EntityUpdated {
-                        entity_id: eid,
+                        entity_id: *eid,
                     }).await;
                 }
 

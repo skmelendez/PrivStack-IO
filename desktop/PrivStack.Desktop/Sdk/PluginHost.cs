@@ -22,7 +22,8 @@ internal sealed class PluginHost : IPluginHost
         IPluginRegistry pluginRegistry,
         Services.Abstractions.IUiDispatcher dispatcher,
         IInfoPanelService infoPanelService,
-        IFocusModeService focusModeService)
+        IFocusModeService focusModeService,
+        IConnectionService? connectionService = null)
     {
         Sdk = sdk;
         Capabilities = capabilities;
@@ -32,6 +33,7 @@ internal sealed class PluginHost : IPluginHost
         DialogService = dialogService;
         InfoPanel = infoPanelService;
         FocusMode = focusModeService;
+        Connections = connectionService;
         Messenger = WeakReferenceMessenger.Default;
         AppVersion = typeof(PluginHost).Assembly.GetName().Version ?? new Version(1, 0, 0);
     }
@@ -44,8 +46,14 @@ internal sealed class PluginHost : IPluginHost
     public ISdkDialogService? DialogService { get; }
     public IInfoPanelService InfoPanel { get; }
     public IFocusModeService FocusMode { get; }
+    public IConnectionService? Connections { get; }
     public IMessenger Messenger { get; }
     public Version AppVersion { get; }
+
+    public string WorkspaceDataPath =>
+        Services.DataPaths.WorkspaceDataDir
+        ?? throw new InvalidOperationException(
+            "No active workspace. Plugins cannot access WorkspaceDataPath before workspace selection.");
 }
 
 /// <summary>

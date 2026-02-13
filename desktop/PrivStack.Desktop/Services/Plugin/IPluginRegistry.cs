@@ -87,6 +87,12 @@ public interface IPluginRegistry
     void Reinitialize();
 
     /// <summary>
+    /// Async version of Reinitialize that runs heavy plugin discovery/init
+    /// on a background thread to avoid freezing the UI during workspace switches.
+    /// </summary>
+    Task ReinitializeAsync();
+
+    /// <summary>
     /// Sets the main window ViewModel for cross-plugin navigation.
     /// </summary>
     void SetMainViewModel(MainWindowViewModel mainViewModel);
@@ -110,6 +116,16 @@ public interface IPluginRegistry
     /// Returns whether a plugin is currently enabled.
     /// </summary>
     bool IsPluginEnabled(string pluginId);
+
+    /// <summary>
+    /// Enables a plugin in the current workspace. Returns true if successful.
+    /// </summary>
+    bool EnablePlugin(string pluginId);
+
+    /// <summary>
+    /// Disables a plugin in the current workspace. Returns true if successful.
+    /// </summary>
+    bool DisablePlugin(string pluginId);
 
     /// <summary>
     /// Toggles a plugin's enabled state. Returns the new enabled state.
