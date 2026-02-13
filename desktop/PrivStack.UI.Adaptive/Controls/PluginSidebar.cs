@@ -10,6 +10,7 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.Controls.Primitives;
 using Avalonia.Media;
 
 namespace PrivStack.UI.Adaptive.Controls;
@@ -47,6 +48,9 @@ public sealed class PluginSidebar : Border
 
     public static readonly StyledProperty<object?> SidebarContentProperty =
         AvaloniaProperty.Register<PluginSidebar, object?>(nameof(SidebarContent));
+
+    public static readonly StyledProperty<bool> IsContentScrollableProperty =
+        AvaloniaProperty.Register<PluginSidebar, bool>(nameof(IsContentScrollable), true);
 
     public static readonly StyledProperty<object?> FooterContentProperty =
         AvaloniaProperty.Register<PluginSidebar, object?>(nameof(FooterContent));
@@ -105,6 +109,16 @@ public sealed class PluginSidebar : Border
         set => SetValue(SidebarContentProperty, value);
     }
 
+    /// <summary>
+    /// When true (default), SidebarContent is wrapped in a ScrollViewer.
+    /// Set to false for content that manages its own scrolling (ListBox, TreeView).
+    /// </summary>
+    public bool IsContentScrollable
+    {
+        get => GetValue(IsContentScrollableProperty);
+        set => SetValue(IsContentScrollableProperty, value);
+    }
+
     public object? FooterContent
     {
         get => GetValue(FooterContentProperty);
@@ -128,6 +142,7 @@ public sealed class PluginSidebar : Border
     private readonly ContentPresenter _contentPresenter;
     private readonly ContentPresenter _footerPresenter;
     private readonly ScrollViewer _scrollViewer;
+    private readonly Border _contentContainer;
 
     private bool _isResizing;
     private Point _resizeStart;
@@ -168,8 +183,10 @@ public sealed class PluginSidebar : Border
         _scrollViewer = new ScrollViewer
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = _contentPresenter,
         };
+
+        _contentContainer = new Border();
+        ApplyContentScrollMode();
 
         var innerPanel = new DockPanel { LastChildFill = true };
         DockPanel.SetDock(_collapseRow, Dock.Top);
@@ -178,7 +195,7 @@ public sealed class PluginSidebar : Border
         innerPanel.Children.Add(_footerPresenter);
         DockPanel.SetDock(_headerPresenter, Dock.Top);
         innerPanel.Children.Add(_headerPresenter);
-        innerPanel.Children.Add(_scrollViewer);
+        innerPanel.Children.Add(_contentContainer);
 
         _mainBorder = new Border
         {
@@ -270,6 +287,8 @@ public sealed class PluginSidebar : Border
             _contentPresenter.Content = change.GetNewValue<object?>();
         else if (change.Property == FooterContentProperty)
             _footerPresenter.Content = change.GetNewValue<object?>();
+        else if (change.Property == IsContentScrollableProperty)
+            ApplyContentScrollMode();
     }
 
     private void ApplyCollapsedState()
@@ -277,12 +296,28 @@ public sealed class PluginSidebar : Border
         var collapsed = IsCollapsed;
         Width = collapsed ? CollapsedWidth : ExpandedWidth;
         _headerPresenter.IsVisible = !collapsed;
-        _scrollViewer.IsVisible = !collapsed;
+        _contentContainer.IsVisible = !collapsed;
         _footerPresenter.IsVisible = !collapsed;
         UpdateResizeHandleVisibility();
         _chevronIcon.Data = StreamGeometry.Parse(collapsed ? ChevronRight : ChevronLeft);
         ToolTip.SetTip(_collapseButton,
             collapsed ? "Expand sidebar" : "Collapse sidebar");
+    }
+
+    private void ApplyContentScrollMode()
+    {
+        _scrollViewer.Content = null;
+        _contentContainer.Child = null;
+
+        if (IsContentScrollable)
+        {
+            _scrollViewer.Content = _contentPresenter;
+            _contentContainer.Child = _scrollViewer;
+        }
+        else
+        {
+            _contentContainer.Child = _contentPresenter;
+        }
     }
 
     private void UpdateResizeHandleVisibility()
