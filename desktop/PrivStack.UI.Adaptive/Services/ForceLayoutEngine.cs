@@ -15,16 +15,16 @@ public sealed class PhysicsParameters
     public double LinkStrength { get; set; } = 0.25;
     public double CollisionStrength { get; set; } = 0.7;
     public double CenterStrength { get; set; } = 0.03;
-    public double VelocityDecay { get; set; } = 0.55;
+    public double VelocityDecay { get; set; } = 0.6;
     public double MinSeparation { get; set; } = 60.0;
     public double Alpha { get; set; } = 1.0;
     public double AlphaMin { get; set; } = 0.001;
-    public double AlphaDecay { get; set; } = 0.028;
+    public double AlphaDecay { get; set; } = 0.04;
 }
 
 public sealed class ForceLayoutEngine
 {
-    private const double MaxVelocity = 40.0;
+    private const double MaxVelocity = 25.0;
 
     private readonly PhysicsParameters _params;
     private GraphData? _graphData;
