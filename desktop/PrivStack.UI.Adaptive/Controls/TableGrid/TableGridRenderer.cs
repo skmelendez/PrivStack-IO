@@ -2,36 +2,57 @@
 // File: TableGridRenderer.cs
 // Description: Grid layout engine for the TableGrid control. Builds column/row
 //              definitions, places cells into the Avalonia Grid, and renders
-//              title/description rows.
+//              title/description rows. Supports both read-only and editable modes,
+//              drag handles, and context menus.
 // ============================================================================
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using PrivStack.UI.Adaptive.Models;
 
 namespace PrivStack.UI.Adaptive.Controls;
 
+internal sealed record TableGridRenderResult
+{
+    public int DataRowCount { get; init; }
+    public int TotalDisplayRows { get; init; }
+}
+
 internal static class TableGridRenderer
 {
-    public static void RenderGrid(
+    public static TableGridRenderResult RenderGrid(
         Grid grid, TableGridData data, TablePagingInfo paging,
         TableGridSortState sortState, bool supportsSorting,
+        bool isEditable, bool isReadOnly,
+        bool supportsRowReorder, bool supportsColumnReorder,
+        bool supportsStructureEditing,
+        ITableGridDataSource? source,
         Action<int> onHeaderClick,
-        Action<int, Avalonia.Input.PointerPressedEventArgs> onResizePressed,
-        Action<Avalonia.Input.PointerEventArgs> onResizeMoved,
-        Action<Avalonia.Input.PointerReleasedEventArgs> onResizeReleased,
+        Action<int, PointerPressedEventArgs> onResizePressed,
+        Action<PointerEventArgs> onResizeMoved,
+        Action<PointerReleasedEventArgs> onResizeReleased,
+        TableGridCellNavigation? cellNavigation,
+        Action<string, int, string>? onCellEdited,
+        TableGridRowDrag? rowDrag,
+        TableGridColumnDrag? columnDrag,
+        Action? rebuild,
         Control themeSource)
     {
         grid.ColumnDefinitions.Clear();
         grid.RowDefinitions.Clear();
         grid.Children.Clear();
+        cellNavigation?.Clear();
 
         var colCount = data.Columns.Count;
-        if (colCount == 0) return;
+        if (colCount == 0) return new TableGridRenderResult();
 
-        // Column 0: hidden 0-width (no drag handle for read-only)
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0, GridUnitType.Pixel)));
+        var showDragHandles = supportsRowReorder && !isReadOnly;
+
+        // Column 0: drag handle column (20px when active, 0px when hidden)
+        grid.ColumnDefinitions.Add(new ColumnDefinition(
+            new Avalonia.Controls.GridLength(showDragHandles ? 20 : 0, GridUnitType.Pixel)));
 
         // Build header and data cell lists for auto-fit
         var headerCells = new List<string>(colCount);
@@ -48,26 +69,30 @@ internal static class TableGridRenderer
         for (var c = 0; c < colCount; c++)
         {
             grid.ColumnDefinitions.Add(new ColumnDefinition(
-                new GridLength(widths[c], GridUnitType.Pixel)));
+                new Avalonia.Controls.GridLength(widths[c], GridUnitType.Pixel)));
             if (c < colCount - 1)
-                grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(4, GridUnitType.Pixel)));
+                grid.ColumnDefinitions.Add(new ColumnDefinition(
+                    new Avalonia.Controls.GridLength(4, GridUnitType.Pixel)));
         }
 
-        // Count display rows: title + header rows + data rows + description
+        // Count display rows
         var hasTitle = !string.IsNullOrEmpty(data.Title);
         var hasDescription = !string.IsNullOrEmpty(data.Description);
         var totalDisplayRows = (hasTitle ? 1 : 0) + data.HeaderRows.Count + data.DataRows.Count
                                + (hasDescription ? 1 : 0);
         for (var r = 0; r < totalDisplayRows; r++)
-            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(Avalonia.Controls.GridLength.Auto));
 
         var gridRow = 0;
         var contentSpan = Math.Max(1, grid.ColumnDefinitions.Count - 1);
 
-        // Build alignment list from column definitions
+        // Build alignment list
         var alignments = new List<TableColumnAlignment>(colCount);
         foreach (var col in data.Columns)
             alignments.Add(col.Alignment);
+
+        if (cellNavigation != null)
+            cellNavigation.ColumnCount = colCount;
 
         // Title row
         if (hasTitle)
@@ -89,6 +114,15 @@ internal static class TableGridRenderer
         // Header rows
         foreach (var headerRow in data.HeaderRows)
         {
+            if (showDragHandles && rowDrag != null)
+            {
+                // Empty drag handle placeholder for header rows
+                var placeholder = new Border { Width = 20 };
+                Grid.SetRow(placeholder, gridRow);
+                Grid.SetColumn(placeholder, 0);
+                grid.Children.Add(placeholder);
+            }
+
             for (var c = 0; c < colCount; c++)
             {
                 var text = c < headerRow.Cells.Count ? headerRow.Cells[c] : "";
@@ -97,11 +131,39 @@ internal static class TableGridRenderer
 
                 var cell = TableGridCellFactory.CreateReadOnlyCell(text, true, c, alignments, themeSource);
 
-                if (supportsSorting)
+                if (supportsSorting && columnDrag == null)
                 {
                     var colIdx = c;
                     cell.PointerPressed += (_, _) => onHeaderClick(colIdx);
-                    cell.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
+                    cell.Cursor = new Cursor(StandardCursorType.Hand);
+                }
+
+                if (supportsColumnReorder && !isReadOnly && columnDrag != null)
+                {
+                    columnDrag.AttachToHeader(cell, c, themeSource, onHeaderClick);
+                    cell.Cursor = new Cursor(StandardCursorType.Hand);
+                }
+                else if (supportsSorting && columnDrag != null)
+                {
+                    // Sort-only header click when column reorder not supported
+                    var colIdx = c;
+                    cell.PointerPressed += (_, _) => onHeaderClick(colIdx);
+                    cell.Cursor = new Cursor(StandardCursorType.Hand);
+                }
+
+                // Context menu on header for structure editing
+                if (supportsStructureEditing && !isReadOnly && source != null && rebuild != null)
+                {
+                    var colIdx = c;
+                    cell.PointerPressed += (s, e) =>
+                    {
+                        if (e.GetCurrentPoint(cell).Properties.IsRightButtonPressed)
+                        {
+                            var menu = TableGridContextMenu.BuildColumnContextMenu(colIdx, source, rebuild);
+                            menu.Open(cell);
+                            e.Handled = true;
+                        }
+                    };
                 }
 
                 Grid.SetRow(cell, gridRow);
@@ -115,12 +177,53 @@ internal static class TableGridRenderer
         }
 
         // Data rows
-        foreach (var dataRow in data.DataRows)
+        var dataRowStartGridRow = gridRow;
+        for (var dataIdx = 0; dataIdx < data.DataRows.Count; dataIdx++)
         {
+            var dataRow = data.DataRows[dataIdx];
+
+            // Drag handle
+            if (showDragHandles && rowDrag != null)
+            {
+                var handle = rowDrag.CreateDragHandle(dataIdx);
+                Grid.SetRow(handle, gridRow);
+                Grid.SetColumn(handle, 0);
+                grid.Children.Add(handle);
+            }
+
             for (var c = 0; c < colCount; c++)
             {
                 var text = c < dataRow.Cells.Count ? dataRow.Cells[c] : "";
-                var cell = TableGridCellFactory.CreateReadOnlyCell(text, false, c, alignments, themeSource);
+
+                Control cell;
+                if (isEditable && !isReadOnly && onCellEdited != null && cellNavigation != null)
+                {
+                    var (editCell, textBox) = TableGridCellFactory.CreateEditableCell(
+                        text, false, dataRow.Id, c, alignments,
+                        onCellEdited, cellNavigation, gridRow - dataRowStartGridRow,
+                        themeSource);
+                    cell = editCell;
+                    cellNavigation.Register(gridRow - dataRowStartGridRow, c, textBox);
+
+                    // Context menu on editable data cells
+                    if (supportsStructureEditing && source != null && rebuild != null)
+                    {
+                        editCell.PointerPressed += (s, e) =>
+                        {
+                            if (e.GetCurrentPoint(editCell).Properties.IsRightButtonPressed)
+                            {
+                                var menu = TableGridContextMenu.BuildRowContextMenu(dataIdx, source, rebuild);
+                                menu.Open(editCell);
+                                e.Handled = true;
+                            }
+                        };
+                    }
+                }
+                else
+                {
+                    cell = TableGridCellFactory.CreateReadOnlyCell(text, false, c, alignments, themeSource);
+                }
+
                 Grid.SetRow(cell, gridRow);
                 Grid.SetColumn(cell, c * 2 + 1);
                 grid.Children.Add(cell);
@@ -146,6 +249,12 @@ internal static class TableGridRenderer
             Grid.SetColumnSpan(descBlock, contentSpan);
             grid.Children.Add(descBlock);
         }
+
+        return new TableGridRenderResult
+        {
+            DataRowCount = data.DataRows.Count,
+            TotalDisplayRows = totalDisplayRows
+        };
     }
 
     private static double[] ComputeWidths(
@@ -153,7 +262,6 @@ internal static class TableGridRenderer
         List<string> headerCells, List<IReadOnlyList<string>> dataRows,
         int colCount, Control themeSource)
     {
-        // Use explicit pixel widths if all columns have them
         var hasExplicitWidths = columns.All(c => c.PixelWidth is >= 10);
         if (hasExplicitWidths)
         {
@@ -168,9 +276,9 @@ internal static class TableGridRenderer
 
     private static void AddResizeGrip(
         Grid grid, int c, int colCount, int gridRow,
-        Action<int, Avalonia.Input.PointerPressedEventArgs> onPressed,
-        Action<Avalonia.Input.PointerEventArgs> onMoved,
-        Action<Avalonia.Input.PointerReleasedEventArgs> onReleased)
+        Action<int, PointerPressedEventArgs> onPressed,
+        Action<PointerEventArgs> onMoved,
+        Action<PointerReleasedEventArgs> onReleased)
     {
         if (c >= colCount - 1) return;
 
