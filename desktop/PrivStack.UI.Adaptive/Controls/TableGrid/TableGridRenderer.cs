@@ -238,8 +238,9 @@ internal static class TableGridRenderer
                     var hasHeader = data.HeaderRows.Count > 0;
                     var ctxMenu = TableGridContextMenu.BuildCellContextMenu(
                         capturedRow, capturedCol, hasHeader,
-                        supportsStructureEditing, frozenRowCount,
-                        source, rebuild, onFreezeRows);
+                        supportsStructureEditing,
+                        frozenColumnCount, frozenRowCount,
+                        source, rebuild, onFreezeColumns, onFreezeRows);
                     cell.ContextMenu = ctxMenu;
 
                     // Also set on inner TextBox for editable cells

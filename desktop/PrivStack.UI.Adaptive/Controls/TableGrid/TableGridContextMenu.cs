@@ -19,8 +19,9 @@ internal static class TableGridContextMenu
     public static ContextMenu BuildCellContextMenu(
         int rowIndex, int colIndex, bool hasHeaderRow,
         bool supportsStructureEditing,
-        int frozenRowCount,
+        int frozenColumnCount, int frozenRowCount,
         ITableGridDataSource source, Action rebuild,
+        Action<int>? onFreezeColumns = null,
         Action<int>? onFreezeRows = null)
     {
         var menu = new ContextMenu();
@@ -89,6 +90,31 @@ internal static class TableGridContextMenu
 
             menu.Items.Add(colMenu);
             menu.Items.Add(new Separator());
+        }
+
+        // ── Freeze columns ─────────────────────────────────────────
+        if (frozenColumnCount > 0)
+        {
+            var unfreezeCol = new MenuItem { Header = "Unfreeze Columns" };
+            unfreezeCol.Click += async (_, _) =>
+            {
+                await source.OnFreezeColumnsAsync(0);
+                onFreezeColumns?.Invoke(0);
+                rebuild();
+            };
+            menu.Items.Add(unfreezeCol);
+        }
+        else
+        {
+            var freezeCol = new MenuItem { Header = "Freeze From Here" };
+            freezeCol.Click += async (_, _) =>
+            {
+                var count = colIndex + 1;
+                await source.OnFreezeColumnsAsync(count);
+                onFreezeColumns?.Invoke(count);
+                rebuild();
+            };
+            menu.Items.Add(freezeCol);
         }
 
         // ── Freeze row ─────────────────────────────────────────────
