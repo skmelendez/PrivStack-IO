@@ -80,9 +80,8 @@ internal static class TableGridRenderer
         }
 
         // Count display rows
-        var hasTitle = !string.IsNullOrEmpty(data.Title);
         var hasDescription = !string.IsNullOrEmpty(data.Description);
-        var totalDisplayRows = (hasTitle ? 1 : 0) + data.HeaderRows.Count + data.DataRows.Count
+        var totalDisplayRows = data.HeaderRows.Count + data.DataRows.Count
                                + (hasDescription ? 1 : 0);
         for (var r = 0; r < totalDisplayRows; r++)
             grid.RowDefinitions.Add(new RowDefinition(Avalonia.Controls.GridLength.Auto));
@@ -97,23 +96,6 @@ internal static class TableGridRenderer
 
         if (cellNavigation != null)
             cellNavigation.ColumnCount = colCount;
-
-        // Title row
-        if (hasTitle)
-        {
-            var titleBlock = new TextBlock
-            {
-                Text = data.Title,
-                FontWeight = FontWeight.SemiBold,
-                FontSize = 14,
-                Margin = new Thickness(4, 4, 4, 8),
-            };
-            Grid.SetRow(titleBlock, gridRow);
-            Grid.SetColumn(titleBlock, 1);
-            Grid.SetColumnSpan(titleBlock, contentSpan);
-            grid.Children.Add(titleBlock);
-            gridRow++;
-        }
 
         var headerGridRow = gridRow;
 
