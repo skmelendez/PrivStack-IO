@@ -27,7 +27,7 @@
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Margin" Value="8,2"/>
+            <Setter Property="Margin" Value="12,2"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
@@ -58,6 +58,10 @@
         <Style Selector="Button.nav-item.active">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextHoverBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="3,0,0,0"/>
+            <Setter Property="CornerRadius" Value="0,6,6,0"/>
+            <Setter Property="Padding" Value="9,10,12,10"/>
         </Style>
         <Style Selector="Button.nav-item.active /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
@@ -86,7 +90,12 @@
         <Style Selector="Button.nav-item TextBlock.nav-label">
             <Setter Property="Margin" Value="12,0,0,0"/>
             <Setter Property="FontSize" Value="{DynamicResource ThemeFontSizeSmMd}"/>
+            <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style Selector="Button.nav-item.active TextBlock.nav-label">
+            <Setter Property="FontWeight" Value="Medium"/>
         </Style>
 
         <!-- Collapsed mode - icon only button (matches expanded sizing) -->
@@ -94,7 +103,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextBrush}"/>
             <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Margin" Value="8,2"/>
+            <Setter Property="Margin" Value="12,2"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -123,6 +132,10 @@
 
         <Style Selector="Button.nav-item-collapsed.active">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="3,0,0,0"/>
+            <Setter Property="CornerRadius" Value="0,6,6,0"/>
+            <Setter Property="Padding" Value="9,10,12,10"/>
         </Style>
         <Style Selector="Button.nav-item-collapsed.active /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>

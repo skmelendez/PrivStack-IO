@@ -98,7 +98,7 @@
 
     <Style Selector="Button.secondary:pointerover">
         <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeTextMutedBrush}"/>
     </Style>
 
     <!-- Subtle button - for icon buttons and minimal UI -->
@@ -263,34 +263,32 @@
         <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
     </Style>
 
-    <!-- Card style -->
+    <!-- Card: borderless, shadow-defined -->
     <Style Selector="Border.card">
-        <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusMd}"/>
-        <Setter Property="Padding" Value="{DynamicResource ThemePaddingMd}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BoxShadow" Value="0 1 3 0 #14000000, 0 1 2 -1 #14000000"/>
+        <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
+        <Setter Property="Padding" Value="20"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BoxShadow" Value="0 1 4 0 #0A000000, 0 1 2 0 #06000000"/>
     </Style>
 
-    <!-- Surface card (elevated) -->
+    <!-- Surface card: subtle border only -->
     <Style Selector="Border.surface-card">
         <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusMd}"/>
-        <Setter Property="Padding" Value="{DynamicResource ThemePaddingMd}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
+        <Setter Property="Padding" Value="20"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderSubtleBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BoxShadow" Value="0 2 6 0 #18000000, 0 1 3 -1 #14000000"/>
+        <Setter Property="BoxShadow" Value="0 2 8 0 #0C000000"/>
     </Style>
 
-    <!-- Elevated card (higher elevation) -->
+    <!-- Elevated card: no border, deeper shadow -->
     <Style Selector="Border.elevated-card">
         <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
         <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
-        <Setter Property="Padding" Value="{DynamicResource ThemePaddingMd}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderSubtleBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
+        <Setter Property="Padding" Value="24"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BoxShadow" Value="0 4 16 0 #14000000, 0 1 4 0 #0A000000"/>
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -317,6 +315,116 @@
 
     <Style Selector="Border.badge-info">
         <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- TYPOGRAPHY HIERARCHY STYLES                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Subheading: small uppercase muted label for section categories -->
+    <Style Selector="TextBlock.subheading">
+        <Setter Property="FontSize" Value="{DynamicResource ThemeFontSizeSubheading}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextMutedBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <!-- Page heading: large title for view headers -->
+    <Style Selector="TextBlock.page-heading">
+        <Setter Property="FontSize" Value="{DynamicResource ThemeFontSizeHeading1}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+    </Style>
+
+    <!-- Section heading: medium heading for card/section titles -->
+    <Style Selector="TextBlock.section-heading">
+        <Setter Property="FontSize" Value="{DynamicResource ThemeFontSizeHeading3}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <!-- Caption: small metadata text -->
+    <Style Selector="TextBlock.caption">
+        <Setter Property="FontSize" Value="{DynamicResource ThemeFontSizeCaption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextMutedBrush}"/>
+    </Style>
+
+    <!-- Display: hero numbers for dashboards -->
+    <Style Selector="TextBlock.display">
+        <Setter Property="FontSize" Value="{DynamicResource ThemeFontSizeDisplay}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- PROGRESSIVE DISCLOSURE STYLES                                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Row actions: hidden until parent hover -->
+    <Style Selector="StackPanel.row-actions">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.list-row:pointerover StackPanel.row-actions">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- BORDERLESS LIST ROW STYLES                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Plugin data row: card-per-row with gap instead of border separators -->
+    <Style Selector="Border.data-row">
+        <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusMd}"/>
+        <Setter Property="Padding" Value="16,14"/>
+        <Setter Property="Margin" Value="0,3"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.data-row:pointerover">
+        <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- MODAL STYLES                                                            -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <Style Selector="Border.modal">
+        <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusXl}"/>
+        <Setter Property="Padding" Value="32"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BoxShadow" Value="0 8 32 0 #28000000, 0 2 8 0 #14000000"/>
+        <Setter Property="MaxWidth" Value="560"/>
+    </Style>
+
+    <Style Selector="Border.modal-backdrop">
+        <Setter Property="Background" Value="#40000000"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- RECESSED PANEL STYLE                                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <Style Selector="Border.recessed-panel">
+        <Setter Property="Background" Value="{DynamicResource ThemeSurfaceRecessedBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="BorderThickness" Value="0"/>
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
