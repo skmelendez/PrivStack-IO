@@ -3,8 +3,8 @@
 // Description: Grid layout engine for the TableGrid control. Builds column/row
 //              definitions, places cells into the Avalonia Grid, and renders
 //              title/description rows. Supports read-only/editable modes,
-//              drag handles, context menus, striping, color themes, and insert
-//              indicators for hover-to-insert UX.
+//              drag handles, context menus, striping, color themes, insert
+//              indicators, and dual-grid freeze-pane layout.
 // ============================================================================
 
 using Avalonia;
@@ -46,23 +46,38 @@ internal static class TableGridRenderer
         int frozenColumnCount = 0,
         int frozenRowCount = 0,
         Action<int>? onFreezeColumns = null,
-        Action<int>? onFreezeRows = null)
+        Action<int>? onFreezeRows = null,
+        Grid? frozenGrid = null)
     {
         grid.ColumnDefinitions.Clear();
         grid.RowDefinitions.Clear();
         grid.Children.Clear();
         cellNavigation?.Clear();
 
+        var isDualGrid = frozenGrid != null && frozenColumnCount > 0;
+        if (isDualGrid)
+        {
+            frozenGrid!.ColumnDefinitions.Clear();
+            frozenGrid.RowDefinitions.Clear();
+            frozenGrid.Children.Clear();
+        }
+
         var colCount = data.Columns.Count;
         if (colCount == 0) return new TableGridRenderResult();
 
+        var effectiveFrozenCols = isDualGrid
+            ? Math.Min(frozenColumnCount, colCount) : 0;
         var showDragHandles = supportsRowReorder && !isReadOnly;
 
-        // Column 0: drag handle column (20px when active, 0px when hidden)
-        grid.ColumnDefinitions.Add(new ColumnDefinition(
-            new Avalonia.Controls.GridLength(showDragHandles ? 20 : 0, GridUnitType.Pixel)));
+        // Dual-grid targeting: resolves which grid and column index for a cell
+        Grid CellGrid(int c) => isDualGrid && c < effectiveFrozenCols
+            ? frozenGrid! : grid;
+        int CellCol(int c) => isDualGrid && c >= effectiveFrozenCols
+            ? (c - effectiveFrozenCols) * 2 + 1 : c * 2 + 1;
+        int GripCol(int c) => isDualGrid && c >= effectiveFrozenCols
+            ? (c - effectiveFrozenCols) * 2 + 2 : c * 2 + 2;
 
-        // Build header and data cell lists for auto-fit
+        // Build cell text lists for auto-fit width computation
         var headerCells = new List<string>(colCount);
         foreach (var col in data.Columns)
             headerCells.Add(col.Name);
@@ -71,27 +86,24 @@ internal static class TableGridRenderer
         foreach (var row in data.DataRows)
             dataRowCells.Add(row.Cells);
 
-        // Compute column widths
-        var widths = ComputeWidths(data.Columns, headerCells, dataRowCells, colCount, themeSource);
+        var widths = ComputeWidths(data.Columns, headerCells, dataRowCells,
+            colCount, themeSource);
 
-        for (var c = 0; c < colCount; c++)
-        {
-            grid.ColumnDefinitions.Add(new ColumnDefinition(
-                new Avalonia.Controls.GridLength(widths[c], GridUnitType.Pixel)));
-            // Grip column after every data column (including last) for resize
-            grid.ColumnDefinitions.Add(new ColumnDefinition(
-                new Avalonia.Controls.GridLength(4, GridUnitType.Pixel)));
-        }
+        SetupColumnDefinitions(grid, frozenGrid, isDualGrid, effectiveFrozenCols,
+            colCount, widths, showDragHandles);
 
-        // Count display rows
+        // Row definitions — both grids share the same count
         var hasDescription = !string.IsNullOrEmpty(data.Description);
         var totalDisplayRows = data.HeaderRows.Count + data.DataRows.Count
                                + (hasDescription ? 1 : 0);
         for (var r = 0; r < totalDisplayRows; r++)
-            grid.RowDefinitions.Add(new RowDefinition(Avalonia.Controls.GridLength.Auto));
+        {
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            if (isDualGrid)
+                frozenGrid!.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        }
 
         var gridRow = 0;
-        var contentSpan = Math.Max(1, grid.ColumnDefinitions.Count - 1);
 
         // Build alignment list
         var alignments = new List<TableColumnAlignment>(colCount);
@@ -101,179 +113,29 @@ internal static class TableGridRenderer
         if (cellNavigation != null)
             cellNavigation.ColumnCount = colCount;
 
-        var headerGridRow = gridRow;
-
         // Header rows
-        foreach (var headerRow in data.HeaderRows)
-        {
-            if (showDragHandles && rowDrag != null)
-            {
-                var placeholder = new Border { Width = 20 };
-                Grid.SetRow(placeholder, gridRow);
-                Grid.SetColumn(placeholder, 0);
-                grid.Children.Add(placeholder);
-            }
-
-            for (var c = 0; c < colCount; c++)
-            {
-                var text = c < headerRow.Cells.Count ? headerRow.Cells[c] : "";
-
-                Control cell;
-
-                // Editable headers for inline tables — click text to edit
-                if (isEditable && !isReadOnly && onCellEdited != null && cellNavigation != null)
-                {
-                    var (editCell, textBox) = TableGridCellFactory.CreateEditableCell(
-                        text, true, headerRow.Id, c, alignments,
-                        onCellEdited, cellNavigation, -1,
-                        themeSource, isStriped, 0, colorTheme);
-                    cell = editCell;
-                }
-                else
-                {
-                    cell = TableGridCellFactory.CreateReadOnlyCell(
-                        text, true, c, alignments, themeSource,
-                        isStriped, 0, colorTheme);
-                }
-
-                // Sort arrow — separate clickable indicator in the header cell
-                if (supportsSorting && cell is Border sortBorderCell)
-                    AddSortArrowToHeaderCell(sortBorderCell, c, sortState, onHeaderClick, themeSource);
-
-                // Column drag reorder (all tables)
-                if (columnDrag != null && cell is Border dragBorderCell)
-                {
-                    columnDrag.AttachToHeader(dragBorderCell, c, themeSource);
-                    cell.Cursor = new Cursor(StandardCursorType.Hand);
-                }
-
-                // Context menu on header cells
-                if (source != null && rebuild != null)
-                {
-                    var colIdx = c;
-                    var hasHeader = data.HeaderRows.Count > 0;
-                    var ctxMenu = TableGridContextMenu.BuildHeaderContextMenu(
-                        colIdx, hasHeader, supportsStructureEditing,
-                        frozenColumnCount, source, rebuild, onFreezeColumns);
-                    cell.ContextMenu = ctxMenu;
-
-                    // Also set on inner TextBox for editable headers
-                    if (cell is Border { Child: TextBox headerTb })
-                        headerTb.ContextMenu = ctxMenu;
-                }
-
-                // Frozen column boundary indicator on header
-                if (frozenColumnCount > 0 && c == frozenColumnCount - 1 && cell is Border freezeHeaderBorder)
-                {
-                    freezeHeaderBorder.BorderBrush = new SolidColorBrush(Color.Parse("#4090CAF9"));
-                    freezeHeaderBorder.BorderThickness = new Thickness(
-                        freezeHeaderBorder.BorderThickness.Left,
-                        freezeHeaderBorder.BorderThickness.Top,
-                        2,
-                        freezeHeaderBorder.BorderThickness.Bottom);
-                }
-
-                Grid.SetRow(cell, gridRow);
-                Grid.SetColumn(cell, c * 2 + 1);
-                grid.Children.Add(cell);
-
-                AddResizeGrip(grid, c, colCount, gridRow,
-                    onResizePressed, onResizeMoved, onResizeReleased);
-            }
-            gridRow++;
-        }
+        gridRow = RenderHeaderRows(grid, frozenGrid, isDualGrid, effectiveFrozenCols,
+            data, gridRow, colCount, showDragHandles,
+            isEditable, isReadOnly, supportsSorting, supportsStructureEditing,
+            source, sortState, alignments,
+            onHeaderClick, onResizePressed, onResizeMoved, onResizeReleased,
+            cellNavigation, onCellEdited, rowDrag, columnDrag,
+            rebuild, themeSource, isStriped, colorTheme,
+            frozenColumnCount, onFreezeColumns,
+            CellGrid, CellCol, GripCol);
 
         // Data rows
         var dataRowStartGridRow = gridRow;
-        for (var dataIdx = 0; dataIdx < data.DataRows.Count; dataIdx++)
-        {
-            var dataRow = data.DataRows[dataIdx];
-
-            // Drag handle
-            if (showDragHandles && rowDrag != null)
-            {
-                var handle = rowDrag.CreateDragHandle(dataIdx);
-                Grid.SetRow(handle, gridRow);
-                Grid.SetColumn(handle, 0);
-                grid.Children.Add(handle);
-            }
-
-            for (var c = 0; c < colCount; c++)
-            {
-                var text = c < dataRow.Cells.Count ? dataRow.Cells[c] : "";
-
-                Control cell;
-                if (isEditable && !isReadOnly && onCellEdited != null && cellNavigation != null)
-                {
-                    var (editCell, textBox) = TableGridCellFactory.CreateEditableCell(
-                        text, false, dataRow.Id, c, alignments,
-                        onCellEdited, cellNavigation, gridRow - dataRowStartGridRow,
-                        themeSource, isStriped, dataIdx, colorTheme);
-                    cell = editCell;
-                    cellNavigation.Register(gridRow - dataRowStartGridRow, c, textBox);
-                }
-                else
-                {
-                    cell = TableGridCellFactory.CreateReadOnlyCell(
-                        text, false, c, alignments, themeSource,
-                        isStriped, dataIdx, colorTheme);
-                }
-
-                // Frozen column boundary indicator on data cells
-                if (frozenColumnCount > 0 && c == frozenColumnCount - 1 && cell is Border freezeDataBorder)
-                {
-                    freezeDataBorder.BorderBrush = new SolidColorBrush(Color.Parse("#4090CAF9"));
-                    freezeDataBorder.BorderThickness = new Thickness(
-                        freezeDataBorder.BorderThickness.Left,
-                        freezeDataBorder.BorderThickness.Top,
-                        2,
-                        freezeDataBorder.BorderThickness.Bottom);
-                }
-
-                // Context menu on all data cells (Row + Column submenus)
-                if (source != null && rebuild != null)
-                {
-                    var capturedRow = dataIdx;
-                    var capturedCol = c;
-                    var hasHeader = data.HeaderRows.Count > 0;
-                    var ctxMenu = TableGridContextMenu.BuildCellContextMenu(
-                        capturedRow, capturedCol, hasHeader,
-                        supportsStructureEditing,
-                        frozenColumnCount, frozenRowCount,
-                        source, rebuild, onFreezeColumns, onFreezeRows);
-                    cell.ContextMenu = ctxMenu;
-
-                    // Also set on inner TextBox for editable cells
-                    if (cell is Border { Child: TextBox cellTb })
-                        cellTb.ContextMenu = ctxMenu;
-                }
-
-                Grid.SetRow(cell, gridRow);
-                Grid.SetColumn(cell, c * 2 + 1);
-                grid.Children.Add(cell);
-
-                AddResizeGrip(grid, c, colCount, gridRow,
-                    onResizePressed, onResizeMoved, onResizeReleased);
-            }
-
-            // Frozen row boundary indicator
-            if (frozenRowCount > 0 && dataIdx == frozenRowCount - 1)
-            {
-                var freezeLine = new Border
-                {
-                    Height = 2,
-                    Background = new SolidColorBrush(Color.Parse("#4090CAF9")),
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
-                    IsHitTestVisible = false
-                };
-                Grid.SetRow(freezeLine, gridRow);
-                Grid.SetColumn(freezeLine, 1);
-                Grid.SetColumnSpan(freezeLine, Math.Max(1, grid.ColumnDefinitions.Count - 1));
-                grid.Children.Add(freezeLine);
-            }
-
-            gridRow++;
-        }
+        gridRow = RenderDataRows(grid, frozenGrid, isDualGrid, effectiveFrozenCols,
+            data, gridRow, colCount, showDragHandles,
+            isEditable, isReadOnly, supportsStructureEditing,
+            source, alignments,
+            onResizePressed, onResizeMoved, onResizeReleased,
+            cellNavigation, onCellEdited, rowDrag,
+            rebuild, themeSource, isStriped, colorTheme,
+            frozenColumnCount, frozenRowCount,
+            onFreezeColumns, onFreezeRows,
+            CellGrid, CellCol, GripCol, dataRowStartGridRow);
 
         // Description row
         if (hasDescription)
@@ -286,8 +148,9 @@ internal static class TableGridRenderer
                 Margin = new Thickness(4, 8, 4, 4),
             };
             Grid.SetRow(descBlock, gridRow);
-            Grid.SetColumn(descBlock, 1);
-            Grid.SetColumnSpan(descBlock, contentSpan);
+            Grid.SetColumn(descBlock, isDualGrid ? 0 : 1);
+            Grid.SetColumnSpan(descBlock,
+                Math.Max(1, grid.ColumnDefinitions.Count));
             grid.Children.Add(descBlock);
         }
 
@@ -297,6 +160,263 @@ internal static class TableGridRenderer
             TotalDisplayRows = totalDisplayRows,
             DataRowStartGridRow = dataRowStartGridRow
         };
+    }
+
+    private static void SetupColumnDefinitions(
+        Grid grid, Grid? frozenGrid, bool isDualGrid,
+        int effectiveFrozenCols, int colCount,
+        double[] widths, bool showDragHandles)
+    {
+        if (isDualGrid)
+        {
+            // Frozen grid: drag handle + frozen columns + grips
+            frozenGrid!.ColumnDefinitions.Add(new ColumnDefinition(
+                new GridLength(showDragHandles ? 20 : 0, GridUnitType.Pixel)));
+            for (var c = 0; c < effectiveFrozenCols; c++)
+            {
+                frozenGrid.ColumnDefinitions.Add(new ColumnDefinition(
+                    new GridLength(widths[c], GridUnitType.Pixel)));
+                frozenGrid.ColumnDefinitions.Add(new ColumnDefinition(
+                    new GridLength(4, GridUnitType.Pixel)));
+            }
+
+            // Scrollable grid: 0px placeholder + remaining columns + grips
+            grid.ColumnDefinitions.Add(new ColumnDefinition(
+                new GridLength(0, GridUnitType.Pixel)));
+            for (var c = effectiveFrozenCols; c < colCount; c++)
+            {
+                grid.ColumnDefinitions.Add(new ColumnDefinition(
+                    new GridLength(widths[c], GridUnitType.Pixel)));
+                grid.ColumnDefinitions.Add(new ColumnDefinition(
+                    new GridLength(4, GridUnitType.Pixel)));
+            }
+        }
+        else
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition(
+                new GridLength(showDragHandles ? 20 : 0, GridUnitType.Pixel)));
+            for (var c = 0; c < colCount; c++)
+            {
+                grid.ColumnDefinitions.Add(new ColumnDefinition(
+                    new GridLength(widths[c], GridUnitType.Pixel)));
+                grid.ColumnDefinitions.Add(new ColumnDefinition(
+                    new GridLength(4, GridUnitType.Pixel)));
+            }
+        }
+    }
+
+    private static int RenderHeaderRows(
+        Grid grid, Grid? frozenGrid, bool isDualGrid, int effectiveFrozenCols,
+        TableGridData data, int gridRow, int colCount,
+        bool showDragHandles,
+        bool isEditable, bool isReadOnly,
+        bool supportsSorting, bool supportsStructureEditing,
+        ITableGridDataSource? source,
+        TableGridSortState sortState,
+        List<TableColumnAlignment> alignments,
+        Action<int> onHeaderClick,
+        Action<int, PointerPressedEventArgs> onResizePressed,
+        Action<PointerEventArgs> onResizeMoved,
+        Action<PointerReleasedEventArgs> onResizeReleased,
+        TableGridCellNavigation? cellNavigation,
+        Action<string, int, string>? onCellEdited,
+        TableGridRowDrag? rowDrag,
+        TableGridColumnDrag? columnDrag,
+        Action? rebuild, Control themeSource,
+        bool isStriped, string? colorTheme,
+        int frozenColumnCount, Action<int>? onFreezeColumns,
+        Func<int, Grid> cellGrid, Func<int, int> cellCol, Func<int, int> gripCol)
+    {
+        foreach (var headerRow in data.HeaderRows)
+        {
+            if (showDragHandles && rowDrag != null)
+            {
+                var placeholder = new Border { Width = 20 };
+                Grid.SetRow(placeholder, gridRow);
+                Grid.SetColumn(placeholder, 0);
+                var handleGrid = isDualGrid ? frozenGrid! : grid;
+                handleGrid.Children.Add(placeholder);
+            }
+
+            for (var c = 0; c < colCount; c++)
+            {
+                var text = c < headerRow.Cells.Count ? headerRow.Cells[c] : "";
+
+                Control cell;
+                if (isEditable && !isReadOnly && onCellEdited != null
+                    && cellNavigation != null)
+                {
+                    var (editCell, _) = TableGridCellFactory.CreateEditableCell(
+                        text, true, headerRow.Id, c, alignments,
+                        onCellEdited, cellNavigation, -1,
+                        themeSource, isStriped, 0, colorTheme);
+                    cell = editCell;
+                }
+                else
+                {
+                    cell = TableGridCellFactory.CreateReadOnlyCell(
+                        text, true, c, alignments, themeSource,
+                        isStriped, 0, colorTheme);
+                }
+
+                if (supportsSorting && cell is Border sortBorder)
+                    AddSortArrowToHeaderCell(sortBorder, c, sortState,
+                        onHeaderClick, themeSource);
+
+                // Column drag reorder (skip frozen columns in dual-grid)
+                if (columnDrag != null && cell is Border dragBorder
+                    && !(isDualGrid && c < effectiveFrozenCols))
+                {
+                    columnDrag.AttachToHeader(dragBorder, c, themeSource);
+                    cell.Cursor = new Cursor(StandardCursorType.Hand);
+                }
+
+                if (source != null && rebuild != null)
+                {
+                    var colIdx = c;
+                    var hasHeader = data.HeaderRows.Count > 0;
+                    var ctxMenu = TableGridContextMenu.BuildHeaderContextMenu(
+                        colIdx, hasHeader, supportsStructureEditing,
+                        frozenColumnCount, source, rebuild, onFreezeColumns);
+                    cell.ContextMenu = ctxMenu;
+                    if (cell is Border { Child: TextBox headerTb })
+                        headerTb.ContextMenu = ctxMenu;
+                }
+
+                // Frozen column boundary indicator (single-grid only)
+                if (!isDualGrid && frozenColumnCount > 0
+                    && c == frozenColumnCount - 1
+                    && cell is Border freezeBorder)
+                {
+                    freezeBorder.BorderBrush =
+                        new SolidColorBrush(Color.Parse("#4090CAF9"));
+                    freezeBorder.BorderThickness = new Thickness(
+                        freezeBorder.BorderThickness.Left,
+                        freezeBorder.BorderThickness.Top,
+                        2,
+                        freezeBorder.BorderThickness.Bottom);
+                }
+
+                var tg = cellGrid(c);
+                Grid.SetRow(cell, gridRow);
+                Grid.SetColumn(cell, cellCol(c));
+                tg.Children.Add(cell);
+
+                AddResizeGrip(cellGrid(c), c, gripCol(c), gridRow,
+                    onResizePressed, onResizeMoved, onResizeReleased);
+            }
+            gridRow++;
+        }
+        return gridRow;
+    }
+
+    private static int RenderDataRows(
+        Grid grid, Grid? frozenGrid, bool isDualGrid, int effectiveFrozenCols,
+        TableGridData data, int gridRow, int colCount,
+        bool showDragHandles,
+        bool isEditable, bool isReadOnly,
+        bool supportsStructureEditing,
+        ITableGridDataSource? source,
+        List<TableColumnAlignment> alignments,
+        Action<int, PointerPressedEventArgs> onResizePressed,
+        Action<PointerEventArgs> onResizeMoved,
+        Action<PointerReleasedEventArgs> onResizeReleased,
+        TableGridCellNavigation? cellNavigation,
+        Action<string, int, string>? onCellEdited,
+        TableGridRowDrag? rowDrag,
+        Action? rebuild, Control themeSource,
+        bool isStriped, string? colorTheme,
+        int frozenColumnCount, int frozenRowCount,
+        Action<int>? onFreezeColumns, Action<int>? onFreezeRows,
+        Func<int, Grid> cellGrid, Func<int, int> cellCol, Func<int, int> gripCol,
+        int dataRowStartGridRow)
+    {
+        for (var dataIdx = 0; dataIdx < data.DataRows.Count; dataIdx++)
+        {
+            var dataRow = data.DataRows[dataIdx];
+
+            if (showDragHandles && rowDrag != null)
+            {
+                var handle = rowDrag.CreateDragHandle(dataIdx);
+                Grid.SetRow(handle, gridRow);
+                Grid.SetColumn(handle, 0);
+                var handleGrid = isDualGrid ? frozenGrid! : grid;
+                handleGrid.Children.Add(handle);
+            }
+
+            for (var c = 0; c < colCount; c++)
+            {
+                var text = c < dataRow.Cells.Count ? dataRow.Cells[c] : "";
+
+                Control cell;
+                if (isEditable && !isReadOnly && onCellEdited != null
+                    && cellNavigation != null)
+                {
+                    var (editCell, textBox) = TableGridCellFactory.CreateEditableCell(
+                        text, false, dataRow.Id, c, alignments,
+                        onCellEdited, cellNavigation,
+                        gridRow - dataRowStartGridRow,
+                        themeSource, isStriped, dataIdx, colorTheme);
+                    cell = editCell;
+                    cellNavigation.Register(
+                        gridRow - dataRowStartGridRow, c, textBox);
+                }
+                else
+                {
+                    cell = TableGridCellFactory.CreateReadOnlyCell(
+                        text, false, c, alignments, themeSource,
+                        isStriped, dataIdx, colorTheme);
+                }
+
+                // Frozen column boundary indicator (single-grid only)
+                if (!isDualGrid && frozenColumnCount > 0
+                    && c == frozenColumnCount - 1
+                    && cell is Border freezeDataBorder)
+                {
+                    freezeDataBorder.BorderBrush =
+                        new SolidColorBrush(Color.Parse("#4090CAF9"));
+                    freezeDataBorder.BorderThickness = new Thickness(
+                        freezeDataBorder.BorderThickness.Left,
+                        freezeDataBorder.BorderThickness.Top,
+                        2,
+                        freezeDataBorder.BorderThickness.Bottom);
+                }
+
+                if (source != null && rebuild != null)
+                {
+                    var capturedRow = dataIdx;
+                    var capturedCol = c;
+                    var hasHeader = data.HeaderRows.Count > 0;
+                    var ctxMenu = TableGridContextMenu.BuildCellContextMenu(
+                        capturedRow, capturedCol, hasHeader,
+                        supportsStructureEditing,
+                        frozenColumnCount, frozenRowCount,
+                        source, rebuild, onFreezeColumns, onFreezeRows);
+                    cell.ContextMenu = ctxMenu;
+                    if (cell is Border { Child: TextBox cellTb })
+                        cellTb.ContextMenu = ctxMenu;
+                }
+
+                var tg = cellGrid(c);
+                Grid.SetRow(cell, gridRow);
+                Grid.SetColumn(cell, cellCol(c));
+                tg.Children.Add(cell);
+
+                AddResizeGrip(cellGrid(c), c, gripCol(c), gridRow,
+                    onResizePressed, onResizeMoved, onResizeReleased);
+            }
+
+            // Frozen row boundary indicator
+            if (frozenRowCount > 0 && dataIdx == frozenRowCount - 1)
+            {
+                AddFreezeRowLine(grid, gridRow);
+                if (isDualGrid)
+                    AddFreezeRowLine(frozenGrid!, gridRow);
+            }
+
+            gridRow++;
+        }
+        return gridRow;
     }
 
     private static double[] ComputeWidths(
@@ -313,7 +433,8 @@ internal static class TableGridRenderer
             return explicit_;
         }
 
-        return TableGridCellFactory.ComputeAutoFitWidths(headerCells, dataRows, colCount, themeSource);
+        return TableGridCellFactory.ComputeAutoFitWidths(
+            headerCells, dataRows, colCount, themeSource);
     }
 
     private static void AddSortArrowToHeaderCell(
@@ -335,7 +456,8 @@ internal static class TableGridRenderer
 
         var isActive = sortState.ColumnIndex == colIndex
                        && sortState.Direction != TableSortDirection.None;
-        var isAsc = isActive && sortState.Direction == TableSortDirection.Ascending;
+        var isAsc = isActive
+            && sortState.Direction == TableSortDirection.Ascending;
 
         var pathData = isAsc ? "M7 14l5-5 5 5" : "M7 10l5 5 5-5";
         var icon = new PathIcon
@@ -374,14 +496,31 @@ internal static class TableGridRenderer
     }
 
     private static void AddResizeGrip(
-        Grid grid, int c, int colCount, int gridRow,
+        Grid targetGrid, int originalColIndex, int targetColumn, int gridRow,
         Action<int, PointerPressedEventArgs> onPressed,
         Action<PointerEventArgs> onMoved,
         Action<PointerReleasedEventArgs> onReleased)
     {
-        var grip = TableGridCellFactory.CreateResizeGrip(c, onPressed, onMoved, onReleased);
+        var grip = TableGridCellFactory.CreateResizeGrip(
+            originalColIndex, onPressed, onMoved, onReleased);
         Grid.SetRow(grip, gridRow);
-        Grid.SetColumn(grip, c * 2 + 2);
-        grid.Children.Add(grip);
+        Grid.SetColumn(grip, targetColumn);
+        targetGrid.Children.Add(grip);
+    }
+
+    private static void AddFreezeRowLine(Grid targetGrid, int gridRow)
+    {
+        var freezeLine = new Border
+        {
+            Height = 2,
+            Background = new SolidColorBrush(Color.Parse("#4090CAF9")),
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
+            IsHitTestVisible = false
+        };
+        Grid.SetRow(freezeLine, gridRow);
+        Grid.SetColumn(freezeLine, 1);
+        Grid.SetColumnSpan(freezeLine,
+            Math.Max(1, targetGrid.ColumnDefinitions.Count - 1));
+        targetGrid.Children.Add(freezeLine);
     }
 }

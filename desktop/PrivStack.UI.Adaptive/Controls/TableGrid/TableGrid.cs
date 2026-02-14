@@ -5,7 +5,7 @@
 //              and renders via TableGridRenderer. Supports sorting, paging,
 //              column resize, editing, drag-drop reorder, context menus,
 //              filter bar, toolbar with options gear, striping, color themes,
-//              and export.
+//              column/row freeze panes, infinite scroll, and export.
 // ============================================================================
 
 using Avalonia;
@@ -162,6 +162,7 @@ public sealed class TableGrid : Border
 
     private readonly Grid _grid;
     private readonly ScrollViewer _scrollViewer;
+    private readonly Border _gridBorder;
     private readonly TableGridPagingBar _pagingBar;
     private readonly Border _errorBorder;
     private readonly TextBlock _errorText;
@@ -178,6 +179,7 @@ public sealed class TableGrid : Border
     private readonly TableGridInfiniteScroll _infiniteScroll;
     private int _lastDataRowCount;
     private int _lastDataRowStartGridRow;
+    private int _lastColCount;
 
     private int _currentPage;
     private int _rebuildVersion;
@@ -186,6 +188,11 @@ public sealed class TableGrid : Border
     {
         CurrentPage = 0, TotalPages = 1, TotalFilteredRows = 0, PageSize = 10
     };
+
+    // Freeze layout state
+    private TableGridFreezeLayout? _freezeLayout;
+    private TableGridColumnResize? _frozenResize;
+    private bool _resizeIsFrozen;
 
     /// <summary>
     /// Access the toolbar's additional menu items for plugin-specific entries.
@@ -228,9 +235,9 @@ public sealed class TableGrid : Border
         _pagingBar.NextPageRequested += OnNextPage;
 
         _columnResize = new TableGridColumnResize(
-            () => _grid,
-            () => _lastPaging.PageSize > 0 ? GetColumnCount() : 0,
-            OnColumnWidthsCommitted);
+            GetActiveGrid,
+            GetActiveScrollableColumnCount,
+            OnScrollableColumnWidthsCommitted);
 
         _cellNavigation = new TableGridCellNavigation();
         _cellNavigation.BoundaryEscapeRequested += dir => BoundaryEscapeRequested?.Invoke(dir);
@@ -276,13 +283,13 @@ public sealed class TableGrid : Border
         root.Children.Add(filterToolbarRow);
         root.Children.Add(_errorBorder);
 
-        var gridBorder = new Border
+        _gridBorder = new Border
         {
             CornerRadius = new CornerRadius(4),
             ClipToBounds = true,
             Child = _scrollViewer
         };
-        root.Children.Add(gridBorder);
+        root.Children.Add(_gridBorder);
         root.Children.Add(_captionBlock);
         root.Children.Add(_pagingBar);
 
@@ -435,7 +442,8 @@ public sealed class TableGrid : Border
                 if (ScrollMode == TableScrollMode.InfiniteScroll)
                 {
                     _infiniteScroll.Reset();
-                    _infiniteScroll.Configure(pageSize, paging.TotalFilteredRows, pageSize);
+                    _infiniteScroll.Configure(pageSize, paging.TotalFilteredRows,
+                        pageSize, FrozenRowCount);
                     _infiniteScroll.SetTemplate(data);
                     _infiniteScroll.CachePage(0, data.DataRows);
 
@@ -447,6 +455,7 @@ public sealed class TableGrid : Border
 
             _lastPaging = paging;
             _currentPage = paging.CurrentPage;
+            _lastColCount = data.Columns.Count;
 
             if (!string.IsNullOrEmpty(data.ErrorMessage))
             {
@@ -460,8 +469,26 @@ public sealed class TableGrid : Border
             var hasHeaderRow = data.HeaderRows.Count > 0 &&
                                data.HeaderRows.Any(r => r.IsHeader);
 
+            // Determine grid targets for freeze layout
+            var hasFreezeColumns = FrozenColumnCount > 0
+                && data.Columns.Count > FrozenColumnCount;
+            Grid renderGrid;
+            Grid? renderFrozenGrid = null;
+
+            if (hasFreezeColumns)
+            {
+                _freezeLayout ??= new TableGridFreezeLayout();
+                _freezeLayout.Clear();
+                renderGrid = _freezeLayout.ScrollableGrid;
+                renderFrozenGrid = _freezeLayout.FrozenGrid;
+            }
+            else
+            {
+                renderGrid = _grid;
+            }
+
             var result = TableGridRenderer.RenderGrid(
-                _grid, data, paging, _sortState,
+                renderGrid, data, paging, _sortState,
                 source.SupportsSorting,
                 source.IsEditable,
                 IsReadOnly,
@@ -470,9 +497,9 @@ public sealed class TableGrid : Border
                 source.SupportsStructureEditing,
                 source,
                 OnHeaderClick,
-                (col, e) => _columnResize.OnGripPressed(col, e, this),
-                e => _columnResize.OnGripMoved(e, this),
-                e => _columnResize.OnGripReleased(e),
+                OnResizeGripPressed,
+                OnResizeGripMoved,
+                OnResizeGripReleased,
                 source.IsEditable ? _cellNavigation : null,
                 source.IsEditable ? OnCellEdited : null,
                 source.SupportsRowReorder && !IsReadOnly ? _rowDrag : null,
@@ -484,10 +511,17 @@ public sealed class TableGrid : Border
                 FrozenColumnCount,
                 FrozenRowCount,
                 OnFreezeColumnsFromContextMenu,
-                OnFreezeRowsFromContextMenu);
+                OnFreezeRowsFromContextMenu,
+                renderFrozenGrid);
 
             _lastDataRowCount = result.DataRowCount;
             _lastDataRowStartGridRow = result.DataRowStartGridRow;
+
+            // Swap grid border child based on freeze state
+            if (hasFreezeColumns)
+                _gridBorder.Child = _freezeLayout!.Container;
+            else
+                _gridBorder.Child = _scrollViewer;
 
             var isInfiniteScroll = ScrollMode == TableScrollMode.InfiniteScroll;
             _pagingBar.Update(paging);
@@ -498,6 +532,11 @@ public sealed class TableGrid : Border
             _toolbar.IsVisible = ShowToolbar;
 
             _filterBar.IsVisible = ShowFilter;
+
+            // Attach infinite scroll to the correct container
+            if (isInfiniteScroll)
+                _infiniteScroll.Attach(hasFreezeColumns
+                    ? _freezeLayout!.Container : (Control)_scrollViewer);
         }
         catch (Exception ex)
         {
@@ -532,9 +571,6 @@ public sealed class TableGrid : Border
             Rebuild();
         }
     }
-
-    private void OnColumnWidthsCommitted(IReadOnlyList<double> widths) =>
-        DataSource?.OnColumnWidthsChanged(widths);
 
     private void OnCellEdited(string rowId, int columnIndex, string newValue)
     {
@@ -612,7 +648,110 @@ public sealed class TableGrid : Border
         FrozenRowCountCommitted?.Invoke(count);
     }
 
+    // ── Resize dispatch (routes to frozen or scrollable grid) ─────────────
+
+    private void OnResizeGripPressed(int colIndex, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        if (FrozenColumnCount > 0 && _freezeLayout != null && colIndex < FrozenColumnCount)
+        {
+            _resizeIsFrozen = true;
+            EnsureFrozenResize();
+            _frozenResize!.OnGripPressed(colIndex, e, this);
+        }
+        else
+        {
+            _resizeIsFrozen = false;
+            var adjustedCol = FrozenColumnCount > 0 && _freezeLayout != null
+                ? colIndex - FrozenColumnCount : colIndex;
+            _columnResize.OnGripPressed(adjustedCol, e, this);
+        }
+    }
+
+    private void OnResizeGripMoved(Avalonia.Input.PointerEventArgs e)
+    {
+        if (_resizeIsFrozen && _frozenResize != null)
+            _frozenResize.OnGripMoved(e, this);
+        else
+            _columnResize.OnGripMoved(e, this);
+    }
+
+    private void OnResizeGripReleased(Avalonia.Input.PointerReleasedEventArgs e)
+    {
+        if (_resizeIsFrozen && _frozenResize != null)
+            _frozenResize.OnGripReleased(e);
+        else
+            _columnResize.OnGripReleased(e);
+    }
+
+    private void EnsureFrozenResize()
+    {
+        _frozenResize ??= new TableGridColumnResize(
+            () => _freezeLayout?.FrozenGrid,
+            () => FrozenColumnCount,
+            OnFrozenColumnWidthsCommitted);
+    }
+
+    private void OnScrollableColumnWidthsCommitted(IReadOnlyList<double> scrollableWidths)
+    {
+        if (FrozenColumnCount > 0 && _freezeLayout != null)
+        {
+            var frozenWidths = CollectWidthsFromGrid(
+                _freezeLayout.FrozenGrid, FrozenColumnCount);
+            var allWidths = new List<double>(frozenWidths);
+            allWidths.AddRange(scrollableWidths);
+            DataSource?.OnColumnWidthsChanged(allWidths);
+        }
+        else
+        {
+            DataSource?.OnColumnWidthsChanged(scrollableWidths);
+        }
+    }
+
+    private void OnFrozenColumnWidthsCommitted(IReadOnlyList<double> frozenWidths)
+    {
+        var scrollableWidths = CollectWidthsFromGrid(
+            GetActiveGrid()!, _lastColCount - FrozenColumnCount);
+        var allWidths = new List<double>(frozenWidths);
+        allWidths.AddRange(scrollableWidths);
+        DataSource?.OnColumnWidthsChanged(allWidths);
+    }
+
+    private static List<double> CollectWidthsFromGrid(Grid? grid, int count)
+    {
+        var widths = new List<double>(count);
+        if (grid == null) return widths;
+        for (var c = 0; c < count; c++)
+        {
+            var gc = c * 2 + 1;
+            if (gc < grid.ColumnDefinitions.Count)
+            {
+                var def = grid.ColumnDefinitions[gc];
+                widths.Add(def.Width.IsAbsolute ? def.Width.Value : def.ActualWidth);
+            }
+            else
+            {
+                widths.Add(100);
+            }
+        }
+        return widths;
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    private Grid? GetActiveGrid()
+    {
+        if (FrozenColumnCount > 0 && _freezeLayout != null)
+            return _freezeLayout.ScrollableGrid;
+        return _grid;
+    }
+
+    private int GetActiveScrollableColumnCount()
+    {
+        if (_lastColCount <= 0) return 0;
+        if (FrozenColumnCount > 0)
+            return Math.Max(0, _lastColCount - FrozenColumnCount);
+        return _lastColCount;
+    }
 
     private void UpdateDragHandlers()
     {
@@ -627,7 +766,8 @@ public sealed class TableGrid : Border
         if (source.SupportsRowReorder)
         {
             _rowDrag = new TableGridRowDrag(
-                () => _grid,
+                () => FrozenColumnCount > 0 && _freezeLayout != null
+                    ? _freezeLayout.FrozenGrid : _grid,
                 () => _lastDataRowCount,
                 () => _lastDataRowStartGridRow,
                 () => DataSource,
@@ -640,19 +780,11 @@ public sealed class TableGrid : Border
         }
 
         _columnDrag = new TableGridColumnDrag(
-            () => _grid,
-            () => GetColumnCount(),
+            () => GetActiveGrid()!,
+            () => GetActiveScrollableColumnCount(),
             () => DataSource,
             Rebuild,
             () => this);
-    }
-
-    private int GetColumnCount()
-    {
-        var count = 0;
-        for (var i = 1; i < _grid.ColumnDefinitions.Count; i += 2)
-            count++;
-        return count;
     }
 
     private void ShowError(string message)
