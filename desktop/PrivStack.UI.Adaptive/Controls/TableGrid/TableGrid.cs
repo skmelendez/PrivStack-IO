@@ -236,7 +236,7 @@ public sealed class TableGrid : Border
         _cellNavigation.BoundaryEscapeRequested += dir => BoundaryEscapeRequested?.Invoke(dir);
 
         _infiniteScroll = new TableGridInfiniteScroll();
-        _infiniteScroll.LoadPageRequested += OnInfiniteScrollLoadPage;
+        _infiniteScroll.PageChangeRequested += OnInfiniteScrollPageChange;
 
         _toolbar = new TableGridToolbar();
         _toolbar.IsStripedChanged += OnToolbarStripedChanged;
@@ -285,7 +285,6 @@ public sealed class TableGrid : Border
         root.Children.Add(gridBorder);
         root.Children.Add(_captionBlock);
         root.Children.Add(_pagingBar);
-        root.Children.Add(_infiniteScroll.LoadingIndicator);
 
         Child = root;
     }
@@ -416,20 +415,12 @@ public sealed class TableGrid : Border
             var hasHeaderRow = data.HeaderRows.Count > 0 &&
                                data.HeaderRows.Any(r => r.IsHeader);
 
-            // In infinite scroll mode, accumulate rows
-            var effectiveDataRows = data.DataRows;
+            // Update infinite scroll with total pages for wheel bounds
             if (ScrollMode == TableScrollMode.InfiniteScroll)
-            {
-                _infiniteScroll.AppendPage(data.DataRows, paging);
-                effectiveDataRows = _infiniteScroll.AccumulatedRows;
-            }
-
-            var renderData = ScrollMode == TableScrollMode.InfiniteScroll
-                ? data with { DataRows = effectiveDataRows }
-                : data;
+                _infiniteScroll.UpdateTotalPages(paging.TotalPages);
 
             var result = TableGridRenderer.RenderGrid(
-                _grid, renderData, paging, _sortState,
+                _grid, data, paging, _sortState,
                 source.SupportsSorting,
                 source.IsEditable,
                 IsReadOnly,
@@ -459,11 +450,6 @@ public sealed class TableGrid : Border
             _pagingBar.Update(paging);
             _pagingBar.IsVisible = ShowPaging && !isInfiniteScroll;
 
-            // Enable vertical scroll in infinite scroll mode
-            _scrollViewer.VerticalScrollBarVisibility = isInfiniteScroll
-                ? Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
-                : Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
-
             _toolbar.Update(source, Rebuild, hasHeaderRow, IsStriped,
                 ScrollMode == TableScrollMode.InfiniteScroll);
             _toolbar.IsVisible = ShowToolbar;
@@ -483,8 +469,6 @@ public sealed class TableGrid : Border
     {
         _sortState.OnHeaderClick(colIndex);
         _currentPage = 0;
-        if (ScrollMode == TableScrollMode.InfiniteScroll)
-            _infiniteScroll.Reset();
         Rebuild();
     }
 
@@ -520,8 +504,7 @@ public sealed class TableGrid : Border
 
     private void OnFilterBarTextChanged(string? text)
     {
-        if (ScrollMode == TableScrollMode.InfiniteScroll)
-            _infiniteScroll.Reset();
+        _currentPage = 0;
         FilterText = text;
         FilterTextCommitted?.Invoke(text);
     }
@@ -556,44 +539,23 @@ public sealed class TableGrid : Border
     {
         if (ScrollMode == TableScrollMode.InfiniteScroll)
         {
-            _infiniteScroll.Reset();
-            _infiniteScroll.AttachToScrollViewer(_scrollViewer);
+            _infiniteScroll.Attach(_scrollViewer);
             _currentPage = 0;
         }
         else
         {
-            _infiniteScroll.DetachFromScrollViewer(_scrollViewer);
-            _infiniteScroll.Reset();
+            _infiniteScroll.Detach();
             _currentPage = 0;
         }
         Rebuild();
     }
 
-    private async Task OnInfiniteScrollLoadPage(int page)
+    private void OnInfiniteScrollPageChange(int delta)
     {
-        var source = DataSource;
-        if (source == null) return;
-
-        var pageSize = Math.Clamp(PageSize, 1, 100);
-        var version = _rebuildVersion;
-
-        try
-        {
-            var (data, paging) = await source.GetDataAsync(
-                FilterText, _sortState.ColumnIndex, _sortState.Direction,
-                page, pageSize);
-
-            if (version != _rebuildVersion) return;
-
-            _infiniteScroll.AppendPage(data.DataRows, paging);
-
-            // Re-render with accumulated rows
-            Rebuild();
-        }
-        catch
-        {
-            // Silently fail — loading indicator will hide on next rebuild
-        }
+        var newPage = _currentPage + delta;
+        if (newPage < 0 || newPage >= _lastPaging.TotalPages) return;
+        _currentPage = newPage;
+        Rebuild();
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
