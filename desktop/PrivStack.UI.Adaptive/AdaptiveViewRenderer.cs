@@ -7517,7 +7517,7 @@ public sealed class AdaptiveViewRenderer : UserControl
         {
             var chevron = new TextBlock
             {
-                Text = isExpanded ? "\u25BC" : "\u25B6",
+                Text = isExpanded ? "\u25BC\uFE0E" : "\u25B6\uFE0E",
                 FontSize = FontSize("ThemeFontSizeXs", 10),
                 VerticalAlignment = VerticalAlignment.Center,
                 Foreground = TextMuted,
@@ -12537,7 +12537,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                             };
                             var sortAsc = new Button
                             {
-                                Content = new TextBlock { Text = "▲", FontSize = FontSize("ThemeFontSize2Xs", 9), Foreground = TextMuted },
+                                Content = new TextBlock { Text = "▲\uFE0E", FontSize = FontSize("ThemeFontSize2Xs", 9), Foreground = TextMuted },
                                 Background = Brushes.Transparent,
                                 BorderThickness = new Thickness(0),
                                 Padding = new Thickness(2, 0),
@@ -12551,7 +12551,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                             };
                             var sortDesc = new Button
                             {
-                                Content = new TextBlock { Text = "▼", FontSize = FontSize("ThemeFontSize2Xs", 9), Foreground = TextMuted },
+                                Content = new TextBlock { Text = "▼\uFE0E", FontSize = FontSize("ThemeFontSize2Xs", 9), Foreground = TextMuted },
                                 Background = Brushes.Transparent,
                                 BorderThickness = new Thickness(0),
                                 Padding = new Thickness(2, 0),
