@@ -415,7 +415,7 @@ public partial class NavigationSidebar : UserControl
     private void ScheduleTimerPopupClose()
     {
         _timerPopupCloseTimer?.Stop();
-        _timerPopupCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _timerPopupCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
         _timerPopupCloseTimer.Tick += (_, _) =>
         {
             _timerPopupCloseTimer.Stop();
