@@ -31,7 +31,7 @@ internal sealed class LocalStorageProvider : IStorageProvider
                 ? Path.Combine(wsDir, "files", "notes")
                 : Path.Combine(PrivStack.Desktop.Services.DataPaths.BaseDir, "quill-images");
 
-            if (_cachedStoragePath != target)
+            if (_cachedStoragePath != target || !Directory.Exists(target))
             {
                 _cachedStoragePath = target;
                 Directory.CreateDirectory(target);
@@ -91,6 +91,12 @@ internal sealed class LocalStorageProvider : IStorageProvider
     public Task<bool> DeleteFileAsync(string fileId, string fileName, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
+
+        if (!Directory.Exists(StoragePath))
+        {
+            _log.Debug("LocalStorage: storage path does not exist, nothing to delete for {FileId}", fileId);
+            return Task.FromResult(false);
+        }
 
         var ext = Path.GetExtension(fileName);
         var exactPath = Path.Combine(StoragePath, fileId + ext);
