@@ -207,6 +207,7 @@
                     <Border Grid.Row="1" Background="{DynamicResource ThemeBackgroundBrush}"
                             BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
                             BorderThickness="0,1,0,0"
+                            BoxShadow="0 -1 4 0 #0A000000"
                             Padding="16,6"
                             IsVisible="{Binding !IsFocusMode}">
                         <Grid ColumnDefinitions="Auto,*,Auto">

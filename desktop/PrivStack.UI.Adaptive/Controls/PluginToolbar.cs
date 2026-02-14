@@ -6,7 +6,6 @@
 
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
 using Avalonia.Data;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -261,7 +260,7 @@ public sealed class PluginToolbar : Border
     private Border BuildSearchPill(TextBox inner)
     {
         // Magnifying glass icon (Material Design filled search icon)
-        var searchIcon = new Path
+        var searchIcon = new Avalonia.Controls.Shapes.Path
         {
             Data = StreamGeometry.Parse(
                 "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 " +
@@ -273,7 +272,7 @@ public sealed class PluginToolbar : Border
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(8, 0, 0, 0),
         };
-        searchIcon.Bind(Path.FillProperty,
+        searchIcon.Bind(Avalonia.Controls.Shapes.Path.FillProperty,
             searchIcon.GetResourceObservable("ThemeTextMutedBrush"));
 
         var panel = new StackPanel

@@ -270,6 +270,7 @@
         <Setter Property="Padding" Value="{DynamicResource ThemePaddingMd}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BoxShadow" Value="0 1 3 0 #14000000, 0 1 2 -1 #14000000"/>
     </Style>
 
     <!-- Surface card (elevated) -->
@@ -279,6 +280,17 @@
         <Setter Property="Padding" Value="{DynamicResource ThemePaddingMd}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BoxShadow" Value="0 2 6 0 #18000000, 0 1 3 -1 #14000000"/>
+    </Style>
+
+    <!-- Elevated card (higher elevation) -->
+    <Style Selector="Border.elevated-card">
+        <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
+        <Setter Property="Padding" Value="{DynamicResource ThemePaddingMd}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderSubtleBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BoxShadow" Value="0 4 12 0 #20000000"/>
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

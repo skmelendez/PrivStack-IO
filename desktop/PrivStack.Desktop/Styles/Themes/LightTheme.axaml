@@ -181,6 +181,7 @@
     <!-- Table Header Brush -->
     <SolidColorBrush x:Key="ThemeTableHeaderBrush" Color="{StaticResource ThemeHover}"/>
     <SolidColorBrush x:Key="ThemeTableStripeBrush" Color="{StaticResource ThemeHover}"/>
+    <SolidColorBrush x:Key="ThemeTableSeparatorBrush" Color="{StaticResource ThemeBorderSubtle}"/>
 
     <!-- Table Color Theme Presets -->
     <SolidColorBrush x:Key="ThemeTableBlueHeaderBrush" Color="#1A3B5C8A"/>
