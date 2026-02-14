@@ -10,13 +10,13 @@ namespace PrivStack.UI.Adaptive.Services;
 
 public sealed class PhysicsParameters
 {
-    public double RepulsionStrength { get; set; } = -400;
-    public double LinkDistance { get; set; } = 500;
+    public double RepulsionStrength { get; set; } = -4000;
+    public double LinkDistance { get; set; } = 350;
     public double LinkStrength { get; set; } = 0.25;
     public double CollisionStrength { get; set; } = 0.7;
     public double CenterStrength { get; set; } = 0.03;
-    public double VelocityDecay { get; set; } = 0.5;
-    public double MinSeparation { get; set; } = 60.0;
+    public double VelocityDecay { get; set; } = 0.55;
+    public double MinSeparation { get; set; } = 140.0;
     public double Alpha { get; set; } = 1.0;
     public double AlphaMin { get; set; } = 0.001;
     public double AlphaDecay { get; set; } = 0.028;
@@ -127,18 +127,16 @@ public sealed class ForceLayoutEngine
         var nodes = _graphData.Nodes.Values.ToList();
         if (nodes.Count == 0) return;
 
-        // All soft forces accumulate into velocity (Vx/Vy).
-        // Velocity decay naturally smooths movement, preventing springiness.
-        ApplyManyBodyForce(nodes);
+        // Velocity-based forces
         ApplyLinkForce(nodes);
         ApplyDepthRingForce(nodes);
         ApplyRadialSpreadForce(nodes);
         ApplyCenterForce(nodes);
-
-        // Integrate velocity → position with damping
         UpdatePositions(nodes);
 
-        // Hard constraints (direct displacement, post-integration)
+        // Direct position displacement forces (applied AFTER velocity update
+        // so they can't be damped away)
+        ApplyManyBodyForce(nodes);
         ApplyEdgeNodeRepulsion(nodes);
         EnforceMinSeparation(nodes);
 
@@ -146,9 +144,7 @@ public sealed class ForceLayoutEngine
     }
 
     /// <summary>
-    /// N-body repulsion accumulated into velocity.
-    /// Uses 1/dist falloff (not 1/dist²) so repulsion is felt at meaningful
-    /// distances — slider 0 = no push, slider 100 = very strong push.
+    /// N-body repulsion via direct position displacement.
     /// Connected pairs get reduced repulsion (springs handle them);
     /// unconnected pairs get amplified repulsion to separate clusters.
     /// </summary>
@@ -160,20 +156,22 @@ public sealed class ForceLayoutEngine
             {
                 var dx = nodes[j].X - nodes[i].X;
                 var dy = nodes[j].Y - nodes[i].Y;
-                var dist = Math.Sqrt(dx * dx + dy * dy);
-                if (dist < 30) dist = 30; // floor prevents extreme forces at close range
+                var distSq = dx * dx + dy * dy;
+                if (distSq < 1) distSq = 1;
+                var dist = Math.Sqrt(distSq);
 
+                // Connectivity-aware: reduce for connected (spring handles), amplify for unconnected
                 var pairKey = string.CompareOrdinal(nodes[i].Id, nodes[j].Id) < 0
                     ? (nodes[i].Id, nodes[j].Id)
                     : (nodes[j].Id, nodes[i].Id);
                 var multiplier = _connectedPairs.Contains(pairKey) ? 0.65 : 1.6;
 
-                var force = _params.RepulsionStrength * _params.Alpha * multiplier / dist;
+                var force = _params.RepulsionStrength * _params.Alpha * multiplier / distSq;
                 var fx = dx / dist * force;
                 var fy = dy / dist * force;
 
-                if (!nodes[i].IsDragging && !nodes[i].IsPinned) { nodes[i].Vx += fx; nodes[i].Vy += fy; }
-                if (!nodes[j].IsDragging && !nodes[j].IsPinned) { nodes[j].Vx -= fx; nodes[j].Vy -= fy; }
+                if (!nodes[i].IsDragging && !nodes[i].IsPinned) { nodes[i].X += fx; nodes[i].Y += fy; }
+                if (!nodes[j].IsDragging && !nodes[j].IsPinned) { nodes[j].X -= fx; nodes[j].Y -= fy; }
             }
         }
     }
@@ -269,7 +267,7 @@ public sealed class ForceLayoutEngine
 
     /// <summary>
     /// Spring force pulling linked nodes toward LinkDistance.
-    /// Accumulated into velocity for smooth movement.
+    /// Uses direct displacement (not velocity) so it actually works.
     /// </summary>
     private void ApplyLinkForce(List<GraphNode> nodes)
     {
@@ -287,12 +285,13 @@ public sealed class ForceLayoutEngine
             var dist = Math.Sqrt(dx * dx + dy * dy);
             if (dist < 1) dist = 1;
 
+            // Direct displacement toward ideal distance
             var delta = (dist - _params.LinkDistance) * _params.LinkStrength * _params.Alpha;
             var fx = dx / dist * delta;
             var fy = dy / dist * delta;
 
-            if (!source.IsDragging && !source.IsPinned) { source.Vx += fx; source.Vy += fy; }
-            if (!target.IsDragging && !target.IsPinned) { target.Vx -= fx; target.Vy -= fy; }
+            if (!source.IsDragging && !source.IsPinned) { source.X += fx; source.Y += fy; }
+            if (!target.IsDragging && !target.IsPinned) { target.X -= fx; target.Y -= fy; }
         }
     }
 
@@ -323,8 +322,8 @@ public sealed class ForceLayoutEngine
 
             var idealDist = n.Depth * _params.LinkDistance;
             var delta = (idealDist - dist) * strength * _params.Alpha;
-            n.Vx += dx / dist * delta;
-            n.Vy += dy / dist * delta;
+            n.X += dx / dist * delta;
+            n.Y += dy / dist * delta;
         }
     }
 
@@ -335,7 +334,7 @@ public sealed class ForceLayoutEngine
     private void ApplyRadialSpreadForce(List<GraphNode> nodes)
     {
         if (_graphData is null) return;
-        const double strength = 0.5;
+        const double strength = 0.8;
 
         // Build parent→children map from edges: a child is the deeper node
         var parentChildren = new Dictionary<string, List<GraphNode>>();
@@ -395,8 +394,8 @@ public sealed class ForceLayoutEngine
                         if (dist < 1) continue;
                         var tx = -(node.Y - parent.Y) / dist * dir;
                         var ty = (node.X - parent.X) / dist * dir;
-                        node.Vx += tx * pushStrength;
-                        node.Vy += ty * pushStrength;
+                        node.X += tx * pushStrength;
+                        node.Y += ty * pushStrength;
                     }
                 }
             }

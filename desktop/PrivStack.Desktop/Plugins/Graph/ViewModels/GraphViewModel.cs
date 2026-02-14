@@ -81,12 +81,12 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     [ObservableProperty] private double _centerSlider = 5;
     [ObservableProperty] private double _nodeSpacingSlider = 68;
 
-    public double RepulsionStrength => -(RepulsionSlider / 100.0 * 800);
-    public double LinkDistance => 50 + (LinkDistanceSlider / 100.0 * 950);
+    public double RepulsionStrength => -(RepulsionSlider / 100.0 * 6000);
+    public double LinkDistance => 100 + (LinkDistanceSlider / 100.0 * 600);
     public double LinkStrength => 0.1 + (LinkStrengthSlider / 100.0 * 0.4);
     public double CollisionStrength => CollisionSlider / 100.0;
     public double CenterStrength => CenterSlider / 100.0 * 0.1;
-    public double NodeSpacingDistance => 10 + (NodeSpacingSlider / 100.0 * 140);
+    public double NodeSpacingDistance => 40 + (NodeSpacingSlider / 100.0 * 260);
 
     // Orphan radio helpers
     public bool IsOrphanHide { get => OrphanMode == OrphanFilterMode.Hide; set { if (value) OrphanMode = OrphanFilterMode.Hide; } }
