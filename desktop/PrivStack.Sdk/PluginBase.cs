@@ -92,6 +92,7 @@ public abstract class PluginBase<TViewModel> : ObservableObject, IAppPlugin
     {
         State = PluginState.Deactivated;
         OnDeactivate();
+        Host?.Capabilities.UnregisterAll(this);
     }
 
     public ViewModelBase CreateViewModel()
@@ -116,6 +117,7 @@ public abstract class PluginBase<TViewModel> : ObservableObject, IAppPlugin
     {
         if (_disposed) return;
         _disposed = true;
+        Host?.Capabilities.UnregisterAll(this);
         OnDispose();
         ResetViewModel();
         State = PluginState.Disposed;

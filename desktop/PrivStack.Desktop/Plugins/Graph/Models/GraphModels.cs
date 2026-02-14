@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace PrivStack.Desktop.Plugins.Graph.Models;
 
-public enum NodeType { Note, Task, Contact, Event, Journal, Company, ContactGroup, RssArticle, Snippet, Tag, Project, Deal, Transaction, Credential, File }
+public enum NodeType { Note, Task, Contact, Event, Journal, Company, ContactGroup, RssArticle, Snippet, Tag, Project, Deal, Transaction, Credential, File, WikiSource }
 
 public record GraphNode
 {
@@ -26,7 +26,7 @@ public record GraphNode
 }
 
 public enum OrphanFilterMode { Hide, Show, Only }
-public enum EdgeType { WikiLink, Backlink, TagRelation, ProjectMembership, ParentChild, GroupMembership, CompanyMembership }
+public enum EdgeType { WikiLink, Backlink, TagRelation, ProjectMembership, ParentChild, GroupMembership, CompanyMembership, WikiSourceMembership }
 
 public record GraphEdge
 {

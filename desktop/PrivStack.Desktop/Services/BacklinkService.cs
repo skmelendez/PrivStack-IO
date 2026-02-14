@@ -52,6 +52,9 @@ public sealed class BacklinkService
     // Temporary storage for page parent_id during index build
     private readonly Dictionary<string, string> _pageParentMap = new();
 
+    // Temporary storage for wiki page source_id during index build
+    private readonly Dictionary<string, string> _pageWikiSourceMap = new();
+
     // Entity types to scan — derived from the shared EntityTypeMap.
     private static readonly (string EntityType, string LinkType, string Icon)[] EntityTypes =
         EntityTypeMap.All.Select(e => (e.EntityType, e.LinkType, e.Icon)).ToArray();
@@ -531,6 +534,56 @@ public sealed class BacklinkService
         if (parentChildCount > 0)
             _log.Information("BacklinkService: added {Count} parent-child relationships", parentChildCount);
 
+        // Add wiki source → wiki page relationships
+        var wikiSourceCount = 0;
+        foreach (var (pageId, sourceId) in _pageWikiSourceMap)
+        {
+            var pageKey = $"page:{pageId}";
+            var wikiKey = $"wiki_source:{sourceId}";
+            if (!entityMap.ContainsKey(pageKey) || !entityMap.ContainsKey(wikiKey)) continue;
+
+            // Forward link: wiki page → wiki source
+            if (!forwardLinks.TryGetValue(pageKey, out var fwdSet))
+            {
+                fwdSet = [];
+                forwardLinks[pageKey] = fwdSet;
+            }
+            fwdSet.Add(wikiKey);
+
+            // Reverse link: wiki source has backlink from wiki page
+            if (!reverseIndex.TryGetValue(wikiKey, out var entries))
+            {
+                entries = [];
+                reverseIndex[wikiKey] = entries;
+            }
+            var pageInfo = entityMap[pageKey];
+            if (entries.All(e => e.SourceId != pageId || e.SourceLinkType != "page"))
+            {
+                entries.Add(new BacklinkEntry(
+                    pageId, "page", pageInfo.Title, pageInfo.Icon,
+                    "Wiki page", pageInfo.ModifiedAt));
+                wikiSourceCount++;
+            }
+
+            // Also add reverse: page sees wiki source as backlink
+            if (!reverseIndex.TryGetValue(pageKey, out var pageEntries))
+            {
+                pageEntries = [];
+                reverseIndex[pageKey] = pageEntries;
+            }
+            var wikiInfo = entityMap[wikiKey];
+            if (pageEntries.All(e => e.SourceId != sourceId || e.SourceLinkType != "wiki_source"))
+            {
+                pageEntries.Add(new BacklinkEntry(
+                    sourceId, "wiki_source", wikiInfo.Title, wikiInfo.Icon,
+                    "Wiki source", wikiInfo.ModifiedAt));
+            }
+        }
+        _pageWikiSourceMap.Clear();
+
+        if (wikiSourceCount > 0)
+            _log.Information("BacklinkService: added {Count} wiki source relationships", wikiSourceCount);
+
         // Create tag virtual nodes and edges (item ↔ tag)
         var tagNodeCount = 0;
         var tagToItems = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -649,6 +702,23 @@ public sealed class BacklinkService
                         lock (_pageParentMap)
                         {
                             _pageParentMap[id] = parentId;
+                        }
+                    }
+                }
+
+                // Capture source_id for wiki pages (used for wiki source relationships)
+                if (entityType == "page"
+                    && item.TryGetProperty("source_type", out var srcTypeProp)
+                    && srcTypeProp.GetString() == "github_wiki"
+                    && item.TryGetProperty("source_id", out var srcIdProp)
+                    && srcIdProp.ValueKind == JsonValueKind.String)
+                {
+                    var sourceId = srcIdProp.GetString();
+                    if (!string.IsNullOrEmpty(sourceId))
+                    {
+                        lock (_pageWikiSourceMap)
+                        {
+                            _pageWikiSourceMap[id] = sourceId;
                         }
                     }
                 }

@@ -183,7 +183,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
         if (_fullGraphData == null) { GraphData = null; NodeCount = 0; EdgeCount = 0; return; }
 
         var includeNodeTypes = new HashSet<NodeType>();
-        if (ShowNotes) includeNodeTypes.Add(NodeType.Note);
+        if (ShowNotes) { includeNodeTypes.Add(NodeType.Note); includeNodeTypes.Add(NodeType.WikiSource); }
         if (ShowTasks) { includeNodeTypes.Add(NodeType.Task); includeNodeTypes.Add(NodeType.Project); }
         if (ShowContacts) { includeNodeTypes.Add(NodeType.Contact); includeNodeTypes.Add(NodeType.Company); includeNodeTypes.Add(NodeType.ContactGroup); }
         if (ShowEvents) includeNodeTypes.Add(NodeType.Event);

@@ -69,16 +69,17 @@ public sealed class GraphDataService
         var fileTask = LoadEntitiesAsync("vault_file", "file", NodeType.File);
         var companyTask = LoadEntitiesAsync("company", "company", NodeType.Company);
         var groupTask = LoadEntitiesAsync("contact_group", "contact_group", NodeType.ContactGroup);
+        var wikiSourceTask = LoadEntitiesAsync("wiki_source", "wiki_source", NodeType.WikiSource);
 
         await Task.WhenAll(pageTask, taskTask, projectTask, contactTask, journalTask, eventTask,
             dealTask, transactionTask, snippetTask, rssTask, credentialTask, fileTask,
-            companyTask, groupTask);
+            companyTask, groupTask, wikiSourceTask);
 
         // Add all nodes
         foreach (var nodes in new[] { pageTask.Result, taskTask.Result, projectTask.Result, contactTask.Result,
             journalTask.Result, eventTask.Result, dealTask.Result, transactionTask.Result,
             snippetTask.Result, rssTask.Result, credentialTask.Result, fileTask.Result,
-            companyTask.Result, groupTask.Result })
+            companyTask.Result, groupTask.Result, wikiSourceTask.Result })
             foreach (var node in nodes)
                 graphData.Nodes[node.Id] = node;
 
@@ -87,10 +88,11 @@ public sealed class GraphDataService
         // Create parent-child edges from page hierarchy
         await CreateParentChildEdgesAsync(graphData, edgeSet);
 
-        // Create structural membership edges (company, group, project)
+        // Create structural membership edges (company, group, project, wiki source)
         await CreateCompanyMembershipEdgesAsync(graphData, edgeSet);
         await CreateGroupMembershipEdgesAsync(graphData, edgeSet);
         await CreateProjectMembershipEdgesAsync(graphData, edgeSet);
+        await CreateWikiSourceEdgesAsync(graphData, edgeSet);
 
         // Parse links from content fields
         await ParseLinksAsync(graphData, edgeSet);
@@ -103,7 +105,7 @@ public sealed class GraphDataService
         // Calculate link counts
         foreach (var edge in graphData.Edges)
         {
-            var isStructural = edge.Type is EdgeType.TagRelation or EdgeType.ProjectMembership or EdgeType.ParentChild or EdgeType.GroupMembership or EdgeType.CompanyMembership;
+            var isStructural = edge.Type is EdgeType.TagRelation or EdgeType.ProjectMembership or EdgeType.ParentChild or EdgeType.GroupMembership or EdgeType.CompanyMembership or EdgeType.WikiSourceMembership;
             if (graphData.Nodes.TryGetValue(edge.SourceId, out var source))
             {
                 source.LinkCount++;
@@ -675,6 +677,57 @@ public sealed class GraphDataService
         catch (Exception ex)
         {
             _log.Warning(ex, "GraphDataService: failed to load page parent-child relationships");
+        }
+    }
+
+    private async Task CreateWikiSourceEdgesAsync(GraphData graphData, HashSet<(string, string)> edgeSet)
+    {
+        try
+        {
+            var response = await _sdk.SendAsync<List<JsonElement>>(new SdkMessage
+            {
+                PluginId = "privstack.graph",
+                Action = SdkAction.ReadList,
+                EntityType = "page",
+            });
+
+            if (response.Data == null) return;
+
+            var count = 0;
+            foreach (var item in response.Data)
+            {
+                var id = item.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                if (string.IsNullOrEmpty(id)) continue;
+
+                // Check for wiki source relationship (source_type == "github_wiki" && source_id set)
+                if (!item.TryGetProperty("source_type", out var stProp)
+                    || stProp.GetString() != "github_wiki") continue;
+                if (!item.TryGetProperty("source_id", out var siProp)) continue;
+                var sourceId = siProp.GetString();
+                if (string.IsNullOrEmpty(sourceId)) continue;
+
+                var pageKey = $"page:{id}";
+                var wikiKey = $"wiki_source:{sourceId}";
+                if (!graphData.Nodes.ContainsKey(pageKey) || !graphData.Nodes.ContainsKey(wikiKey)) continue;
+
+                if (edgeSet.Add((pageKey, wikiKey)))
+                {
+                    graphData.Edges.Add(new GraphEdge
+                    {
+                        SourceId = pageKey,
+                        TargetId = wikiKey,
+                        Type = EdgeType.WikiSourceMembership,
+                    });
+                    count++;
+                }
+            }
+
+            if (count > 0)
+                _log.Information("GraphDataService: created {Count} wiki source edges", count);
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "GraphDataService: failed to load wiki source relationships");
         }
     }
 
