@@ -30,7 +30,7 @@ internal sealed class TableGridFilterBar : Border
             BorderThickness = new Thickness(1),
         };
         _filterTextBox.Bind(TextBlock.FontSizeProperty,
-            _filterTextBox.GetResourceObservable("ThemeFontSizeXsSm"));
+            _filterTextBox.GetResourceObservable("ThemeFontSizeSmMd"));
         _filterTextBox.TextChanged += OnFilterTextChanged;
 
         _pageSizeCombo = new ComboBox
@@ -41,7 +41,7 @@ internal sealed class TableGridFilterBar : Border
             SelectedIndex = 0,
         };
         _pageSizeCombo.Bind(TextBlock.FontSizeProperty,
-            _pageSizeCombo.GetResourceObservable("ThemeFontSizeXsSm"));
+            _pageSizeCombo.GetResourceObservable("ThemeFontSizeSmMd"));
         _pageSizeCombo.SelectionChanged += OnPageSizeSelectionChanged;
 
         var panel = new StackPanel
@@ -54,6 +54,7 @@ internal sealed class TableGridFilterBar : Border
         panel.Children.Add(_pageSizeCombo);
 
         Child = panel;
+        VerticalAlignment = VerticalAlignment.Center;
         Margin = new Thickness(4, 0, 0, 4);
     }
 
