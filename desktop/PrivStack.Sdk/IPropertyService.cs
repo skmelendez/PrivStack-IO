@@ -9,7 +9,7 @@ namespace PrivStack.Sdk;
 [JsonConverter(typeof(JsonStringEnumConverter<SdkPropertyType>))]
 public enum SdkPropertyType
 {
-    Text, Number, Date, Checkbox, Select, MultiSelect, Url
+    Text, Number, Date, Checkbox, Select, MultiSelect, Url, Relation
 }
 
 /// <summary>
