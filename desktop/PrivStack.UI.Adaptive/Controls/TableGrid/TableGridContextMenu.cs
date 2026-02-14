@@ -20,7 +20,8 @@ internal static class TableGridContextMenu
         int rowIndex, int colIndex, bool hasHeaderRow,
         bool supportsStructureEditing,
         int frozenRowCount,
-        ITableGridDataSource source, Action rebuild)
+        ITableGridDataSource source, Action rebuild,
+        Action<int>? onFreezeRows = null)
     {
         var menu = new ContextMenu();
 
@@ -97,6 +98,7 @@ internal static class TableGridContextMenu
             unfreezeRows.Click += async (_, _) =>
             {
                 await source.OnFreezeRowsAsync(0);
+                onFreezeRows?.Invoke(0);
                 rebuild();
             };
             menu.Items.Add(unfreezeRows);
@@ -106,7 +108,9 @@ internal static class TableGridContextMenu
             var freezeRow = new MenuItem { Header = "Freeze This Row" };
             freezeRow.Click += async (_, _) =>
             {
-                await source.OnFreezeRowsAsync(rowIndex + 1);
+                var count = rowIndex + 1;
+                await source.OnFreezeRowsAsync(count);
+                onFreezeRows?.Invoke(count);
                 rebuild();
             };
             menu.Items.Add(freezeRow);
@@ -137,7 +141,8 @@ internal static class TableGridContextMenu
         int colIndex, bool hasHeaderRow,
         bool supportsStructureEditing,
         int frozenColumnCount,
-        ITableGridDataSource source, Action rebuild)
+        ITableGridDataSource source, Action rebuild,
+        Action<int>? onFreezeColumns = null)
     {
         var menu = new ContextMenu();
 
@@ -211,6 +216,7 @@ internal static class TableGridContextMenu
             unfreezeCol.Click += async (_, _) =>
             {
                 await source.OnFreezeColumnsAsync(0);
+                onFreezeColumns?.Invoke(0);
                 rebuild();
             };
             menu.Items.Add(unfreezeCol);
@@ -220,7 +226,9 @@ internal static class TableGridContextMenu
             var freezeCol = new MenuItem { Header = "Freeze From Here" };
             freezeCol.Click += async (_, _) =>
             {
-                await source.OnFreezeColumnsAsync(colIndex + 1);
+                var count = colIndex + 1;
+                await source.OnFreezeColumnsAsync(count);
+                onFreezeColumns?.Invoke(count);
                 rebuild();
             };
             menu.Items.Add(freezeCol);

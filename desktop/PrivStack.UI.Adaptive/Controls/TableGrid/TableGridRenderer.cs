@@ -44,7 +44,9 @@ internal static class TableGridRenderer
         bool isStriped = false,
         string? colorTheme = null,
         int frozenColumnCount = 0,
-        int frozenRowCount = 0)
+        int frozenRowCount = 0,
+        Action<int>? onFreezeColumns = null,
+        Action<int>? onFreezeRows = null)
     {
         grid.ColumnDefinitions.Clear();
         grid.RowDefinitions.Clear();
@@ -152,7 +154,7 @@ internal static class TableGridRenderer
                     var hasHeader = data.HeaderRows.Count > 0;
                     var ctxMenu = TableGridContextMenu.BuildHeaderContextMenu(
                         colIdx, hasHeader, supportsStructureEditing,
-                        frozenColumnCount, source, rebuild);
+                        frozenColumnCount, source, rebuild, onFreezeColumns);
                     cell.ContextMenu = ctxMenu;
 
                     // Also set on inner TextBox for editable headers
@@ -237,7 +239,7 @@ internal static class TableGridRenderer
                     var ctxMenu = TableGridContextMenu.BuildCellContextMenu(
                         capturedRow, capturedCol, hasHeader,
                         supportsStructureEditing, frozenRowCount,
-                        source, rebuild);
+                        source, rebuild, onFreezeRows);
                     cell.ContextMenu = ctxMenu;
 
                     // Also set on inner TextBox for editable cells
