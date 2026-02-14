@@ -1,7 +1,8 @@
 // ============================================================================
 // File: TableGridInsertIndicators.cs
-// Description: Manages "+" circle overlays on cell borders for row/column
-//              insertion. Shows indicators on hover over row/column gaps.
+// Description: Manages floating "+" circle indicators for row/column insertion.
+//              Uses grid-level PointerMoved to track mouse position and show
+//              indicators at cell borders — no PointerEntered/Exited flickering.
 // ============================================================================
 
 using Avalonia;
@@ -16,138 +17,169 @@ namespace PrivStack.UI.Adaptive.Controls;
 internal static class TableGridInsertIndicators
 {
     private const double IndicatorSize = 16;
+    private const double EdgeThreshold = 12;
 
     /// <summary>
-    /// Attaches row insert indicators to the left edge of data rows.
-    /// A "+" circle appears between rows on hover. Includes an indicator
-    /// above the first data row (insert at 0) and below each data row.
+    /// Attaches floating row/column insert indicators to the grid.
+    /// Row "+" appears at the bottom-center of the hovered data cell.
+    /// Column "+" appears at the left/right border of the hovered cell,
+    /// centered vertically, as the mouse approaches that edge.
     /// </summary>
-    public static void AttachRowIndicators(
-        Grid grid, int dataRowStartGridRow, int dataRowCount,
+    public static void AttachCellIndicators(
+        Grid grid, int headerGridRow, int dataRowStartGridRow,
+        int dataRowCount, int colCount,
         ITableGridDataSource source, Action rebuild, Control themeSource)
     {
-        // Insert-above-first-row indicator (insert at index 0)
-        if (dataRowCount > 0)
-            AttachRowIndicator(grid, dataRowStartGridRow, 0,
-                VerticalAlignment.Top, source, rebuild, themeSource);
+        var rowIndicator = CreateIndicator(themeSource);
+        rowIndicator.VerticalAlignment = VerticalAlignment.Bottom;
+        rowIndicator.HorizontalAlignment = HorizontalAlignment.Center;
+        rowIndicator.Opacity = 0;
+        rowIndicator.IsHitTestVisible = false;
+        grid.Children.Add(rowIndicator);
 
-        // Insert-below-each-row indicators
-        for (var dataIdx = 0; dataIdx < dataRowCount; dataIdx++)
+        var colIndicator = CreateIndicator(themeSource);
+        colIndicator.VerticalAlignment = VerticalAlignment.Center;
+        colIndicator.Opacity = 0;
+        colIndicator.IsHitTestVisible = false;
+        grid.Children.Add(colIndicator);
+
+        var currentRowInsertIdx = -1;
+        var currentColInsertIdx = -1;
+
+        grid.PointerMoved += (_, e) =>
         {
-            var gridRow = dataRowStartGridRow + dataIdx;
-            AttachRowIndicator(grid, gridRow, dataIdx + 1,
-                VerticalAlignment.Bottom, source, rebuild, themeSource);
-        }
-    }
+            var pos = e.GetPosition(grid);
 
-    private static void AttachRowIndicator(
-        Grid grid, int gridRow, int insertIndex,
-        VerticalAlignment vAlign,
-        ITableGridDataSource source, Action rebuild, Control themeSource)
-    {
-        var indicator = CreateIndicator(themeSource);
-        indicator.VerticalAlignment = vAlign;
-        indicator.HorizontalAlignment = HorizontalAlignment.Left;
-        indicator.Margin = new Thickness(2, 0, 0, 0);
-        indicator.Opacity = 0;
-        indicator.IsHitTestVisible = false;
-
-        var hoverZone = new Border
-        {
-            Height = 10,
-            Background = Brushes.Transparent,
-            Cursor = new Cursor(StandardCursorType.Hand),
-            VerticalAlignment = vAlign,
-        };
-
-        var capturedIndicator = indicator;
-        var capturedInsertIdx = insertIndex;
-
-        hoverZone.PointerEntered += (_, _) =>
-        {
-            capturedIndicator.Opacity = 1;
-            capturedIndicator.IsHitTestVisible = true;
-        };
-        hoverZone.PointerExited += (_, _) =>
-        {
-            capturedIndicator.Opacity = 0;
-            capturedIndicator.IsHitTestVisible = false;
-        };
-
-        capturedIndicator.PointerPressed += async (_, e) =>
-        {
-            e.Handled = true;
-            await source.OnInsertRowAtAsync(capturedInsertIdx);
-            rebuild();
-        };
-
-        // Span hover zone across column 0 and first data column for wider target
-        Grid.SetRow(hoverZone, gridRow);
-        Grid.SetColumn(hoverZone, 0);
-        Grid.SetColumnSpan(hoverZone, 3);
-        grid.Children.Add(hoverZone);
-
-        Grid.SetRow(indicator, gridRow);
-        Grid.SetColumn(indicator, 0);
-        Grid.SetColumnSpan(indicator, 2);
-        grid.Children.Add(indicator);
-    }
-
-    /// <summary>
-    /// Attaches column insert indicators to the resize grip zones between columns.
-    /// The "+" circle appears centered at the top of each grip on hover.
-    /// </summary>
-    public static void AttachColumnIndicators(
-        Grid grid, int colCount, int headerGridRow,
-        ITableGridDataSource source, Action rebuild, Control themeSource)
-    {
-        for (var c = 0; c < colCount - 1; c++)
-        {
-            var insertIndex = c + 1;
-            var gripCol = c * 2 + 2; // Grip columns are at even indices after first data col
-
-            var indicator = CreateIndicator(themeSource);
-            indicator.VerticalAlignment = VerticalAlignment.Center;
-            indicator.HorizontalAlignment = HorizontalAlignment.Center;
-            indicator.Opacity = 0;
-            indicator.IsHitTestVisible = false;
-
-            var capturedIndicator = indicator;
-            var capturedInsertIdx = insertIndex;
-
-            // Find existing grip borders at this column and attach hover events
-            foreach (var child in grid.Children)
+            // ── Hit test: find grid row ──────────────────────────────
+            int hitGridRow = -1;
+            double rowRelY = 0, rowHeight = 0;
             {
-                if (child is Border grip &&
-                    grip.Classes.Contains("col-resize-grip") &&
-                    Grid.GetColumn(grip) == gripCol &&
-                    Grid.GetRow(grip) == headerGridRow)
+                double cumY = 0;
+                for (var r = 0; r < grid.RowDefinitions.Count; r++)
                 {
-                    grip.PointerEntered += (_, _) =>
+                    var rh = grid.RowDefinitions[r].ActualHeight;
+                    if (pos.Y >= cumY && pos.Y < cumY + rh)
                     {
-                        capturedIndicator.Opacity = 1;
-                        capturedIndicator.IsHitTestVisible = true;
-                    };
-                    grip.PointerExited += (_, _) =>
-                    {
-                        capturedIndicator.Opacity = 0;
-                        capturedIndicator.IsHitTestVisible = false;
-                    };
-                    break;
+                        hitGridRow = r;
+                        rowRelY = pos.Y - cumY;
+                        rowHeight = rh;
+                        break;
+                    }
+                    cumY += rh;
                 }
             }
 
-            capturedIndicator.PointerPressed += async (_, e) =>
+            // ── Hit test: find data column ───────────────────────────
+            int hitDataCol = -1, hitGridCol = -1;
+            double colRelX = 0, colWidth = 0;
             {
-                e.Handled = true;
-                await source.OnInsertColumnAtAsync(capturedInsertIdx);
-                rebuild();
-            };
+                double cumX = 0;
+                for (var c = 0; c < grid.ColumnDefinitions.Count; c++)
+                {
+                    var cw = grid.ColumnDefinitions[c].ActualWidth;
+                    if (pos.X >= cumX && pos.X < cumX + cw)
+                    {
+                        // Data columns are at odd indices (1, 3, 5, ...)
+                        if (c >= 1 && c % 2 == 1)
+                        {
+                            hitDataCol = (c - 1) / 2;
+                            hitGridCol = c;
+                            colRelX = pos.X - cumX;
+                            colWidth = cw;
+                        }
+                        break;
+                    }
+                    cumX += cw;
+                }
+            }
 
-            Grid.SetRow(indicator, headerGridRow);
-            Grid.SetColumn(indicator, gripCol);
-            grid.Children.Add(indicator);
-        }
+            var hitDataRow = hitGridRow >= 0 ? hitGridRow - dataRowStartGridRow : -1;
+            var isDataRow = hitDataRow >= 0 && hitDataRow < dataRowCount;
+            var isTableRow = hitGridRow >= headerGridRow
+                             && hitGridRow < dataRowStartGridRow + dataRowCount;
+
+            // ── Row indicator (bottom border of hovered data cell) ───
+            if (isDataRow && hitGridCol >= 0 && rowHeight > 0
+                && rowRelY > rowHeight - EdgeThreshold)
+            {
+                currentRowInsertIdx = hitDataRow + 1;
+                Grid.SetRow(rowIndicator, hitGridRow);
+                Grid.SetColumn(rowIndicator, hitGridCol);
+                rowIndicator.Opacity = 1;
+                rowIndicator.IsHitTestVisible = true;
+            }
+            else
+            {
+                rowIndicator.Opacity = 0;
+                rowIndicator.IsHitTestVisible = false;
+                currentRowInsertIdx = -1;
+            }
+
+            // ── Column indicator (left/right border) ─────────────────
+            var showCol = false;
+            if (hitDataCol >= 0 && hitGridRow >= 0 && isTableRow && colWidth > 0)
+            {
+                var nearLeft = colRelX < EdgeThreshold;
+                var nearRight = colRelX > colWidth - EdgeThreshold;
+
+                if (nearRight)
+                {
+                    currentColInsertIdx = hitDataCol + 1;
+                    Grid.SetRow(colIndicator, hitGridRow);
+                    Grid.SetColumn(colIndicator, hitDataCol * 2 + 2);
+                    colIndicator.HorizontalAlignment = HorizontalAlignment.Center;
+                    showCol = true;
+                }
+                else if (nearLeft && hitDataCol > 0)
+                {
+                    currentColInsertIdx = hitDataCol;
+                    Grid.SetRow(colIndicator, hitGridRow);
+                    Grid.SetColumn(colIndicator, (hitDataCol - 1) * 2 + 2);
+                    colIndicator.HorizontalAlignment = HorizontalAlignment.Center;
+                    showCol = true;
+                }
+                else if (nearLeft && hitDataCol == 0)
+                {
+                    currentColInsertIdx = 0;
+                    Grid.SetRow(colIndicator, hitGridRow);
+                    Grid.SetColumn(colIndicator, hitGridCol);
+                    colIndicator.HorizontalAlignment = HorizontalAlignment.Left;
+                    showCol = true;
+                }
+            }
+
+            colIndicator.Opacity = showCol ? 1 : 0;
+            colIndicator.IsHitTestVisible = showCol;
+            if (!showCol) currentColInsertIdx = -1;
+        };
+
+        grid.PointerExited += (_, _) =>
+        {
+            rowIndicator.Opacity = 0;
+            colIndicator.Opacity = 0;
+            rowIndicator.IsHitTestVisible = false;
+            colIndicator.IsHitTestVisible = false;
+            currentRowInsertIdx = -1;
+            currentColInsertIdx = -1;
+        };
+
+        rowIndicator.PointerPressed += async (_, e) =>
+        {
+            if (currentRowInsertIdx < 0) return;
+            e.Handled = true;
+            var idx = currentRowInsertIdx;
+            await source.OnInsertRowAtAsync(idx);
+            rebuild();
+        };
+
+        colIndicator.PointerPressed += async (_, e) =>
+        {
+            if (currentColInsertIdx < 0) return;
+            e.Handled = true;
+            var idx = currentColInsertIdx;
+            await source.OnInsertColumnAtAsync(idx);
+            rebuild();
+        };
     }
 
     private static Border CreateIndicator(Control themeSource)

@@ -250,19 +250,12 @@ internal static class TableGridRenderer
             gridRow++;
         }
 
-        // Insert indicators for hover-to-insert UX
+        // Insert indicators for hover-to-insert UX (floating "+" circles on cell borders)
         if (supportsStructureEditing && !isReadOnly && source != null && rebuild != null)
         {
-            TableGridInsertIndicators.AttachRowIndicators(
-                grid, dataRowStartGridRow, data.DataRows.Count,
-                source, rebuild, themeSource);
-
-            if (data.HeaderRows.Count > 0)
-            {
-                TableGridInsertIndicators.AttachColumnIndicators(
-                    grid, colCount, headerGridRow,
-                    source, rebuild, themeSource);
-            }
+            TableGridInsertIndicators.AttachCellIndicators(
+                grid, headerGridRow, dataRowStartGridRow, data.DataRows.Count,
+                colCount, source, rebuild, themeSource);
         }
 
         // Description row
