@@ -48,12 +48,13 @@ internal sealed class TableGridFilterBar : Border
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
+            VerticalAlignment = VerticalAlignment.Center,
         };
         panel.Children.Add(_filterTextBox);
         panel.Children.Add(_pageSizeCombo);
 
         Child = panel;
-        Margin = new Thickness(0, 0, 0, 4);
+        Margin = new Thickness(4, 0, 0, 4);
     }
 
     public void SetFilterText(string? text)
