@@ -419,6 +419,7 @@ public partial class InfoPanelViewModel : ViewModelBase
         try
         {
             await _entityMetadataService.SeedDefaultTemplatesAsync();
+            await _entityMetadataService.SeedDefaultPropertyGroupsAsync();
             var templates = await _entityMetadataService.GetPropertyTemplatesAsync();
             AvailableTemplates = new ObservableCollection<PropertyTemplate>(templates);
         }
@@ -821,6 +822,7 @@ public partial class InfoPanelViewModel : ViewModelBase
     {
         try
         {
+            await _entityMetadataService.SeedDefaultPropertyGroupsAsync(ct);
             var allDefs = await _entityMetadataService.GetPropertyDefinitionsAsync(ct);
             var groups = await _entityMetadataService.GetPropertyGroupsAsync(ct);
             var groupLookup = groups.ToDictionary(g => g.Id, g => g.Name);

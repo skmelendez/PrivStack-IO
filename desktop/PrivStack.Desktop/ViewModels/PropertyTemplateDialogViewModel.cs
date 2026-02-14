@@ -82,6 +82,7 @@ public partial class PropertyTemplateDialogViewModel : ViewModelBase
     {
         IsOpen = true;
         await _metadataService.SeedDefaultTemplatesAsync();
+        await _metadataService.SeedDefaultPropertyGroupsAsync();
         await LoadTemplatesAsync();
         await LoadPropertyDefsAsync();
     }

@@ -719,6 +719,60 @@ public sealed class EntityMetadataService : IPropertyService
         }
     }
 
+    /// <summary>
+    /// Creates default property groups and assigns ungrouped property definitions to them.
+    /// Idempotent — skips if groups already exist.
+    /// </summary>
+    public async Task SeedDefaultPropertyGroupsAsync(CancellationToken ct = default)
+    {
+        var existingGroups = await GetPropertyGroupsAsync(ct);
+        if (existingGroups.Count > 0) return;
+
+        _log.Information("EntityMetadataService: seeding default property groups");
+
+        try
+        {
+            var reference = await CreatePropertyGroupAsync(
+                new PropertyGroup { Name = "Reference", SortOrder = 10 }, ct);
+            var categorization = await CreatePropertyGroupAsync(
+                new PropertyGroup { Name = "Categorization", SortOrder = 20 }, ct);
+            var tracking = await CreatePropertyGroupAsync(
+                new PropertyGroup { Name = "Tracking", SortOrder = 30 }, ct);
+
+            // Map well-known property names to groups
+            var nameToGroup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["URL"] = reference.Id,
+                ["Source"] = reference.Id,
+                ["Author"] = reference.Id,
+                ["Location"] = reference.Id,
+                ["Category"] = categorization.Id,
+                ["Genre"] = categorization.Id,
+                ["Difficulty"] = categorization.Id,
+                ["Language"] = categorization.Id,
+                ["Rating"] = tracking.Id,
+                ["Progress"] = tracking.Id,
+                ["Version"] = tracking.Id,
+                ["Cost"] = tracking.Id,
+            };
+
+            var allDefs = await GetPropertyDefinitionsAsync(ct);
+            foreach (var def in allDefs)
+            {
+                if (!string.IsNullOrEmpty(def.GroupId)) continue;
+                if (!nameToGroup.TryGetValue(def.Name, out var groupId)) continue;
+
+                await UpdatePropertyDefinitionAsync(def with { GroupId = groupId }, ct);
+            }
+
+            _log.Information("EntityMetadataService: seeded {Count} default property groups", 3);
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Failed to seed default property groups");
+        }
+    }
+
     // =========================================================================
     // Orphaned Metadata Validation
     // =========================================================================
