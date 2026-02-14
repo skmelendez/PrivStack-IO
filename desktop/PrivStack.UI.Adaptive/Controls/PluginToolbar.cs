@@ -242,13 +242,14 @@ public sealed class PluginToolbar : Border
         tb.Bind(TextBox.ForegroundProperty,
             tb.GetResourceObservable("ThemeTextPrimaryBrush"));
 
-        tb.GetObservable(TextBox.TextProperty).Subscribe(text =>
+        tb.PropertyChanged += (_, args) =>
         {
+            if (args.Property != TextBox.TextProperty) return;
             if (_suppressSearchSync) return;
             _suppressSearchSync = true;
-            SearchText = text ?? "";
+            SearchText = args.GetNewValue<string?>() ?? "";
             _suppressSearchSync = false;
-        });
+        };
 
         return tb;
     }
