@@ -20,6 +20,8 @@ internal sealed record TableGridRenderResult
     public int DataRowCount { get; init; }
     public int TotalDisplayRows { get; init; }
     public int DataRowStartGridRow { get; init; }
+    public double[]? ComputedWidths { get; init; }
+    public bool WasAutoFit { get; init; }
 }
 
 internal static class TableGridRenderer
@@ -86,6 +88,7 @@ internal static class TableGridRenderer
         foreach (var row in data.DataRows)
             dataRowCells.Add(row.Cells);
 
+        var hasExplicitWidths = data.Columns.All(c => c.PixelWidth is >= 10);
         var widths = ComputeWidths(data.Columns, headerCells, dataRowCells,
             colCount, themeSource);
 
@@ -158,7 +161,9 @@ internal static class TableGridRenderer
         {
             DataRowCount = data.DataRows.Count,
             TotalDisplayRows = totalDisplayRows,
-            DataRowStartGridRow = dataRowStartGridRow
+            DataRowStartGridRow = dataRowStartGridRow,
+            ComputedWidths = widths,
+            WasAutoFit = !hasExplicitWidths
         };
     }
 

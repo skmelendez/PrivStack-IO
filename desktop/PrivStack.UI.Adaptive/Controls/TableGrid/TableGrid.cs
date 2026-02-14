@@ -517,6 +517,10 @@ public sealed class TableGrid : Border
             _lastDataRowCount = result.DataRowCount;
             _lastDataRowStartGridRow = result.DataRowStartGridRow;
 
+            // Persist auto-fit widths so subsequent rebuilds use explicit widths
+            if (result.WasAutoFit && result.ComputedWidths != null && source != null)
+                source.OnColumnWidthsChanged(result.ComputedWidths);
+
             // Swap grid border child based on freeze state
             if (hasFreezeColumns)
                 _gridBorder.Child = _freezeLayout!.Container;
