@@ -11,7 +11,7 @@ namespace PrivStack.Desktop.Services;
 /// entities so plugin models don't need to know about these fields.
 /// Also manages property definitions and property groups.
 /// </summary>
-public sealed class EntityMetadataService
+public sealed class EntityMetadataService : IPropertyService
 {
     private static readonly ILogger _log = Log.ForContext<EntityMetadataService>();
     private static readonly JsonSerializerOptions JsonOpts = SdkJsonOptions.Default;
@@ -1095,5 +1095,28 @@ public sealed class EntityMetadataService
                     ExtractTextStringsFromJson(item, results);
                 break;
         }
+    }
+
+    // =========================================================================
+    // IPropertyService (explicit implementations for SDK-typed returns)
+    // =========================================================================
+
+    async Task<SdkEntityMetadata> IPropertyService.GetMetadataAsync(string linkType, string entityId, CancellationToken ct)
+    {
+        var meta = await GetMetadataAsync(linkType, entityId, ct);
+        return new SdkEntityMetadata(meta.EntityId, meta.LinkType, meta.Tags, meta.Properties);
+    }
+
+    async Task<IReadOnlyList<SdkPropertyDefinition>> IPropertyService.GetPropertyDefinitionsAsync(CancellationToken ct)
+    {
+        var defs = await GetPropertyDefinitionsAsync(ct);
+        return defs.Select(d => new SdkPropertyDefinition(
+            d.Id, d.Name, (SdkPropertyType)(int)d.Type, d.Description,
+            d.Options, d.DefaultValue, d.Icon, d.SortOrder, d.GroupId)).ToList();
+    }
+
+    async Task<IReadOnlyList<string>> IPropertyService.GetAllTagsAsync(CancellationToken ct)
+    {
+        return await GetAllTagsAsync(ct);
     }
 }

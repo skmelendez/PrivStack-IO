@@ -67,6 +67,12 @@ public interface IPluginHost
     IConnectionService? Connections { get; }
 
     /// <summary>
+    /// Service for reading and writing entity metadata (tags, custom properties).
+    /// Nullable for backward compatibility with older hosts.
+    /// </summary>
+    IPropertyService? Properties { get; }
+
+    /// <summary>
     /// The active workspace data directory.
     /// Plugins should store all workspace-specific files under this path.
     /// </summary>
