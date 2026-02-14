@@ -633,16 +633,15 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
                 _plugins.Add(plugin);
                 _pluginById[plugin.Metadata.Id] = plugin;
 
-                // Initialize
+                // Initialize (schemas must be registered before init, matching startup order)
                 var host = HostFactory.CreateHost(plugin.Metadata.Id);
+                RegisterEntitySchemas(plugin);
                 var success = await plugin.InitializeAsync(host, ct);
                 if (!success)
                 {
                     _log.Warning("Hot-loaded plugin failed to initialize: {PluginId}", plugin.Metadata.Id);
                     continue;
                 }
-
-                RegisterEntitySchemas(plugin);
 
                 // Activate
                 ActivatePlugin(plugin);
@@ -655,6 +654,12 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
 
                 _log.Information("Hot-loaded plugin: {PluginId} ({PluginName})",
                     plugin.Metadata.Id, plugin.Metadata.Name);
+            }
+
+            // Add to cached types so workspace switch (reinitialize) rediscovers them
+            if (_cachedPluginTypes != null)
+            {
+                _cachedPluginTypes.AddRange(pluginTypes);
             }
 
             // Re-sort and rebuild navigation
