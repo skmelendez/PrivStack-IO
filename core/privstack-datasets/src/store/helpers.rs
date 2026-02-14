@@ -57,11 +57,11 @@ pub(crate) fn build_filter_clause(
     }
 }
 
-/// Sanitize a column name for use in SQL (remove anything that isn't alphanumeric/underscore/space).
+/// Escape a column name for use in double-quoted SQL identifiers.
+/// DuckDB supports any character in identifiers when double-quoted;
+/// we only need to escape embedded double quotes (by doubling them).
 pub(crate) fn sanitize_identifier(name: &str) -> String {
-    name.chars()
-        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == ' ')
-        .collect()
+    name.replace('"', "\"\"")
 }
 
 /// Extract a single row value as serde_json::Value.
