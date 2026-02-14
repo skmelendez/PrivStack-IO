@@ -53,6 +53,15 @@ public sealed class TableGrid : Border
     public static readonly StyledProperty<string?> CaptionProperty =
         AvaloniaProperty.Register<TableGrid, string?>(nameof(Caption));
 
+    public static readonly StyledProperty<int> FrozenColumnCountProperty =
+        AvaloniaProperty.Register<TableGrid, int>(nameof(FrozenColumnCount));
+
+    public static readonly StyledProperty<int> FrozenRowCountProperty =
+        AvaloniaProperty.Register<TableGrid, int>(nameof(FrozenRowCount));
+
+    public static readonly StyledProperty<TableScrollMode> ScrollModeProperty =
+        AvaloniaProperty.Register<TableGrid, TableScrollMode>(nameof(ScrollMode));
+
     public ITableGridDataSource? DataSource
     {
         get => GetValue(DataSourceProperty);
@@ -119,6 +128,24 @@ public sealed class TableGrid : Border
         set => SetValue(CaptionProperty, value);
     }
 
+    public int FrozenColumnCount
+    {
+        get => GetValue(FrozenColumnCountProperty);
+        set => SetValue(FrozenColumnCountProperty, value);
+    }
+
+    public int FrozenRowCount
+    {
+        get => GetValue(FrozenRowCountProperty);
+        set => SetValue(FrozenRowCountProperty, value);
+    }
+
+    public TableScrollMode ScrollMode
+    {
+        get => GetValue(ScrollModeProperty);
+        set => SetValue(ScrollModeProperty, value);
+    }
+
     // ── Events ────────────────────────────────────────────────────────────
 
     public event Action<int>? BoundaryEscapeRequested;
@@ -127,6 +154,9 @@ public sealed class TableGrid : Border
     public event Action<int>? PageSizeCommitted;
     public event Action<bool>? IsStripedCommitted;
     public event Action? EditTableRequested;
+    public event Action<int>? FrozenColumnCountCommitted;
+    public event Action<int>? FrozenRowCountCommitted;
+    public event Action<TableScrollMode>? ScrollModeCommitted;
 
     // ── Internal state ────────────────────────────────────────────────────
 
@@ -145,6 +175,8 @@ public sealed class TableGrid : Border
 
     private TableGridRowDrag? _rowDrag;
     private TableGridColumnDrag? _columnDrag;
+    private TableGridFreezeLayout? _freezeLayout;
+    private readonly TableGridInfiniteScroll _infiniteScroll;
     private int _lastDataRowCount;
     private int _lastDataRowStartGridRow;
 
@@ -203,10 +235,14 @@ public sealed class TableGrid : Border
         _cellNavigation = new TableGridCellNavigation();
         _cellNavigation.BoundaryEscapeRequested += dir => BoundaryEscapeRequested?.Invoke(dir);
 
+        _infiniteScroll = new TableGridInfiniteScroll();
+        _infiniteScroll.LoadPageRequested += OnInfiniteScrollLoadPage;
+
         _toolbar = new TableGridToolbar();
         _toolbar.IsStripedChanged += OnToolbarStripedChanged;
         _toolbar.HeaderToggleChanged += OnToolbarHeaderToggled;
         _toolbar.EditTableRequested += () => EditTableRequested?.Invoke();
+        _toolbar.ScrollModeChanged += OnToolbarScrollModeChanged;
 
         _titleBlock = new TextBlock
         {
@@ -249,6 +285,7 @@ public sealed class TableGrid : Border
         root.Children.Add(gridBorder);
         root.Children.Add(_captionBlock);
         root.Children.Add(_pagingBar);
+        root.Children.Add(_infiniteScroll.LoadingIndicator);
 
         Child = root;
     }
@@ -320,6 +357,15 @@ public sealed class TableGrid : Border
             _captionBlock.Text = caption ?? "";
             _captionBlock.IsVisible = !string.IsNullOrEmpty(caption);
         }
+        else if (change.Property == FrozenColumnCountProperty
+                 || change.Property == FrozenRowCountProperty)
+        {
+            Rebuild();
+        }
+        else if (change.Property == ScrollModeProperty)
+        {
+            OnScrollModeChanged();
+        }
     }
 
     // ── Public API ────────────────────────────────────────────────────────
@@ -370,8 +416,20 @@ public sealed class TableGrid : Border
             var hasHeaderRow = data.HeaderRows.Count > 0 &&
                                data.HeaderRows.Any(r => r.IsHeader);
 
+            // In infinite scroll mode, accumulate rows
+            var effectiveDataRows = data.DataRows;
+            if (ScrollMode == TableScrollMode.InfiniteScroll)
+            {
+                _infiniteScroll.AppendPage(data.DataRows, paging);
+                effectiveDataRows = _infiniteScroll.AccumulatedRows;
+            }
+
+            var renderData = ScrollMode == TableScrollMode.InfiniteScroll
+                ? data with { DataRows = effectiveDataRows }
+                : data;
+
             var result = TableGridRenderer.RenderGrid(
-                _grid, data, paging, _sortState,
+                _grid, renderData, paging, _sortState,
                 source.SupportsSorting,
                 source.IsEditable,
                 IsReadOnly,
@@ -390,14 +448,24 @@ public sealed class TableGrid : Border
                 Rebuild,
                 this,
                 IsStriped,
-                ColorTheme);
+                ColorTheme,
+                FrozenColumnCount,
+                FrozenRowCount);
 
             _lastDataRowCount = result.DataRowCount;
             _lastDataRowStartGridRow = result.DataRowStartGridRow;
-            _pagingBar.Update(paging);
-            _pagingBar.IsVisible = ShowPaging;
 
-            _toolbar.Update(source, Rebuild, hasHeaderRow, IsStriped);
+            var isInfiniteScroll = ScrollMode == TableScrollMode.InfiniteScroll;
+            _pagingBar.Update(paging);
+            _pagingBar.IsVisible = ShowPaging && !isInfiniteScroll;
+
+            // Enable vertical scroll in infinite scroll mode
+            _scrollViewer.VerticalScrollBarVisibility = isInfiniteScroll
+                ? Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
+                : Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
+
+            _toolbar.Update(source, Rebuild, hasHeaderRow, IsStriped,
+                ScrollMode == TableScrollMode.InfiniteScroll);
             _toolbar.IsVisible = ShowToolbar;
 
             _filterBar.IsVisible = ShowFilter;
@@ -415,6 +483,8 @@ public sealed class TableGrid : Border
     {
         _sortState.OnHeaderClick(colIndex);
         _currentPage = 0;
+        if (ScrollMode == TableScrollMode.InfiniteScroll)
+            _infiniteScroll.Reset();
         Rebuild();
     }
 
@@ -450,6 +520,8 @@ public sealed class TableGrid : Border
 
     private void OnFilterBarTextChanged(string? text)
     {
+        if (ScrollMode == TableScrollMode.InfiniteScroll)
+            _infiniteScroll.Reset();
         FilterText = text;
         FilterTextCommitted?.Invoke(text);
     }
@@ -469,6 +541,59 @@ public sealed class TableGrid : Border
     private void OnToolbarHeaderToggled(bool hasHeader)
     {
         DataChanged?.Invoke();
+    }
+
+    private void OnToolbarScrollModeChanged(bool isInfiniteScroll)
+    {
+        var mode = isInfiniteScroll
+            ? TableScrollMode.InfiniteScroll
+            : TableScrollMode.Paginated;
+        ScrollMode = mode;
+        ScrollModeCommitted?.Invoke(mode);
+    }
+
+    private void OnScrollModeChanged()
+    {
+        if (ScrollMode == TableScrollMode.InfiniteScroll)
+        {
+            _infiniteScroll.Reset();
+            _infiniteScroll.AttachToScrollViewer(_scrollViewer);
+            _currentPage = 0;
+        }
+        else
+        {
+            _infiniteScroll.DetachFromScrollViewer(_scrollViewer);
+            _infiniteScroll.Reset();
+            _currentPage = 0;
+        }
+        Rebuild();
+    }
+
+    private async Task OnInfiniteScrollLoadPage(int page)
+    {
+        var source = DataSource;
+        if (source == null) return;
+
+        var pageSize = Math.Clamp(PageSize, 1, 100);
+        var version = _rebuildVersion;
+
+        try
+        {
+            var (data, paging) = await source.GetDataAsync(
+                FilterText, _sortState.ColumnIndex, _sortState.Direction,
+                page, pageSize);
+
+            if (version != _rebuildVersion) return;
+
+            _infiniteScroll.AppendPage(data.DataRows, paging);
+
+            // Re-render with accumulated rows
+            Rebuild();
+        }
+        catch
+        {
+            // Silently fail — loading indicator will hide on next rebuild
+        }
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

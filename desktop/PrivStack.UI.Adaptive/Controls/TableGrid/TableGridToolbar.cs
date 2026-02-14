@@ -24,11 +24,13 @@ internal sealed class TableGridToolbar : Border
     private Action? _rebuild;
     private bool _currentHasHeader;
     private bool _currentIsStriped;
+    private bool _currentIsInfiniteScroll;
     private MenuFlyout? _lastFlyout;
 
     public event Action<bool>? IsStripedChanged;
     public event Action<bool>? HeaderToggleChanged;
     public event Action? EditTableRequested;
+    public event Action<bool>? ScrollModeChanged;
 
     /// <summary>
     /// Slot for plugin-injected menu items. Add MenuItem controls to this list;
@@ -66,12 +68,14 @@ internal sealed class TableGridToolbar : Border
         Child = _mainPanel;
     }
 
-    public void Update(ITableGridDataSource? source, Action rebuild, bool hasHeaderRow, bool isStriped = false)
+    public void Update(ITableGridDataSource? source, Action rebuild, bool hasHeaderRow,
+        bool isStriped = false, bool isInfiniteScroll = false)
     {
         _source = source;
         _rebuild = rebuild;
         _currentHasHeader = hasHeaderRow;
         _currentIsStriped = isStriped;
+        _currentIsInfiniteScroll = isInfiniteScroll;
     }
 
     private void OnOptionsButtonClick(object? sender, RoutedEventArgs e)
@@ -108,6 +112,18 @@ internal sealed class TableGridToolbar : Border
             IsStripedChanged?.Invoke(_currentIsStriped);
         };
         flyout.Items.Add(stripedItem);
+
+        // Infinite Scroll toggle
+        var scrollItem = new MenuItem
+        {
+            Header = _currentIsInfiniteScroll ? "\u2611 Infinite Scroll" : "\u2610 Infinite Scroll"
+        };
+        scrollItem.Click += (_, _) =>
+        {
+            _currentIsInfiniteScroll = !_currentIsInfiniteScroll;
+            ScrollModeChanged?.Invoke(_currentIsInfiniteScroll);
+        };
+        flyout.Items.Add(scrollItem);
 
         // Additional items from plugin
         if (AdditionalMenuItems.Count > 0)

@@ -36,4 +36,8 @@ public interface ITableGridDataSource
     Task OnDeleteRowAtAsync(int index);
     Task OnInsertColumnAtAsync(int index);
     Task OnDeleteColumnAtAsync(int index);
+
+    // Freeze pane callbacks
+    Task OnFreezeColumnsAsync(int count);
+    Task OnFreezeRowsAsync(int count);
 }

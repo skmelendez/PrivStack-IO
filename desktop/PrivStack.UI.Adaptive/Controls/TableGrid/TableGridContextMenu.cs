@@ -19,6 +19,7 @@ internal static class TableGridContextMenu
     public static ContextMenu BuildCellContextMenu(
         int rowIndex, int colIndex, bool hasHeaderRow,
         bool supportsStructureEditing,
+        int frozenRowCount,
         ITableGridDataSource source, Action rebuild)
     {
         var menu = new ContextMenu();
@@ -89,6 +90,30 @@ internal static class TableGridContextMenu
             menu.Items.Add(new Separator());
         }
 
+        // ── Freeze row ─────────────────────────────────────────────
+        if (frozenRowCount > 0)
+        {
+            var unfreezeRows = new MenuItem { Header = "Unfreeze Rows" };
+            unfreezeRows.Click += async (_, _) =>
+            {
+                await source.OnFreezeRowsAsync(0);
+                rebuild();
+            };
+            menu.Items.Add(unfreezeRows);
+        }
+        else
+        {
+            var freezeRow = new MenuItem { Header = "Freeze This Row" };
+            freezeRow.Click += async (_, _) =>
+            {
+                await source.OnFreezeRowsAsync(rowIndex + 1);
+                rebuild();
+            };
+            menu.Items.Add(freezeRow);
+        }
+
+        menu.Items.Add(new Separator());
+
         // ── Header row toggle (always available) ─────────────────────
         var headerToggle = new MenuItem
         {
@@ -111,6 +136,7 @@ internal static class TableGridContextMenu
     public static ContextMenu BuildHeaderContextMenu(
         int colIndex, bool hasHeaderRow,
         bool supportsStructureEditing,
+        int frozenColumnCount,
         ITableGridDataSource source, Action rebuild)
     {
         var menu = new ContextMenu();
@@ -177,6 +203,30 @@ internal static class TableGridContextMenu
 
             menu.Items.Add(new Separator());
         }
+
+        // ── Freeze columns ─────────────────────────────────────────
+        if (frozenColumnCount > 0)
+        {
+            var unfreezeCol = new MenuItem { Header = "Unfreeze Columns" };
+            unfreezeCol.Click += async (_, _) =>
+            {
+                await source.OnFreezeColumnsAsync(0);
+                rebuild();
+            };
+            menu.Items.Add(unfreezeCol);
+        }
+        else
+        {
+            var freezeCol = new MenuItem { Header = "Freeze From Here" };
+            freezeCol.Click += async (_, _) =>
+            {
+                await source.OnFreezeColumnsAsync(colIndex + 1);
+                rebuild();
+            };
+            menu.Items.Add(freezeCol);
+        }
+
+        menu.Items.Add(new Separator());
 
         // ── Header row toggle (always available) ─────────────────────
         var headerToggle = new MenuItem
