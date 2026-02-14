@@ -9,10 +9,10 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Primary background - deepest layer -->
-    <Color x:Key="ThemeBackground">#ECEEF2</Color>
+    <Color x:Key="ThemeBackground">#F0F1F5</Color>
 
     <!-- Surface - panels, cards, sidebars -->
-    <Color x:Key="ThemeSurface">#F8F9FB</Color>
+    <Color x:Key="ThemeSurface">#FAFBFC</Color>
 
     <!-- Elevated surface - modals, dropdowns, popovers -->
     <Color x:Key="ThemeSurfaceElevated">#FFFFFF</Color>
@@ -20,15 +20,18 @@
     <!-- Glass surface - semi-transparent overlay panels -->
     <Color x:Key="ThemeSurfaceGlass">#D9F8F9FB</Color>
 
+    <!-- Recessed surface — inset areas, code blocks, sidebar backgrounds -->
+    <Color x:Key="ThemeSurfaceRecessed">#E8EAF0</Color>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- BORDER COLORS                                                            -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Primary border - dividers, outlines -->
-    <Color x:Key="ThemeBorder">#C8CCD4</Color>
+    <Color x:Key="ThemeBorder">#D5D8E0</Color>
 
     <!-- Subtle border - low-contrast separators -->
-    <Color x:Key="ThemeBorderSubtle">#DDE0E6</Color>
+    <Color x:Key="ThemeBorderSubtle">#EAEDF2</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- TEXT COLORS                                                              -->
@@ -126,6 +129,7 @@
     <SolidColorBrush x:Key="ThemeSurfaceBrush" Color="{StaticResource ThemeSurface}"/>
     <SolidColorBrush x:Key="ThemeSurfaceElevatedBrush" Color="{StaticResource ThemeSurfaceElevated}"/>
     <SolidColorBrush x:Key="ThemeSurfaceGlassBrush" Color="{StaticResource ThemeSurfaceGlass}"/>
+    <SolidColorBrush x:Key="ThemeSurfaceRecessedBrush" Color="{StaticResource ThemeSurfaceRecessed}"/>
 
     <!-- Border Brushes -->
     <SolidColorBrush x:Key="ThemeBorderBrush" Color="{StaticResource ThemeBorder}"/>
@@ -304,6 +308,12 @@
     <!-- Section spacing (between major sections) -->
     <x:Double x:Key="ThemeSectionSpacing">24</x:Double>
 
+    <!-- Semantic spacing aliases -->
+    <Thickness x:Key="ThemeSectionGap">32</Thickness>
+    <Thickness x:Key="ThemeCardInternalPadding">20</Thickness>
+    <Thickness x:Key="ThemeClusterGap">16</Thickness>
+    <Thickness x:Key="ThemeInlineGap">8</Thickness>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- BUTTON SIZING                                                            -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -329,7 +339,7 @@
     <!-- TYPOGRAPHY                                                               -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
-    <FontFamily x:Key="ThemeFontSans">Inter, Segoe UI, -apple-system, Noto Sans, sans-serif, Segoe UI Emoji, Noto Color Emoji</FontFamily>
+    <FontFamily x:Key="ThemeFontSans">avares://PrivStack.Desktop/Assets/Fonts#IBM Plex Sans, Segoe UI, -apple-system, Noto Sans, sans-serif, Segoe UI Emoji, Noto Color Emoji</FontFamily>
     <FontFamily x:Key="ThemeFontMono">avares://PrivStack.Desktop/Assets/Fonts#JetBrains Mono, Consolas, Menlo, monospace</FontFamily>
 
     <x:Double x:Key="ThemeFontSize2Xs">10</x:Double>
@@ -344,6 +354,17 @@
     <x:Double x:Key="ThemeFontSize2Xl">26</x:Double>
     <x:Double x:Key="ThemeFontSize3Xl">34</x:Double>
     <x:Double x:Key="ThemeFontSize4Xl">48</x:Double>
+
+    <!-- Semantic type scale -->
+    <x:Double x:Key="ThemeFontSizeCaption">11</x:Double>
+    <x:Double x:Key="ThemeFontSizeBody">14</x:Double>
+    <x:Double x:Key="ThemeFontSizeBodyLg">15</x:Double>
+    <x:Double x:Key="ThemeFontSizeSubheading">13</x:Double>
+    <x:Double x:Key="ThemeFontSizeHeading3">17</x:Double>
+    <x:Double x:Key="ThemeFontSizeHeading2">22</x:Double>
+    <x:Double x:Key="ThemeFontSizeHeading1">28</x:Double>
+    <x:Double x:Key="ThemeFontSizeDisplay">36</x:Double>
+
     <!-- Line Heights -->
     <x:Double x:Key="ThemeLineHeightXs">14</x:Double>
     <x:Double x:Key="ThemeLineHeightSm">22</x:Double>
