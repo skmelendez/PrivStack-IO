@@ -190,10 +190,11 @@ internal static class TableGridCellFactory
         var capturedCol = colIndex;
         tb.LostFocus += (_, _) => onCellEdited(capturedRowId, capturedCol, tb.Text ?? "");
 
-        // Cell navigation
+        // Cell navigation — use Tunnel routing so keys are handled before the
+        // TextBox's internal OnKeyDown (which may swallow Up/Down for wrapped text).
         var dr = displayRow;
         var ci = colIndex;
-        tb.KeyDown += (_, e) =>
+        tb.AddHandler(InputElement.KeyDownEvent, (object? _, KeyEventArgs e) =>
         {
             switch (e.Key)
             {
@@ -218,7 +219,7 @@ internal static class TableGridCellFactory
                     e.Handled = true;
                     break;
             }
-        };
+        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
         var backgroundColor = GetCellBackground(themeSource, isHeader, isStriped, dataRowIndex, colorTheme);
 
