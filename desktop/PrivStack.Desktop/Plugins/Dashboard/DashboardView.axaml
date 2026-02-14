@@ -137,12 +137,12 @@
                             Command="{Binding ToggleWorkspacePluginsExpandedCommand}">
                         <StackPanel Spacing="4">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="&#x25B6;&#xFE0E;"
+                                <TextBlock Text="&#x25B8;"
                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding !IsWorkspacePluginsExpanded}"/>
-                                <TextBlock Text="&#x25BC;&#xFE0E;"
+                                <TextBlock Text="&#x25BE;"
                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                            VerticalAlignment="Center"
@@ -302,12 +302,12 @@
                                 HorizontalAlignment="Left" HorizontalContentAlignment="Left"
                                 Command="{Binding ToggleStorageExpandedCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="&#x25B6;&#xFE0E;"
+                                <TextBlock Text="&#x25B8;"
                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding !IsStorageExpanded}"/>
-                                <TextBlock Text="&#x25BC;&#xFE0E;"
+                                <TextBlock Text="&#x25BE;"
                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                            VerticalAlignment="Center"
@@ -673,12 +673,12 @@
                                                 Command="{Binding $parent[UserControl].((vm:DashboardViewModel)DataContext).TogglePluginExpandedCommand}"
                                                 CommandParameter="{Binding}">
                                             <Grid ColumnDefinitions="Auto,*,Auto">
-                                                <TextBlock Grid.Column="0" Text="&#x25B6;&#xFE0E;"
+                                                <TextBlock Grid.Column="0" Text="&#x25B8;"
                                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                                            VerticalAlignment="Center" Margin="0,0,10,0"
                                                            IsVisible="{Binding !IsExpanded}"/>
-                                                <TextBlock Grid.Column="0" Text="&#x25BC;&#xFE0E;"
+                                                <TextBlock Grid.Column="0" Text="&#x25BE;"
                                                            FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                                            VerticalAlignment="Center" Margin="0,0,10,0"
