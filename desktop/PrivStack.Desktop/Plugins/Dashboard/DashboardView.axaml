@@ -20,8 +20,7 @@
             <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="FontSize" Value="{DynamicResource ThemeFontSizeXs}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
         </Style>
         <Style Selector="Button.category-pill:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
@@ -109,8 +108,7 @@
                     <!-- Refresh -->
                     <Button Command="{Binding RefreshCommand}"
                             Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                            BorderBrush="{DynamicResource ThemeBorderBrush}"
-                            BorderThickness="1"
+                            BorderThickness="0"
                             Padding="10,6"
                             CornerRadius="6"
                             Cursor="Hand">
@@ -148,8 +146,7 @@
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding IsWorkspacePluginsExpanded}"/>
                                 <TextBlock Text="Workspace Plugins"
-                                           FontSize="{DynamicResource ThemeFontSizeLgXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           Classes="section-heading"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                             <TextBlock Text="Manage which plugins are active in this workspace"
@@ -168,11 +165,11 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="models:WorkspacePluginEntry">
-                                    <Border CornerRadius="10" Padding="14"
+                                    <Border CornerRadius="12" Padding="20"
                                             MinWidth="200"
-                                            BorderThickness="1"
-                                            BorderBrush="{DynamicResource ThemeBorderBrush}"
-                                            Background="{DynamicResource ThemeSurfaceElevatedBrush}">
+                                            BorderThickness="0"
+                                            Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                            BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                                         <Grid ColumnDefinitions="Auto,*,Auto">
                                             <Border Grid.Column="0" Width="32" Height="32"
                                                     Background="{DynamicResource ThemeSurfaceBrush}"
@@ -220,13 +217,12 @@
 
                 <!-- System Overview Cards -->
                 <StackPanel Spacing="8">
-                    <TextBlock Text="System Overview"
-                               FontSize="{DynamicResource ThemeFontSizeLgXl}" FontWeight="Bold"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                    <TextBlock Text="System Overview" Classes="section-heading"/>
                     <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <!-- App Shell -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}">
+                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <controls:IconControl Icon="Box" Size="16" StrokeThickness="1.5"
@@ -241,8 +237,9 @@
                             </StackPanel>
                         </Border>
                         <!-- Plugins (binaries) -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}">
+                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <controls:IconControl Icon="Package" Size="16" StrokeThickness="1.5"
@@ -257,8 +254,9 @@
                             </StackPanel>
                         </Border>
                         <!-- Data Storage -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}">
+                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <controls:IconControl Icon="Database" Size="16" StrokeThickness="1.5"
@@ -273,8 +271,9 @@
                             </StackPanel>
                         </Border>
                         <!-- Memory -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" MinWidth="180"
-                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}"
+                                BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <controls:IconControl Icon="Cpu" Size="16" StrokeThickness="1.5"
@@ -313,8 +312,7 @@
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding IsStorageExpanded}"/>
                                 <TextBlock Text="Storage Details"
-                                           FontSize="{DynamicResource ThemeFontSizeMd}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           Classes="section-heading"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -442,11 +440,11 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:DashboardPluginItem">
                                 <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                        CornerRadius="10"
-                                        Padding="16"
+                                        CornerRadius="12"
+                                        Padding="20"
                                         MinWidth="220"
-                                        BorderBrush="{DynamicResource ThemeBorderBrush}"
-                                        BorderThickness="1">
+                                        BorderThickness="0"
+                                        BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                                     <Grid RowDefinitions="Auto,*,Auto">
                                         <!-- Header: icon + name + badges -->
                                         <StackPanel Grid.Row="0" Spacing="10">
@@ -589,13 +587,12 @@
             <ScrollViewer Padding="24,24,24,48">
                 <StackPanel Spacing="24" MaxWidth="900" HorizontalAlignment="Center">
                     <!-- Storage Overview Cards -->
-                    <TextBlock Text="Storage Overview"
-                               FontSize="{DynamicResource ThemeFontSizeLgXl}" FontWeight="Bold"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                    <TextBlock Text="Storage Overview" Classes="section-heading"/>
                     <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <!-- Database -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}">
+                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
                                 <TextBlock Text="&#x1F5C3;&#xFE0F; Database" FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
@@ -610,8 +607,9 @@
                             </StackPanel>
                         </Border>
                         <!-- Files -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}">
+                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
                                 <TextBlock Text="&#x1F4C1; Files" FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
@@ -622,8 +620,9 @@
                             </StackPanel>
                         </Border>
                         <!-- Vault -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}">
+                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
                                 <TextBlock Text="&#x1F512; Vault" FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
@@ -638,8 +637,9 @@
                             </StackPanel>
                         </Border>
                         <!-- Total -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="8" MinWidth="180"
-                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}"
+                                BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
                                 <TextBlock Text="&#x1F4BE; Total" FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
@@ -656,9 +656,7 @@
                     </WrapPanel>
 
                     <!-- Plugin Data Table -->
-                    <TextBlock Text="Plugin Data"
-                               FontSize="{DynamicResource ThemeFontSizeLgXl}" FontWeight="Bold"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                    <TextBlock Text="Plugin Data" Classes="section-heading"
                                Margin="0,8,0,0"/>
 
                     <ItemsControl ItemsSource="{Binding PluginDataItems}">
