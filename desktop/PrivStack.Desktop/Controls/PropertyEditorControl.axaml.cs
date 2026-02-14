@@ -1,9 +1,12 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using PrivStack.Desktop.Models;
 using PrivStack.Desktop.ViewModels;
+using PrivStack.Sdk.Capabilities;
 
 namespace PrivStack.Desktop.Controls;
 
@@ -62,6 +65,7 @@ public partial class PropertyEditorControl : UserControl
             PropertyType.Select => BuildSelectEditor(vm),
             PropertyType.MultiSelect => BuildMultiSelectEditor(vm),
             PropertyType.Url => BuildUrlEditor(vm),
+            PropertyType.Relation => BuildRelationEditor(vm),
             _ => BuildTextEditor(vm),
         };
     }
@@ -205,6 +209,227 @@ public partial class PropertyEditorControl : UserControl
         grid.Children.Add(textBox);
         grid.Children.Add(linkIcon);
         return grid;
+    }
+
+    private static Control BuildRelationEditor(PropertyValueViewModel vm)
+    {
+        var container = new StackPanel { Spacing = 4 };
+
+        // Chip display area
+        var chipPanel = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 2) };
+        RebuildChips(chipPanel, vm);
+        vm.RelationItems.CollectionChanged += (_, _) => RebuildChips(chipPanel, vm);
+        container.Children.Add(chipPanel);
+
+        // Search input + popup
+        var searchBox = new TextBox
+        {
+            Watermark = "Search entities...",
+            Classes = { "prop-input" },
+        };
+
+        var resultsList = new StackPanel { Spacing = 0 };
+        var popup = new Popup
+        {
+            PlacementTarget = searchBox,
+            Placement = PlacementMode.Bottom,
+            MaxHeight = 200,
+            MinWidth = 220,
+            Child = new Border
+            {
+                Background = GetResource("ThemeSurfaceElevatedBrush") as IBrush ?? Brushes.Black,
+                BorderBrush = GetResource("ThemeBorderSubtleBrush") as IBrush ?? Brushes.Gray,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(4),
+                Child = new ScrollViewer
+                {
+                    MaxHeight = 180,
+                    Content = resultsList,
+                },
+            },
+        };
+
+        DispatcherTimer? debounceTimer = null;
+
+        searchBox.TextChanged += (_, _) =>
+        {
+            debounceTimer?.Stop();
+            var query = searchBox.Text?.Trim() ?? "";
+            if (query.Length < 2)
+            {
+                popup.IsOpen = false;
+                resultsList.Children.Clear();
+                return;
+            }
+
+            debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            debounceTimer.Tick += async (_, _) =>
+            {
+                debounceTimer.Stop();
+                if (vm.EntitySearcher == null) return;
+
+                try
+                {
+                    var results = await vm.EntitySearcher(query, vm.Definition.AllowedLinkTypes, 10);
+                    resultsList.Children.Clear();
+                    if (results.Count == 0)
+                    {
+                        resultsList.Children.Add(new TextBlock
+                        {
+                            Text = "No results",
+                            FontSize = ThemeDouble("ThemeFontSizeSm", 12),
+                            Foreground = GetResource("ThemeTextMutedBrush") as IBrush ?? Brushes.Gray,
+                            Margin = new Thickness(6, 4),
+                        });
+                    }
+                    else
+                    {
+                        foreach (var item in results)
+                        {
+                            var row = BuildSearchResultRow(item, vm, searchBox, popup);
+                            resultsList.Children.Add(row);
+                        }
+                    }
+                    popup.IsOpen = true;
+                }
+                catch
+                {
+                    // Ignore search errors
+                }
+            };
+            debounceTimer.Start();
+        };
+
+        searchBox.LostFocus += (_, _) =>
+        {
+            // Delay close so click on popup item registers
+            DispatcherTimer.RunOnce(() => { if (!popup.IsPointerOver) popup.IsOpen = false; },
+                TimeSpan.FromMilliseconds(200));
+        };
+
+        container.Children.Add(searchBox);
+        container.Children.Add(popup);
+        return container;
+    }
+
+    private static Control BuildSearchResultRow(LinkableItem item, PropertyValueViewModel vm, TextBox searchBox, Popup popup)
+    {
+        var btn = new Button
+        {
+            Background = Brushes.Transparent,
+            Padding = new Thickness(6, 4),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+            MinHeight = 0,
+            CornerRadius = new CornerRadius(4),
+            Content = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 6,
+                Children =
+                {
+                    new IconControl
+                    {
+                        Icon = item.Icon ?? "Link",
+                        Size = 12,
+                        StrokeThickness = 1.5,
+                        Stroke = GetResource("ThemeTextMutedBrush") as IBrush ?? Brushes.Gray,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    },
+                    new TextBlock
+                    {
+                        Text = item.Title,
+                        FontSize = ThemeDouble("ThemeFontSizeSmMd", 13),
+                        Foreground = GetResource("ThemeTextPrimaryBrush") as IBrush ?? Brushes.White,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                    },
+                    new TextBlock
+                    {
+                        Text = item.LinkType,
+                        FontSize = ThemeDouble("ThemeFontSizeXsSm", 11),
+                        Foreground = GetResource("ThemeTextMutedBrush") as IBrush ?? Brushes.Gray,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    },
+                },
+            },
+        };
+        var hoverBrush = GetResource("ThemeHoverBrush") as IBrush ?? Brushes.DarkGray;
+        btn.PointerEntered += (_, _) => btn.Background = hoverBrush;
+        btn.PointerExited += (_, _) => btn.Background = Brushes.Transparent;
+
+        btn.Click += async (_, _) =>
+        {
+            await vm.AddRelationAsync(item);
+            searchBox.Text = "";
+            popup.IsOpen = false;
+        };
+        return btn;
+    }
+
+    private static void RebuildChips(WrapPanel panel, PropertyValueViewModel vm)
+    {
+        panel.Children.Clear();
+        foreach (var item in vm.RelationItems)
+        {
+            var chip = new Border
+            {
+                Background = GetResource("ThemeSurfaceElevatedBrush") as IBrush ?? Brushes.DarkGray,
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(6, 2, 4, 2),
+                Margin = new Thickness(0, 0, 4, 2),
+                Child = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 4,
+                    Children =
+                    {
+                        new IconControl
+                        {
+                            Icon = item.Icon ?? "Link",
+                            Size = 10,
+                            StrokeThickness = 1.5,
+                            Stroke = GetResource("ThemeTextMutedBrush") as IBrush ?? Brushes.Gray,
+                            VerticalAlignment = VerticalAlignment.Center,
+                        },
+                        new TextBlock
+                        {
+                            Text = item.Title,
+                            FontSize = ThemeDouble("ThemeFontSizeSm", 12),
+                            Foreground = GetResource("ThemeTextPrimaryBrush") as IBrush ?? Brushes.White,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            MaxWidth = 140,
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                        },
+                    },
+                },
+            };
+
+            var removeBtn = new Button
+            {
+                Background = Brushes.Transparent,
+                Padding = new Thickness(2),
+                MinWidth = 0,
+                MinHeight = 0,
+                CornerRadius = new CornerRadius(3),
+                Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+                VerticalAlignment = VerticalAlignment.Center,
+                Content = new IconControl
+                {
+                    Icon = "X",
+                    Size = 8,
+                    StrokeThickness = 1.5,
+                    Stroke = GetResource("ThemeTextMutedBrush") as IBrush ?? Brushes.Gray,
+                },
+            };
+            var capturedItem = item;
+            removeBtn.Click += async (_, _) => await vm.RemoveRelationAsync(capturedItem);
+
+            ((StackPanel)chip.Child).Children.Add(removeBtn);
+            panel.Children.Add(chip);
+        }
     }
 
     private static object? GetResource(string key) =>
