@@ -211,21 +211,23 @@ public sealed class TableGrid : Border
         _titleBlock = new TextBlock
         {
             FontWeight = FontWeight.SemiBold,
-            FontSize = 14,
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 0, 0, 4),
             IsVisible = false
         };
+        _titleBlock.Bind(TextBlock.FontSizeProperty,
+            _titleBlock.GetResourceObservable("ThemeFontSizeLg"));
 
         _captionBlock = new TextBlock
         {
-            FontSize = 12,
             FontStyle = FontStyle.Italic,
             Opacity = 0.6,
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 4, 0, 0),
             IsVisible = false
         };
+        _captionBlock.Bind(TextBlock.FontSizeProperty,
+            _captionBlock.GetResourceObservable("ThemeFontSizeSmMd"));
 
         // Filter bar (left) + toolbar/cog (right) on same row
         var filterToolbarRow = new DockPanel { Margin = new Thickness(0, 0, 0, 2) };
