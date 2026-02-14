@@ -181,6 +181,7 @@ public sealed class TableGrid : Border
 
     private int _currentPage;
     private int _rebuildVersion;
+    private bool _isScrollTriggeredRebuild;
     private TablePagingInfo _lastPaging = new()
     {
         CurrentPage = 0, TotalPages = 1, TotalFilteredRows = 0, PageSize = 10
@@ -235,7 +236,7 @@ public sealed class TableGrid : Border
         _cellNavigation.BoundaryEscapeRequested += dir => BoundaryEscapeRequested?.Invoke(dir);
 
         _infiniteScroll = new TableGridInfiniteScroll();
-        _infiniteScroll.PageChangeRequested += OnInfiniteScrollPageChange;
+        _infiniteScroll.ScrollOffsetChanged += OnScrollOffsetChanged;
 
         _toolbar = new TableGridToolbar();
         _toolbar.IsStripedChanged += OnToolbarStripedChanged;
@@ -388,16 +389,61 @@ public sealed class TableGrid : Border
             return;
         }
 
+        var isScrollRebuild = _isScrollTriggeredRebuild;
+        _isScrollTriggeredRebuild = false;
+
         var version = ++_rebuildVersion;
         var pageSize = Math.Clamp(PageSize, 1, 100);
 
         try
         {
-            var (data, paging) = await source.GetDataAsync(
-                FilterText, _sortState.ColumnIndex, _sortState.Direction,
-                _currentPage, pageSize);
+            TableGridData data;
+            TablePagingInfo paging;
 
-            if (version != _rebuildVersion) return;
+            if (ScrollMode == TableScrollMode.InfiniteScroll
+                && isScrollRebuild && _infiniteScroll.Template != null)
+            {
+                // Scroll-triggered: serve from page cache, fetch missing pages
+                var (neededPages, visibleRows) = _infiniteScroll.GetVisibleWindow();
+
+                if (neededPages.Count > 0)
+                {
+                    foreach (var page in neededPages)
+                    {
+                        var (pageData, _) = await source.GetDataAsync(
+                            FilterText, _sortState.ColumnIndex, _sortState.Direction,
+                            page, pageSize);
+                        if (version != _rebuildVersion) return;
+                        _infiniteScroll.CachePage(page, pageData.DataRows);
+                    }
+                    (_, visibleRows) = _infiniteScroll.GetVisibleWindow();
+                }
+
+                data = _infiniteScroll.Template with { DataRows = visibleRows ?? [] };
+                paging = _lastPaging;
+            }
+            else
+            {
+                // Normal fetch (initial load, paginated, filter/sort change)
+                (data, paging) = await source.GetDataAsync(
+                    FilterText, _sortState.ColumnIndex, _sortState.Direction,
+                    _currentPage, pageSize);
+
+                if (version != _rebuildVersion) return;
+
+                // Initialize infinite scroll cache on first fetch
+                if (ScrollMode == TableScrollMode.InfiniteScroll)
+                {
+                    _infiniteScroll.Reset();
+                    _infiniteScroll.Configure(pageSize, paging.TotalFilteredRows, pageSize);
+                    _infiniteScroll.SetTemplate(data);
+                    _infiniteScroll.CachePage(0, data.DataRows);
+
+                    var (_, visibleRows) = _infiniteScroll.GetVisibleWindow();
+                    if (visibleRows != null)
+                        data = data with { DataRows = visibleRows };
+                }
+            }
 
             _lastPaging = paging;
             _currentPage = paging.CurrentPage;
@@ -413,10 +459,6 @@ public sealed class TableGrid : Border
 
             var hasHeaderRow = data.HeaderRows.Count > 0 &&
                                data.HeaderRows.Any(r => r.IsHeader);
-
-            // Update infinite scroll with total pages for wheel bounds
-            if (ScrollMode == TableScrollMode.InfiniteScroll)
-                _infiniteScroll.UpdateTotalPages(paging.TotalPages);
 
             var result = TableGridRenderer.RenderGrid(
                 _grid, data, paging, _sortState,
@@ -538,6 +580,7 @@ public sealed class TableGrid : Border
 
     private void OnScrollModeChanged()
     {
+        _infiniteScroll.Reset();
         if (ScrollMode == TableScrollMode.InfiniteScroll)
         {
             _infiniteScroll.Attach(_scrollViewer);
@@ -551,6 +594,12 @@ public sealed class TableGrid : Border
         Rebuild();
     }
 
+    private void OnScrollOffsetChanged()
+    {
+        _isScrollTriggeredRebuild = true;
+        Rebuild();
+    }
+
     private void OnFreezeColumnsFromContextMenu(int count)
     {
         FrozenColumnCount = count;
@@ -561,14 +610,6 @@ public sealed class TableGrid : Border
     {
         FrozenRowCount = count;
         FrozenRowCountCommitted?.Invoke(count);
-    }
-
-    private void OnInfiniteScrollPageChange(int delta)
-    {
-        var newPage = _currentPage + delta;
-        if (newPage < 0 || newPage >= _lastPaging.TotalPages) return;
-        _currentPage = newPage;
-        Rebuild();
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
