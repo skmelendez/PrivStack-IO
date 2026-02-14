@@ -569,16 +569,17 @@
                             <!-- Property editors (collapsible, grouped) -->
                             <StackPanel IsVisible="{Binding IsPropertiesExpanded}"
                                         Margin="12,0,12,0"
-                                        Spacing="4">
+                                        Spacing="0">
                                 <ItemsControl ItemsSource="{Binding ActiveItemPropertyGroups}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:PropertyGroupViewModel">
-                                            <StackPanel Spacing="2">
-                                                <!-- Group header (hidden for single unnamed group) -->
+                                            <StackPanel Spacing="0" Margin="0,0,0,4">
+                                                <!-- Group header -->
                                                 <TextBlock Text="{Binding GroupName}"
-                                                           FontWeight="SemiBold"
-                                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
                                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                           FontWeight="Medium"
+                                                           LetterSpacing="0.5"
                                                            Margin="0,6,0,2"
                                                            IsVisible="{Binding GroupName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                                 <!-- Properties in this group -->

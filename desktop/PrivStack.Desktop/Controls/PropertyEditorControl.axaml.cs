@@ -36,11 +36,10 @@ public partial class PropertyEditorControl : UserControl
     {
         if (DataContext is not PropertyValueViewModel propVm) return;
 
-        // Walk up the visual tree to find the InfoPanel's DataContext
         var parent = this.Parent as Control;
         while (parent != null)
         {
-            if (parent.DataContext is ViewModels.InfoPanelViewModel infoPanelVm)
+            if (parent.DataContext is InfoPanelViewModel infoPanelVm)
             {
                 infoPanelVm.EditPropertyDefinitionCommand.Execute(propVm);
                 return;
@@ -69,13 +68,12 @@ public partial class PropertyEditorControl : UserControl
 
     private static Control BuildTextEditor(PropertyValueViewModel vm)
     {
-        var textBox = new TextBox
+        return new TextBox
         {
             [!TextBox.TextProperty] = new Avalonia.Data.Binding(nameof(vm.TextValue)) { Mode = Avalonia.Data.BindingMode.TwoWay },
-            Watermark = "Enter text...",
+            Watermark = "Empty",
             Classes = { "prop-input" },
         };
-        return textBox;
     }
 
     private static Control BuildNumberEditor(PropertyValueViewModel vm)
@@ -87,14 +85,16 @@ public partial class PropertyEditorControl : UserControl
             Increment = 1,
             Minimum = decimal.MinValue,
             Maximum = decimal.MaxValue,
+            ShowButtonSpinner = false,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        numericUpDown.SetValue(BackgroundProperty, GetResource("ThemeSurfaceElevatedBrush") as IBrush ?? Brushes.Transparent);
+        numericUpDown.SetValue(BackgroundProperty, Brushes.Transparent);
         numericUpDown.SetValue(ForegroundProperty, GetResource("ThemeTextPrimaryBrush") as IBrush ?? Brushes.White);
-        numericUpDown.SetValue(BorderBrushProperty, GetResource("ThemeBorderSubtleBrush") as IBrush ?? Brushes.Gray);
-        numericUpDown.BorderThickness = new Thickness(1);
-        numericUpDown.CornerRadius = new CornerRadius(4);
-        numericUpDown.Padding = new Thickness(6, 4);
+        numericUpDown.SetValue(BorderBrushProperty, Brushes.Transparent);
+        numericUpDown.BorderThickness = new Thickness(0);
+        numericUpDown.Padding = new Thickness(4, 2);
         numericUpDown.FontSize = ThemeDouble("ThemeFontSizeSmMd", 13);
+        numericUpDown.MinHeight = 0;
         return numericUpDown;
     }
 
@@ -137,19 +137,18 @@ public partial class PropertyEditorControl : UserControl
             PlaceholderText = "Select...",
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        comboBox.SetValue(BackgroundProperty, GetResource("ThemeSurfaceElevatedBrush") as IBrush ?? Brushes.Transparent);
+        comboBox.SetValue(BackgroundProperty, Brushes.Transparent);
         comboBox.SetValue(ForegroundProperty, GetResource("ThemeTextPrimaryBrush") as IBrush ?? Brushes.White);
-        comboBox.SetValue(BorderBrushProperty, GetResource("ThemeBorderSubtleBrush") as IBrush ?? Brushes.Gray);
-        comboBox.BorderThickness = new Thickness(1);
-        comboBox.CornerRadius = new CornerRadius(4);
-        comboBox.Padding = new Thickness(6, 4);
+        comboBox.SetValue(BorderBrushProperty, Brushes.Transparent);
+        comboBox.BorderThickness = new Thickness(0);
+        comboBox.Padding = new Thickness(4, 2);
         comboBox.FontSize = ThemeDouble("ThemeFontSizeSmMd", 13);
+        comboBox.MinHeight = 0;
         return comboBox;
     }
 
     private static Control BuildMultiSelectEditor(PropertyValueViewModel vm)
     {
-        // Multi-select uses checkboxes within a wrap panel
         var panel = new WrapPanel { Orientation = Orientation.Horizontal };
         if (vm.Options != null)
         {
@@ -166,7 +165,7 @@ public partial class PropertyEditorControl : UserControl
                         VerticalAlignment = VerticalAlignment.Center,
                     },
                     IsChecked = isChecked,
-                    Margin = new Thickness(0, 2, 8, 2),
+                    Margin = new Thickness(0, 1, 8, 1),
                     Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
                 };
                 var capturedOption = option;
@@ -195,11 +194,11 @@ public partial class PropertyEditorControl : UserControl
         var linkIcon = new IconControl
         {
             Icon = "ExternalLink",
-            Size = 14,
+            Size = 12,
             StrokeThickness = 1.5,
             Stroke = GetResource("ThemeTextMutedBrush") as IBrush ?? Brushes.Gray,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(4, 0, 0, 0),
+            Margin = new Thickness(2, 0, 0, 0),
         };
         Grid.SetColumn(linkIcon, 1);
 

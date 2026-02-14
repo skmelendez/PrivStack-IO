@@ -52,6 +52,12 @@ public partial class PropertyValueViewModel : ObservableObject
     [ObservableProperty]
     private string _urlValue = "";
 
+    /// <summary>
+    /// Invoked after the property is successfully removed from the entity.
+    /// The parent should use this to update its collections.
+    /// </summary>
+    public Action<PropertyValueViewModel>? OnRemoved { get; set; }
+
     public PropertyValueViewModel(
         PropertyDefinition definition,
         JsonElement? currentValue,
@@ -223,6 +229,7 @@ public partial class PropertyValueViewModel : ObservableObject
         try
         {
             await _metadataService.RemovePropertyAsync(_linkType, _entityId, Definition.Id);
+            OnRemoved?.Invoke(this);
         }
         catch (Exception ex)
         {

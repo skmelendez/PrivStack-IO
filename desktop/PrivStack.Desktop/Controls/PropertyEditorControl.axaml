@@ -10,34 +10,46 @@
              x:DataType="vm:PropertyValueViewModel">
 
     <UserControl.Styles>
-        <!-- Common text input style — elevated bg for contrast against panel -->
+        <!-- Borderless text input that blends with the panel -->
         <Style Selector="TextBox.prop-input">
-            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Padding" Value="4,2"/>
             <Setter Property="FontSize" Value="{DynamicResource ThemeFontSizeSmMd}"/>
+            <Setter Property="MinHeight" Value="0"/>
         </Style>
         <Style Selector="TextBox.prop-input /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="TextBox.prop-input:focus /template/ Border#PART_BorderElement">
             <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
         <Style Selector="TextBox.prop-input:pointerover /template/ Border#PART_BorderElement">
             <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
         </Style>
+
+        <!-- Action buttons hidden by default, revealed on row hover -->
+        <Style Selector="Border.prop-row StackPanel.prop-actions">
+            <Setter Property="Opacity" Value="0"/>
+        </Style>
+        <Style Selector="Border.prop-row:pointerover StackPanel.prop-actions">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
     </UserControl.Styles>
 
-    <!-- Property row: label + editor -->
-    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-        <StackPanel Grid.Column="0" Spacing="3">
-            <!-- Property name -->
-            <StackPanel Orientation="Horizontal" Spacing="4">
+    <!-- Inline property row -->
+    <Border Classes="prop-row" Padding="0,3" CornerRadius="4">
+        <Grid ColumnDefinitions="100,*,Auto">
+            <!-- Label -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4"
+                        VerticalAlignment="Center" Margin="0,0,8,0">
                 <controls:IconControl Icon="{Binding Icon}"
-                                      Size="12"
+                                      Size="11"
                                       StrokeThickness="1.5"
                                       Stroke="{DynamicResource ThemeTextMutedBrush}"
                                       VerticalAlignment="Center"
@@ -45,56 +57,45 @@
                 <TextBlock Text="{Binding Name}"
                            FontSize="{DynamicResource ThemeFontSizeXsSm}"
                            Foreground="{DynamicResource ThemeTextMutedBrush}"
-                           VerticalAlignment="Center"/>
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
             </StackPanel>
 
-            <!-- Type-specific editor (rendered from code-behind) -->
-            <ContentControl x:Name="EditorHost"/>
-        </StackPanel>
+            <!-- Editor -->
+            <ContentControl Grid.Column="1" x:Name="EditorHost"
+                            VerticalAlignment="Center"/>
 
-        <!-- Action buttons -->
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2"
-                    VerticalAlignment="Top" Margin="4,0,0,0">
-            <!-- Edit definition button -->
-            <Button x:Name="EditDefButton"
-                    Background="Transparent"
-                    Padding="4"
-                    CornerRadius="4"
-                    Cursor="Hand"
-                    Opacity="0.5"
-                    MinWidth="0" MinHeight="0"
-                    ToolTip.Tip="Edit property definition">
-                <Button.Styles>
-                    <Style Selector="Button:pointerover">
-                        <Setter Property="Opacity" Value="1"/>
-                    </Style>
-                    <Style Selector="Button:pointerover /template/ ContentPresenter">
-                        <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
-                    </Style>
-                </Button.Styles>
-                <controls:IconControl Icon="Edit" Size="10" StrokeThickness="2"
-                                      Stroke="{DynamicResource ThemeTextMutedBrush}"/>
-            </Button>
-            <!-- Remove button -->
-            <Button Command="{Binding RemovePropertyCommand}"
-                    Background="Transparent"
-                    Padding="4"
-                    CornerRadius="4"
-                    Cursor="Hand"
-                    Opacity="0.5"
-                    MinWidth="0" MinHeight="0"
-                    ToolTip.Tip="Remove property">
-                <Button.Styles>
-                    <Style Selector="Button:pointerover">
-                        <Setter Property="Opacity" Value="1"/>
-                    </Style>
-                    <Style Selector="Button:pointerover /template/ ContentPresenter">
-                        <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
-                    </Style>
-                </Button.Styles>
-                <controls:IconControl Icon="X" Size="10" StrokeThickness="2"
-                                      Stroke="{DynamicResource ThemeTextMutedBrush}"/>
-            </Button>
-        </StackPanel>
-    </Grid>
+            <!-- Actions (hover-only) -->
+            <StackPanel Grid.Column="2" Classes="prop-actions"
+                        Orientation="Horizontal" Spacing="0"
+                        VerticalAlignment="Center" Margin="2,0,0,0">
+                <Button x:Name="EditDefButton"
+                        Background="Transparent"
+                        Padding="3" CornerRadius="3" Cursor="Hand"
+                        MinWidth="0" MinHeight="0"
+                        ToolTip.Tip="Edit definition">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                            <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+                        </Style>
+                    </Button.Styles>
+                    <controls:IconControl Icon="Edit" Size="10" StrokeThickness="1.5"
+                                          Stroke="{DynamicResource ThemeTextMutedBrush}"/>
+                </Button>
+                <Button Command="{Binding RemovePropertyCommand}"
+                        Background="Transparent"
+                        Padding="3" CornerRadius="3" Cursor="Hand"
+                        MinWidth="0" MinHeight="0"
+                        ToolTip.Tip="Remove property">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                            <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+                        </Style>
+                    </Button.Styles>
+                    <controls:IconControl Icon="X" Size="10" StrokeThickness="1.5"
+                                          Stroke="{DynamicResource ThemeTextMutedBrush}"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
 </UserControl>
