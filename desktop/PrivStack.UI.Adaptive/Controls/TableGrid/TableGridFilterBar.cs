@@ -28,6 +28,7 @@ internal sealed class TableGridFilterBar : Border
             MinWidth = 200,
             Padding = new Thickness(8, 4),
             BorderThickness = new Thickness(1),
+            VerticalContentAlignment = VerticalAlignment.Center,
         };
         _filterTextBox.Bind(TextBlock.FontSizeProperty,
             _filterTextBox.GetResourceObservable("ThemeFontSizeSmMd"));
