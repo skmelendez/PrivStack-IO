@@ -75,6 +75,7 @@ internal sealed class TableGridColumnResize
         var grid = _getGrid();
         if (grid == null) return;
 
+        var colCount = _getColCount();
         var pos = e.GetPosition(relativeTo);
         var delta = pos.X - _resizeStartPoint.X;
         var gridColIndex = _resizeColIndex * 2 + 1;
@@ -83,6 +84,18 @@ internal sealed class TableGridColumnResize
         {
             var newWidth = Math.Max(60, _resizeStartWidth + delta);
             grid.ColumnDefinitions[gridColIndex].Width = new GridLength(newWidth, GridUnitType.Pixel);
+
+            // Resize adjacent column to maintain total width
+            if (_resizeColIndex < colCount - 1)
+            {
+                var nextGridCol = (_resizeColIndex + 1) * 2 + 1;
+                if (nextGridCol < grid.ColumnDefinitions.Count
+                    && _resizeColIndex + 1 < _resizeOriginalWidths.Length)
+                {
+                    var nextNew = Math.Max(60, _resizeOriginalWidths[_resizeColIndex + 1] - delta);
+                    grid.ColumnDefinitions[nextGridCol].Width = new GridLength(nextNew, GridUnitType.Pixel);
+                }
+            }
         }
 
         e.Handled = true;
@@ -104,39 +117,20 @@ internal sealed class TableGridColumnResize
         if (grid == null) return;
 
         var colCount = _getColCount();
-        if (_resizeOriginalWidths.Length != colCount || _resizeTotalWidth <= 0) return;
-
-        var resizedGridCol = _resizeColIndex * 2 + 1;
-        if (resizedGridCol >= grid.ColumnDefinitions.Count) return;
-
-        var resizedDef = grid.ColumnDefinitions[resizedGridCol];
-        var resizedPixelWidth = resizedDef.Width.IsAbsolute ? resizedDef.Width.Value : _resizeStartWidth;
-
         var pixelWidths = new double[colCount];
-        var otherOriginalTotal = 0.0;
-        for (var c = 0; c < colCount; c++)
-        {
-            if (c != _resizeColIndex)
-                otherOriginalTotal += _resizeOriginalWidths[c];
-        }
-
-        var remainingWidth = Math.Max(60, _resizeTotalWidth - resizedPixelWidth);
-
-        for (var c = 0; c < colCount; c++)
-        {
-            if (c == _resizeColIndex)
-                pixelWidths[c] = resizedPixelWidth;
-            else if (otherOriginalTotal > 0)
-                pixelWidths[c] = Math.Max(30, (_resizeOriginalWidths[c] / otherOriginalTotal) * remainingWidth);
-            else
-                pixelWidths[c] = remainingWidth / Math.Max(1, colCount - 1);
-        }
 
         for (var c = 0; c < colCount; c++)
         {
             var gc = c * 2 + 1;
             if (gc < grid.ColumnDefinitions.Count)
-                grid.ColumnDefinitions[gc].Width = new GridLength(pixelWidths[c], GridUnitType.Pixel);
+            {
+                var def = grid.ColumnDefinitions[gc];
+                pixelWidths[c] = def.Width.IsAbsolute ? def.Width.Value : def.ActualWidth;
+            }
+            else
+            {
+                pixelWidths[c] = 100;
+            }
         }
 
         _onWidthsCommitted(pixelWidths);
