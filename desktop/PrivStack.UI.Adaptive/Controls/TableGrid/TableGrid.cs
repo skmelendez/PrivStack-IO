@@ -47,6 +47,12 @@ public sealed class TableGrid : Border
     public static readonly StyledProperty<string?> ColorThemeProperty =
         AvaloniaProperty.Register<TableGrid, string?>(nameof(ColorTheme));
 
+    public static readonly StyledProperty<string?> TitleProperty =
+        AvaloniaProperty.Register<TableGrid, string?>(nameof(Title));
+
+    public static readonly StyledProperty<string?> CaptionProperty =
+        AvaloniaProperty.Register<TableGrid, string?>(nameof(Caption));
+
     public ITableGridDataSource? DataSource
     {
         get => GetValue(DataSourceProperty);
@@ -101,6 +107,18 @@ public sealed class TableGrid : Border
         set => SetValue(ColorThemeProperty, value);
     }
 
+    public string? Title
+    {
+        get => GetValue(TitleProperty);
+        set => SetValue(TitleProperty, value);
+    }
+
+    public string? Caption
+    {
+        get => GetValue(CaptionProperty);
+        set => SetValue(CaptionProperty, value);
+    }
+
     // ── Events ────────────────────────────────────────────────────────────
 
     public event Action<int>? BoundaryEscapeRequested;
@@ -122,6 +140,8 @@ public sealed class TableGrid : Border
     private readonly TableGridCellNavigation _cellNavigation;
     private readonly TableGridToolbar _toolbar;
     private readonly TableGridFilterBar _filterBar;
+    private readonly TextBlock _titleBlock;
+    private readonly TextBlock _captionBlock;
 
     private TableGridRowDrag? _rowDrag;
     private TableGridColumnDrag? _columnDrag;
@@ -188,9 +208,34 @@ public sealed class TableGrid : Border
         _toolbar.HeaderToggleChanged += OnToolbarHeaderToggled;
         _toolbar.EditTableRequested += () => EditTableRequested?.Invoke();
 
+        _titleBlock = new TextBlock
+        {
+            FontWeight = FontWeight.SemiBold,
+            FontSize = 14,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 4),
+            IsVisible = false
+        };
+
+        _captionBlock = new TextBlock
+        {
+            FontSize = 12,
+            FontStyle = FontStyle.Italic,
+            Opacity = 0.6,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 4, 0, 0),
+            IsVisible = false
+        };
+
+        // Filter bar (left) + toolbar/cog (right) on same row
+        var filterToolbarRow = new DockPanel { Margin = new Thickness(0, 0, 0, 2) };
+        DockPanel.SetDock(_toolbar, Dock.Right);
+        filterToolbarRow.Children.Add(_toolbar);
+        filterToolbarRow.Children.Add(_filterBar);
+
         var root = new StackPanel { Spacing = 4 };
-        root.Children.Add(_filterBar);
-        root.Children.Add(_toolbar);
+        root.Children.Add(_titleBlock);
+        root.Children.Add(filterToolbarRow);
         root.Children.Add(_errorBorder);
 
         var gridBorder = new Border
@@ -200,6 +245,7 @@ public sealed class TableGrid : Border
             Child = _scrollViewer
         };
         root.Children.Add(gridBorder);
+        root.Children.Add(_captionBlock);
         root.Children.Add(_pagingBar);
 
         Child = root;
@@ -259,6 +305,18 @@ public sealed class TableGrid : Border
         else if (change.Property == IsStripedProperty || change.Property == ColorThemeProperty)
         {
             Rebuild();
+        }
+        else if (change.Property == TitleProperty)
+        {
+            var title = change.GetNewValue<string?>();
+            _titleBlock.Text = title ?? "";
+            _titleBlock.IsVisible = !string.IsNullOrEmpty(title);
+        }
+        else if (change.Property == CaptionProperty)
+        {
+            var caption = change.GetNewValue<string?>();
+            _captionBlock.Text = caption ?? "";
+            _captionBlock.IsVisible = !string.IsNullOrEmpty(caption);
         }
     }
 
