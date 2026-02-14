@@ -609,7 +609,7 @@ internal sealed class HtmlContentParser
                 {
                     new TextBlock
                     {
-                        Text = "\u25B6",
+                        Text = "\u25B6\uFE0E",
                         FontSize = ThemeDouble("ThemeFontSize4Xl", 48),
                         Foreground = PrimaryBrush,
                         HorizontalAlignment = HorizontalAlignment.Center,

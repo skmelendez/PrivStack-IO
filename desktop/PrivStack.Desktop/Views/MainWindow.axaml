@@ -307,7 +307,7 @@
                                                 <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
                                             </Style>
                                         </Button.Styles>
-                                        <TextBlock Text="▶" FontSize="{DynamicResource ThemeFontSizeXs}"
+                                        <TextBlock Text="▶&#xFE0E;" FontSize="{DynamicResource ThemeFontSizeXs}"
                                                    Foreground="{DynamicResource ThemeSuccessBrush}"/>
                                     </Button>
 
