@@ -23,7 +23,8 @@ internal sealed class PluginHost : IPluginHost
         Services.Abstractions.IUiDispatcher dispatcher,
         IInfoPanelService infoPanelService,
         IFocusModeService focusModeService,
-        IConnectionService? connectionService = null)
+        IConnectionService? connectionService = null,
+        IPropertyService? propertyService = null)
     {
         Sdk = sdk;
         Capabilities = capabilities;
@@ -34,6 +35,7 @@ internal sealed class PluginHost : IPluginHost
         InfoPanel = infoPanelService;
         FocusMode = focusModeService;
         Connections = connectionService;
+        Properties = propertyService;
         Messenger = WeakReferenceMessenger.Default;
         AppVersion = typeof(PluginHost).Assembly.GetName().Version ?? new Version(1, 0, 0);
     }
@@ -47,6 +49,7 @@ internal sealed class PluginHost : IPluginHost
     public IInfoPanelService InfoPanel { get; }
     public IFocusModeService FocusMode { get; }
     public IConnectionService? Connections { get; }
+    public IPropertyService? Properties { get; }
     public IMessenger Messenger { get; }
     public Version AppVersion { get; }
 
