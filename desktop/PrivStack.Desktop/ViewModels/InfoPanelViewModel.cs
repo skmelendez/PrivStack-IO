@@ -439,6 +439,7 @@ public partial class InfoPanelViewModel : ViewModelBase
 
         // Create a PropertyValueViewModel with default value
         var vm = new PropertyValueViewModel(definition, null, _entityMetadataService, ActiveItemLinkType, ActiveItemId);
+        vm.OnRemoved = OnPropertyRemoved;
         ActiveItemProperties.Add(vm);
 
         // Save the default value to persist the property assignment
@@ -834,7 +835,9 @@ public partial class InfoPanelViewModel : ViewModelBase
                 if (!propertyValues.TryGetValue(def.Id, out var value))
                     continue;
 
-                propVms.Add(new PropertyValueViewModel(def, value, _entityMetadataService, linkType, itemId));
+                var vm = new PropertyValueViewModel(def, value, _entityMetadataService, linkType, itemId);
+                vm.OnRemoved = OnPropertyRemoved;
+                propVms.Add(vm);
             }
 
             ActiveItemProperties = propVms;
@@ -861,6 +864,19 @@ public partial class InfoPanelViewModel : ViewModelBase
             ActiveItemProperties = [];
             ActiveItemPropertyGroups = [];
         }
+    }
+
+    private void OnPropertyRemoved(PropertyValueViewModel removed)
+    {
+        ActiveItemProperties.Remove(removed);
+
+        foreach (var group in ActiveItemPropertyGroups)
+            group.Properties.Remove(removed);
+
+        // Remove empty groups
+        var emptyGroups = ActiveItemPropertyGroups.Where(g => g.Properties.Count == 0).ToList();
+        foreach (var g in emptyGroups)
+            ActiveItemPropertyGroups.Remove(g);
     }
 
     /// <summary>
