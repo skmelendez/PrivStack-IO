@@ -90,7 +90,7 @@ public partial class GraphView : UserControl
             CollisionStrength = _vm.CollisionStrength,
             CenterStrength = _vm.CenterStrength,
             MinSeparation = _vm.NodeSpacingDistance,
-            VelocityDecay = 0.5,
+            VelocityDecay = 0.4,
         };
         _graphControl.StartWithData(adaptiveData);
     }
@@ -144,7 +144,7 @@ public partial class GraphView : UserControl
             CollisionStrength = _vm.CollisionStrength,
             CenterStrength = _vm.CenterStrength,
             MinSeparation = _vm.NodeSpacingDistance,
-            VelocityDecay = 0.5,
+            VelocityDecay = 0.4,
         };
         _graphControl.ApplyPhysicsChanges();
     }
