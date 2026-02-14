@@ -36,11 +36,10 @@ internal sealed class TableGridColumnDrag
     }
 
     /// <summary>
-    /// Attaches drag behavior to a header cell border. Returns true if sort
-    /// click should be suppressed (drag occurred instead).
+    /// Attaches drag behavior to a header cell border. Sorting is handled
+    /// separately via sort arrow indicators in the header cells.
     /// </summary>
-    public void AttachToHeader(Border headerBorder, int colIndex, Control relativeTo,
-        Action<int> onSortClick)
+    public void AttachToHeader(Border headerBorder, int colIndex, Control relativeTo)
     {
         headerBorder.PointerPressed += (_, e) =>
         {
@@ -82,13 +81,8 @@ internal sealed class TableGridColumnDrag
                     e.Handled = true;
                     return;
                 }
-                _dragColIndex = -1;
             }
-            else
-            {
-                _dragColIndex = -1;
-                onSortClick(colIndex);
-            }
+            _dragColIndex = -1;
         };
     }
 

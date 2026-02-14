@@ -39,13 +39,13 @@ public static class TableGridExport
         await writer.WriteAsync(content);
     }
 
-    public static async Task CopyToClipboardAsync(TableGridData data, TopLevel topLevel)
+    public static async Task CopyToClipboardAsync(TableGridData data, string format, TopLevel topLevel)
     {
         var clipboard = topLevel.Clipboard;
         if (clipboard == null) return;
 
-        var tsv = ToCsv(data, '\t');
-        await clipboard.SetTextAsync(tsv);
+        var (content, _) = FormatData(data, format);
+        await clipboard.SetTextAsync(content);
     }
 
     private static (string content, string extension) FormatData(TableGridData data, string format) =>

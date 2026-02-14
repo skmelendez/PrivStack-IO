@@ -73,9 +73,9 @@ internal static class TableGridRenderer
         {
             grid.ColumnDefinitions.Add(new ColumnDefinition(
                 new Avalonia.Controls.GridLength(widths[c], GridUnitType.Pixel)));
-            if (c < colCount - 1)
-                grid.ColumnDefinitions.Add(new ColumnDefinition(
-                    new Avalonia.Controls.GridLength(4, GridUnitType.Pixel)));
+            // Grip column after every data column (including last) for resize
+            grid.ColumnDefinitions.Add(new ColumnDefinition(
+                new Avalonia.Controls.GridLength(4, GridUnitType.Pixel)));
         }
 
         // Count display rows
@@ -130,12 +130,10 @@ internal static class TableGridRenderer
             for (var c = 0; c < colCount; c++)
             {
                 var text = c < headerRow.Cells.Count ? headerRow.Cells[c] : "";
-                if (supportsSorting)
-                    text += sortState.GetSortIndicator(c);
 
                 Control cell;
 
-                // Editable headers for inline tables
+                // Editable headers for inline tables — click text to edit
                 if (isEditable && !isReadOnly && onCellEdited != null && cellNavigation != null)
                 {
                     var (editCell, textBox) = TableGridCellFactory.CreateEditableCell(
@@ -143,40 +141,26 @@ internal static class TableGridRenderer
                         onCellEdited, cellNavigation, -1,
                         themeSource, isStriped, 0, colorTheme);
                     cell = editCell;
-
-                    if (supportsSorting)
-                    {
-                        var colIdx = c;
-                        editCell.DoubleTapped += (_, _) => onHeaderClick(colIdx);
-                    }
                 }
                 else
                 {
                     cell = TableGridCellFactory.CreateReadOnlyCell(
                         text, true, c, alignments, themeSource,
                         isStriped, 0, colorTheme);
-
-                    if (supportsSorting && columnDrag == null)
-                    {
-                        var colIdx = c;
-                        cell.PointerPressed += (_, _) => onHeaderClick(colIdx);
-                        cell.Cursor = new Cursor(StandardCursorType.Hand);
-                    }
                 }
 
+                // Sort arrow — separate clickable indicator in the header cell
+                if (supportsSorting && cell is Border sortBorderCell)
+                    AddSortArrowToHeaderCell(sortBorderCell, c, sortState, onHeaderClick, themeSource);
+
+                // Column drag reorder
                 if (supportsColumnReorder && !isReadOnly && columnDrag != null)
                 {
                     if (cell is Border borderCell)
                     {
-                        columnDrag.AttachToHeader(borderCell, c, themeSource, onHeaderClick);
+                        columnDrag.AttachToHeader(borderCell, c, themeSource);
                         cell.Cursor = new Cursor(StandardCursorType.Hand);
                     }
-                }
-                else if (supportsSorting && columnDrag != null)
-                {
-                    var colIdx = c;
-                    cell.PointerPressed += (_, _) => onHeaderClick(colIdx);
-                    cell.Cursor = new Cursor(StandardCursorType.Hand);
                 }
 
                 // Context menu on header for structure editing
@@ -321,14 +305,69 @@ internal static class TableGridRenderer
         return TableGridCellFactory.ComputeAutoFitWidths(headerCells, dataRows, colCount, themeSource);
     }
 
+    private static void AddSortArrowToHeaderCell(
+        Border cell, int colIndex, TableGridSortState sortState,
+        Action<int> onHeaderClick, Control themeSource)
+    {
+        var existingChild = cell.Child;
+        cell.Child = null;
+
+        var wrapperGrid = new Grid();
+        wrapperGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        wrapperGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+
+        if (existingChild != null)
+        {
+            Grid.SetColumn(existingChild, 0);
+            wrapperGrid.Children.Add(existingChild);
+        }
+
+        var isActive = sortState.ColumnIndex == colIndex
+                       && sortState.Direction != TableSortDirection.None;
+        var isAsc = isActive && sortState.Direction == TableSortDirection.Ascending;
+
+        var pathData = isAsc ? "M7 14l5-5 5 5" : "M7 10l5 5 5-5";
+        var icon = new PathIcon
+        {
+            Data = StreamGeometry.Parse(pathData),
+            Width = 10,
+            Height = 10,
+        };
+
+        var fg = isActive
+            ? TableGridCellFactory.GetBrush(themeSource, "ThemePrimaryBrush")
+            : TableGridCellFactory.GetBrush(themeSource, "ThemeTextMutedBrush");
+        if (fg != null) icon.Foreground = fg;
+
+        var arrowBorder = new Border
+        {
+            Child = icon,
+            Padding = new Thickness(4, 0),
+            Cursor = new Cursor(StandardCursorType.Hand),
+            Background = Brushes.Transparent,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            Opacity = isActive ? 1.0 : 0.4,
+        };
+
+        var idx = colIndex;
+        arrowBorder.PointerPressed += (_, e) =>
+        {
+            onHeaderClick(idx);
+            e.Handled = true;
+        };
+
+        Grid.SetColumn(arrowBorder, 1);
+        wrapperGrid.Children.Add(arrowBorder);
+
+        cell.Child = wrapperGrid;
+    }
+
     private static void AddResizeGrip(
         Grid grid, int c, int colCount, int gridRow,
         Action<int, PointerPressedEventArgs> onPressed,
         Action<PointerEventArgs> onMoved,
         Action<PointerReleasedEventArgs> onReleased)
     {
-        if (c >= colCount - 1) return;
-
         var grip = TableGridCellFactory.CreateResizeGrip(c, onPressed, onMoved, onReleased);
         Grid.SetRow(grip, gridRow);
         Grid.SetColumn(grip, c * 2 + 2);

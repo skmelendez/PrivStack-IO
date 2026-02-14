@@ -132,15 +132,27 @@ internal sealed class TableGridToolbar : Border
         mdItem.Click += (_, _) => OnExport("md");
         var jsonItem = new MenuItem { Header = "JSON" };
         jsonItem.Click += (_, _) => OnExport("json");
-        var clipItem = new MenuItem { Header = "Copy to Clipboard" };
-        clipItem.Click += (_, _) => OnCopyToClipboard();
         exportSub.Items.Add(csvItem);
         exportSub.Items.Add(tsvItem);
         exportSub.Items.Add(mdItem);
         exportSub.Items.Add(jsonItem);
-        exportSub.Items.Add(new Separator());
-        exportSub.Items.Add(clipItem);
         flyout.Items.Add(exportSub);
+
+        // Copy As submenu
+        var copySub = new MenuItem { Header = "Copy As" };
+        var copyCsvItem = new MenuItem { Header = "CSV" };
+        copyCsvItem.Click += (_, _) => OnCopyToClipboard("csv");
+        var copyTsvItem = new MenuItem { Header = "TSV" };
+        copyTsvItem.Click += (_, _) => OnCopyToClipboard("tsv");
+        var copyMdItem = new MenuItem { Header = "Markdown" };
+        copyMdItem.Click += (_, _) => OnCopyToClipboard("md");
+        var copyJsonItem = new MenuItem { Header = "JSON" };
+        copyJsonItem.Click += (_, _) => OnCopyToClipboard("json");
+        copySub.Items.Add(copyCsvItem);
+        copySub.Items.Add(copyTsvItem);
+        copySub.Items.Add(copyMdItem);
+        copySub.Items.Add(copyJsonItem);
+        flyout.Items.Add(copySub);
 
         // Edit Table
         flyout.Items.Add(new Separator());
@@ -163,7 +175,7 @@ internal sealed class TableGridToolbar : Border
         await TableGridExport.ExportToFileAsync(data, format, topLevel);
     }
 
-    private async void OnCopyToClipboard()
+    private async void OnCopyToClipboard(string format)
     {
         if (_source == null) return;
         var topLevel = TopLevel.GetTopLevel(this);
@@ -172,6 +184,6 @@ internal sealed class TableGridToolbar : Border
         var data = await _source.GetFullDataForExportAsync();
         if (data == null) return;
 
-        await TableGridExport.CopyToClipboardAsync(data, topLevel);
+        await TableGridExport.CopyToClipboardAsync(data, format, topLevel);
     }
 }
