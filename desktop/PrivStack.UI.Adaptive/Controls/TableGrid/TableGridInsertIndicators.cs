@@ -197,7 +197,7 @@ internal static class TableGridInsertIndicators
             FontWeight = FontWeight.Bold,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, -1, 0, 0),
+            Margin = new Thickness(0.5, 1, 0, 0),
         };
 
         return new Border

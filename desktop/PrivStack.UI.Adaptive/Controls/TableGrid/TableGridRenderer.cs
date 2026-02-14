@@ -173,7 +173,7 @@ internal static class TableGridRenderer
                     {
                         if (e.GetCurrentPoint(capturedCell).Properties.IsRightButtonPressed)
                         {
-                            var menu = TableGridContextMenu.BuildColumnContextMenu(colIdx, source, rebuild);
+                            var menu = TableGridContextMenu.BuildHeaderContextMenu(colIdx, source, rebuild);
                             menu.Open(capturedCell);
                             e.Handled = true;
                         }
@@ -218,27 +218,30 @@ internal static class TableGridRenderer
                         themeSource, isStriped, dataIdx, colorTheme);
                     cell = editCell;
                     cellNavigation.Register(gridRow - dataRowStartGridRow, c, textBox);
-
-                    // Context menu on editable data cells
-                    if (supportsStructureEditing && source != null && rebuild != null)
-                    {
-                        var capturedIdx = dataIdx;
-                        editCell.PointerPressed += (s, e) =>
-                        {
-                            if (e.GetCurrentPoint(editCell).Properties.IsRightButtonPressed)
-                            {
-                                var menu = TableGridContextMenu.BuildRowContextMenu(capturedIdx, source, rebuild);
-                                menu.Open(editCell);
-                                e.Handled = true;
-                            }
-                        };
-                    }
                 }
                 else
                 {
                     cell = TableGridCellFactory.CreateReadOnlyCell(
                         text, false, c, alignments, themeSource,
                         isStriped, dataIdx, colorTheme);
+                }
+
+                // Context menu on all data cells (Row + Column submenus)
+                if (supportsStructureEditing && !isReadOnly && source != null && rebuild != null)
+                {
+                    var capturedRow = dataIdx;
+                    var capturedCol = c;
+                    var capturedCell = cell;
+                    cell.PointerPressed += (s, e) =>
+                    {
+                        if (e.GetCurrentPoint(capturedCell).Properties.IsRightButtonPressed)
+                        {
+                            var menu = TableGridContextMenu.BuildCellContextMenu(
+                                capturedRow, capturedCol, source, rebuild);
+                            menu.Open(capturedCell);
+                            e.Handled = true;
+                        }
+                    };
                 }
 
                 Grid.SetRow(cell, gridRow);
