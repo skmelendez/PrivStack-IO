@@ -8,6 +8,7 @@ namespace PrivStack.UI.Adaptive.Models;
 
 public enum TableColumnAlignment { Left, Center, Right }
 public enum TableSortDirection { None, Ascending, Descending }
+public enum TableScrollMode { Paginated, InfiniteScroll }
 
 public sealed record TableColumnDefinition
 {
@@ -34,6 +35,8 @@ public sealed record TableGridData
     public string? ErrorMessage { get; init; }
     public bool IsStriped { get; init; }
     public string? ColorTheme { get; init; }
+    public int FrozenColumnCount { get; init; }
+    public int FrozenRowCount { get; init; }
 }
 
 public sealed record TablePagingInfo

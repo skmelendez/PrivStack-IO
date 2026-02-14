@@ -42,7 +42,9 @@ internal static class TableGridRenderer
         Action? rebuild,
         Control themeSource,
         bool isStriped = false,
-        string? colorTheme = null)
+        string? colorTheme = null,
+        int frozenColumnCount = 0,
+        int frozenRowCount = 0)
     {
         grid.ColumnDefinitions.Clear();
         grid.RowDefinitions.Clear();
@@ -149,12 +151,24 @@ internal static class TableGridRenderer
                     var colIdx = c;
                     var hasHeader = data.HeaderRows.Count > 0;
                     var ctxMenu = TableGridContextMenu.BuildHeaderContextMenu(
-                        colIdx, hasHeader, supportsStructureEditing, source, rebuild);
+                        colIdx, hasHeader, supportsStructureEditing,
+                        frozenColumnCount, source, rebuild);
                     cell.ContextMenu = ctxMenu;
 
                     // Also set on inner TextBox for editable headers
                     if (cell is Border { Child: TextBox headerTb })
                         headerTb.ContextMenu = ctxMenu;
+                }
+
+                // Frozen column boundary indicator on header
+                if (frozenColumnCount > 0 && c == frozenColumnCount - 1 && cell is Border freezeHeaderBorder)
+                {
+                    freezeHeaderBorder.BorderBrush = new SolidColorBrush(Color.Parse("#4090CAF9"));
+                    freezeHeaderBorder.BorderThickness = new Thickness(
+                        freezeHeaderBorder.BorderThickness.Left,
+                        freezeHeaderBorder.BorderThickness.Top,
+                        2,
+                        freezeHeaderBorder.BorderThickness.Bottom);
                 }
 
                 Grid.SetRow(cell, gridRow);
@@ -203,6 +217,17 @@ internal static class TableGridRenderer
                         isStriped, dataIdx, colorTheme);
                 }
 
+                // Frozen column boundary indicator on data cells
+                if (frozenColumnCount > 0 && c == frozenColumnCount - 1 && cell is Border freezeDataBorder)
+                {
+                    freezeDataBorder.BorderBrush = new SolidColorBrush(Color.Parse("#4090CAF9"));
+                    freezeDataBorder.BorderThickness = new Thickness(
+                        freezeDataBorder.BorderThickness.Left,
+                        freezeDataBorder.BorderThickness.Top,
+                        2,
+                        freezeDataBorder.BorderThickness.Bottom);
+                }
+
                 // Context menu on all data cells (Row + Column submenus)
                 if (source != null && rebuild != null)
                 {
@@ -211,7 +236,8 @@ internal static class TableGridRenderer
                     var hasHeader = data.HeaderRows.Count > 0;
                     var ctxMenu = TableGridContextMenu.BuildCellContextMenu(
                         capturedRow, capturedCol, hasHeader,
-                        supportsStructureEditing, source, rebuild);
+                        supportsStructureEditing, frozenRowCount,
+                        source, rebuild);
                     cell.ContextMenu = ctxMenu;
 
                     // Also set on inner TextBox for editable cells
@@ -226,6 +252,23 @@ internal static class TableGridRenderer
                 AddResizeGrip(grid, c, colCount, gridRow,
                     onResizePressed, onResizeMoved, onResizeReleased);
             }
+
+            // Frozen row boundary indicator
+            if (frozenRowCount > 0 && dataIdx == frozenRowCount - 1)
+            {
+                var freezeLine = new Border
+                {
+                    Height = 2,
+                    Background = new SolidColorBrush(Color.Parse("#4090CAF9")),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
+                    IsHitTestVisible = false
+                };
+                Grid.SetRow(freezeLine, gridRow);
+                Grid.SetColumn(freezeLine, 1);
+                Grid.SetColumnSpan(freezeLine, Math.Max(1, grid.ColumnDefinitions.Count - 1));
+                grid.Children.Add(freezeLine);
+            }
+
             gridRow++;
         }
 
