@@ -18,7 +18,7 @@ public sealed class DashboardPlugin : PluginBase<DashboardViewModel>
         Id = "privstack.dashboard",
         Name = "Dashboard",
         Description = "System overview, plugin marketplace, and management dashboard",
-        Version = new Version(1, 2, 0),
+        Version = new Version(1, 2, 1),
         Author = "PrivStack",
         Icon = "LayoutDashboard",
         NavigationOrder = 50,
