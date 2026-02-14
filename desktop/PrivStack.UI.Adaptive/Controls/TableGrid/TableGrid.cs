@@ -175,7 +175,6 @@ public sealed class TableGrid : Border
 
     private TableGridRowDrag? _rowDrag;
     private TableGridColumnDrag? _columnDrag;
-    private TableGridFreezeLayout? _freezeLayout;
     private readonly TableGridInfiniteScroll _infiniteScroll;
     private int _lastDataRowCount;
     private int _lastDataRowStartGridRow;
@@ -441,7 +440,9 @@ public sealed class TableGrid : Border
                 IsStriped,
                 ColorTheme,
                 FrozenColumnCount,
-                FrozenRowCount);
+                FrozenRowCount,
+                OnFreezeColumnsFromContextMenu,
+                OnFreezeRowsFromContextMenu);
 
             _lastDataRowCount = result.DataRowCount;
             _lastDataRowStartGridRow = result.DataRowStartGridRow;
@@ -548,6 +549,18 @@ public sealed class TableGrid : Border
             _currentPage = 0;
         }
         Rebuild();
+    }
+
+    private void OnFreezeColumnsFromContextMenu(int count)
+    {
+        FrozenColumnCount = count;
+        FrozenColumnCountCommitted?.Invoke(count);
+    }
+
+    private void OnFreezeRowsFromContextMenu(int count)
+    {
+        FrozenRowCount = count;
+        FrozenRowCountCommitted?.Invoke(count);
     }
 
     private void OnInfiniteScrollPageChange(int delta)
