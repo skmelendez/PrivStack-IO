@@ -33,6 +33,7 @@ internal static class TableGridInsertIndicators
         var rowIndicator = CreateIndicator(themeSource);
         rowIndicator.VerticalAlignment = VerticalAlignment.Bottom;
         rowIndicator.HorizontalAlignment = HorizontalAlignment.Center;
+        rowIndicator.Margin = new Thickness(0, 0, 0, -IndicatorSize / 2);
         rowIndicator.Opacity = 0;
         rowIndicator.IsHitTestVisible = false;
         grid.Children.Add(rowIndicator);
@@ -196,6 +197,7 @@ internal static class TableGridInsertIndicators
             FontWeight = FontWeight.Bold,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, -1, 0, 0),
         };
 
         return new Border

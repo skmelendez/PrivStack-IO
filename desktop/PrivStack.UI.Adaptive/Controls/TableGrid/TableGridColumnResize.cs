@@ -1,7 +1,7 @@
 // ============================================================================
 // File: TableGridColumnResize.cs
 // Description: Handles column resize grip interaction for the TableGrid control.
-//              Tracks pointer capture, delta calculation, and width redistribution.
+//              Tracks pointer capture, delta calculation, and width update.
 // ============================================================================
 
 using Avalonia;
@@ -16,8 +16,6 @@ internal sealed class TableGridColumnResize
     private int _resizeColIndex;
     private Point _resizeStartPoint;
     private double _resizeStartWidth;
-    private double _resizeTotalWidth;
-    private double[] _resizeOriginalWidths = [];
 
     private readonly Func<Grid?> _getGrid;
     private readonly Func<int> _getColCount;
@@ -42,26 +40,10 @@ internal sealed class TableGridColumnResize
         var grid = _getGrid();
         if (grid == null) return;
 
-        var colCount = _getColCount();
-        _resizeTotalWidth = 0;
-        _resizeOriginalWidths = new double[colCount];
-
-        for (var c = 0; c < colCount; c++)
-        {
-            var gc = c * 2 + 1;
-            if (gc < grid.ColumnDefinitions.Count)
-            {
-                _resizeOriginalWidths[c] = grid.ColumnDefinitions[gc].ActualWidth;
-                _resizeTotalWidth += _resizeOriginalWidths[c];
-            }
-            else
-            {
-                _resizeOriginalWidths[c] = 100;
-                _resizeTotalWidth += 100;
-            }
-        }
-
-        _resizeStartWidth = colIndex < colCount ? _resizeOriginalWidths[colIndex] : 100;
+        var gridColIndex = colIndex * 2 + 1;
+        _resizeStartWidth = gridColIndex < grid.ColumnDefinitions.Count
+            ? grid.ColumnDefinitions[gridColIndex].ActualWidth
+            : 100;
 
         if (e.Source is Control source)
             e.Pointer.Capture(source);
@@ -75,7 +57,6 @@ internal sealed class TableGridColumnResize
         var grid = _getGrid();
         if (grid == null) return;
 
-        var colCount = _getColCount();
         var pos = e.GetPosition(relativeTo);
         var delta = pos.X - _resizeStartPoint.X;
         var gridColIndex = _resizeColIndex * 2 + 1;
@@ -84,18 +65,6 @@ internal sealed class TableGridColumnResize
         {
             var newWidth = Math.Max(60, _resizeStartWidth + delta);
             grid.ColumnDefinitions[gridColIndex].Width = new GridLength(newWidth, GridUnitType.Pixel);
-
-            // Resize adjacent column to maintain total width
-            if (_resizeColIndex < colCount - 1)
-            {
-                var nextGridCol = (_resizeColIndex + 1) * 2 + 1;
-                if (nextGridCol < grid.ColumnDefinitions.Count
-                    && _resizeColIndex + 1 < _resizeOriginalWidths.Length)
-                {
-                    var nextNew = Math.Max(60, _resizeOriginalWidths[_resizeColIndex + 1] - delta);
-                    grid.ColumnDefinitions[nextGridCol].Width = new GridLength(nextNew, GridUnitType.Pixel);
-                }
-            }
         }
 
         e.Handled = true;

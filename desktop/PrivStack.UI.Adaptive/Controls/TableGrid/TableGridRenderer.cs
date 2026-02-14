@@ -19,6 +19,7 @@ internal sealed record TableGridRenderResult
 {
     public int DataRowCount { get; init; }
     public int TotalDisplayRows { get; init; }
+    public int DataRowStartGridRow { get; init; }
 }
 
 internal static class TableGridRenderer
@@ -277,7 +278,8 @@ internal static class TableGridRenderer
         return new TableGridRenderResult
         {
             DataRowCount = data.DataRows.Count,
-            TotalDisplayRows = totalDisplayRows
+            TotalDisplayRows = totalDisplayRows,
+            DataRowStartGridRow = dataRowStartGridRow
         };
     }
 

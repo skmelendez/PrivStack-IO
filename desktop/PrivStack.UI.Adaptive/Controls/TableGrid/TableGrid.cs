@@ -126,6 +126,7 @@ public sealed class TableGrid : Border
     private TableGridRowDrag? _rowDrag;
     private TableGridColumnDrag? _columnDrag;
     private int _lastDataRowCount;
+    private int _lastDataRowStartGridRow;
 
     private int _currentPage;
     private int _rebuildVersion;
@@ -332,6 +333,7 @@ public sealed class TableGrid : Border
                 ColorTheme);
 
             _lastDataRowCount = result.DataRowCount;
+            _lastDataRowStartGridRow = result.DataRowStartGridRow;
             _pagingBar.Update(paging);
             _pagingBar.IsVisible = ShowPaging;
 
@@ -426,6 +428,7 @@ public sealed class TableGrid : Border
             _rowDrag = new TableGridRowDrag(
                 () => _grid,
                 () => _lastDataRowCount,
+                () => _lastDataRowStartGridRow,
                 () => DataSource,
                 Rebuild,
                 () => this);

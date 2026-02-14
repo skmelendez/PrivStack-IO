@@ -22,6 +22,7 @@ internal sealed class TableGridRowDrag
 
     private readonly Func<Grid> _getGrid;
     private readonly Func<int> _getDataRowCount;
+    private readonly Func<int> _getDataRowStartGridRow;
     private readonly Func<ITableGridDataSource?> _getSource;
     private readonly Action _onReorder;
     private readonly Func<Control> _getThemeSource;
@@ -29,12 +30,14 @@ internal sealed class TableGridRowDrag
     public TableGridRowDrag(
         Func<Grid> getGrid,
         Func<int> getDataRowCount,
+        Func<int> getDataRowStartGridRow,
         Func<ITableGridDataSource?> getSource,
         Action onReorder,
         Func<Control> getThemeSource)
     {
         _getGrid = getGrid;
         _getDataRowCount = getDataRowCount;
+        _getDataRowStartGridRow = getDataRowStartGridRow;
         _getSource = getSource;
         _onReorder = onReorder;
         _getThemeSource = getThemeSource;
@@ -119,11 +122,19 @@ internal sealed class TableGridRowDrag
     private int GetDropRowIndex(double y, Grid grid)
     {
         var rowCount = _getDataRowCount();
-        var cumulativeHeight = 0.0;
+        var dataRowStart = _getDataRowStartGridRow();
+
+        // Accumulate Y offset up to the first data row
+        double cumulativeHeight = 0;
+        for (var r = 0; r < dataRowStart && r < grid.RowDefinitions.Count; r++)
+            cumulativeHeight += grid.RowDefinitions[r].ActualHeight;
 
         for (var r = 0; r < rowCount; r++)
         {
-            var rowDef = r < grid.RowDefinitions.Count ? grid.RowDefinitions[r] : null;
+            var gridRowIdx = dataRowStart + r;
+            var rowDef = gridRowIdx < grid.RowDefinitions.Count
+                ? grid.RowDefinitions[gridRowIdx]
+                : null;
             var rowHeight = rowDef?.ActualHeight ?? 40;
 
             if (y < cumulativeHeight + rowHeight / 2)
@@ -139,6 +150,7 @@ internal sealed class TableGridRowDrag
     {
         RemoveDropIndicator(grid);
 
+        var dataRowStart = _getDataRowStartGridRow();
         var themeSource = _getThemeSource();
         _dropIndicator = new Border
         {
@@ -148,11 +160,12 @@ internal sealed class TableGridRowDrag
             IsHitTestVisible = false
         };
 
-        var row = Math.Max(0, Math.Min(dropIndex, grid.RowDefinitions.Count - 1));
+        var gridRow = dataRowStart + dropIndex;
+        var row = Math.Max(0, Math.Min(gridRow, grid.RowDefinitions.Count - 1));
         Grid.SetRow(_dropIndicator, row);
         Grid.SetColumn(_dropIndicator, 0);
         Grid.SetColumnSpan(_dropIndicator, grid.ColumnDefinitions.Count);
-        _dropIndicator.VerticalAlignment = dropIndex >= grid.RowDefinitions.Count
+        _dropIndicator.VerticalAlignment = gridRow >= grid.RowDefinitions.Count
             ? VerticalAlignment.Bottom
             : VerticalAlignment.Top;
 
