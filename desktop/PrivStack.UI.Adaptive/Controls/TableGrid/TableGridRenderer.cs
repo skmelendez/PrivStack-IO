@@ -164,20 +164,18 @@ internal static class TableGridRenderer
                     }
                 }
 
-                // Context menu on header for structure editing
-                if (supportsStructureEditing && !isReadOnly && source != null && rebuild != null)
+                // Context menu on header cells
+                if (source != null && rebuild != null)
                 {
                     var colIdx = c;
-                    var capturedCell = cell;
-                    cell.PointerPressed += (s, e) =>
-                    {
-                        if (e.GetCurrentPoint(capturedCell).Properties.IsRightButtonPressed)
-                        {
-                            var menu = TableGridContextMenu.BuildHeaderContextMenu(colIdx, source, rebuild);
-                            menu.Open(capturedCell);
-                            e.Handled = true;
-                        }
-                    };
+                    var hasHeader = data.HeaderRows.Count > 0;
+                    var ctxMenu = TableGridContextMenu.BuildHeaderContextMenu(
+                        colIdx, hasHeader, supportsStructureEditing, source, rebuild);
+                    cell.ContextMenu = ctxMenu;
+
+                    // Also set on inner TextBox for editable headers
+                    if (cell is Border { Child: TextBox headerTb })
+                        headerTb.ContextMenu = ctxMenu;
                 }
 
                 Grid.SetRow(cell, gridRow);
@@ -227,21 +225,19 @@ internal static class TableGridRenderer
                 }
 
                 // Context menu on all data cells (Row + Column submenus)
-                if (supportsStructureEditing && !isReadOnly && source != null && rebuild != null)
+                if (source != null && rebuild != null)
                 {
                     var capturedRow = dataIdx;
                     var capturedCol = c;
-                    var capturedCell = cell;
-                    cell.PointerPressed += (s, e) =>
-                    {
-                        if (e.GetCurrentPoint(capturedCell).Properties.IsRightButtonPressed)
-                        {
-                            var menu = TableGridContextMenu.BuildCellContextMenu(
-                                capturedRow, capturedCol, source, rebuild);
-                            menu.Open(capturedCell);
-                            e.Handled = true;
-                        }
-                    };
+                    var hasHeader = data.HeaderRows.Count > 0;
+                    var ctxMenu = TableGridContextMenu.BuildCellContextMenu(
+                        capturedRow, capturedCol, hasHeader,
+                        supportsStructureEditing, source, rebuild);
+                    cell.ContextMenu = ctxMenu;
+
+                    // Also set on inner TextBox for editable cells
+                    if (cell is Border { Child: TextBox cellTb })
+                        cellTb.ContextMenu = ctxMenu;
                 }
 
                 Grid.SetRow(cell, gridRow);
@@ -252,14 +248,6 @@ internal static class TableGridRenderer
                     onResizePressed, onResizeMoved, onResizeReleased);
             }
             gridRow++;
-        }
-
-        // Insert indicators for hover-to-insert UX (floating "+" circles on cell borders)
-        if (supportsStructureEditing && !isReadOnly && source != null && rebuild != null)
-        {
-            TableGridInsertIndicators.AttachCellIndicators(
-                grid, headerGridRow, dataRowStartGridRow, data.DataRows.Count,
-                colCount, source, rebuild, themeSource);
         }
 
         // Description row
