@@ -8,6 +8,7 @@ using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Sdk;
+using PrivStack.Sdk.Capabilities;
 using PrivStack.UI.Adaptive.Models;
 using Serilog;
 
@@ -440,6 +441,7 @@ public partial class InfoPanelViewModel : ViewModelBase
         // Create a PropertyValueViewModel with default value
         var vm = new PropertyValueViewModel(definition, null, _entityMetadataService, ActiveItemLinkType, ActiveItemId);
         vm.OnRemoved = OnPropertyRemoved;
+        WireRelationDelegates(vm);
         ActiveItemProperties.Add(vm);
 
         // Save the default value to persist the property assignment
@@ -471,6 +473,8 @@ public partial class InfoPanelViewModel : ViewModelBase
             {
                 IsAddPropertyOpen = false;
                 var vm = new PropertyValueViewModel(def, null, _entityMetadataService, ActiveItemLinkType, ActiveItemId);
+                vm.OnRemoved = OnPropertyRemoved;
+                WireRelationDelegates(vm);
                 ActiveItemProperties.Add(vm);
             }
         }
@@ -837,6 +841,7 @@ public partial class InfoPanelViewModel : ViewModelBase
 
                 var vm = new PropertyValueViewModel(def, value, _entityMetadataService, linkType, itemId);
                 vm.OnRemoved = OnPropertyRemoved;
+                WireRelationDelegates(vm);
                 propVms.Add(vm);
             }
 
@@ -864,6 +869,32 @@ public partial class InfoPanelViewModel : ViewModelBase
             ActiveItemProperties = [];
             ActiveItemPropertyGroups = [];
         }
+    }
+
+    private void WireRelationDelegates(PropertyValueViewModel vm)
+    {
+        if (vm.Type != PropertyType.Relation) return;
+
+        vm.EntitySearcher = async (query, allowedTypes, max) =>
+        {
+            var providers = _pluginRegistry.GetCapabilityProviders<ILinkableItemProvider>();
+            if (allowedTypes is { Count: > 0 })
+                providers = providers.Where(p => allowedTypes.Contains(p.LinkType)).ToList();
+
+            var tasks = providers.Select(p => p.SearchItemsAsync(query, max));
+            var results = await Task.WhenAll(tasks);
+            return results.SelectMany(r => r).OrderByDescending(i => i.ModifiedAt).Take(max).ToList();
+        };
+
+        vm.EntityResolver = async (linkType, entityId) =>
+        {
+            var provider = _pluginRegistry.GetCapabilityProviders<ILinkableItemProvider>()
+                .FirstOrDefault(p => p.LinkType == linkType);
+            return provider != null ? await provider.GetItemByIdAsync(entityId) : null;
+        };
+
+        // Re-resolve now that delegates are wired (items may have loaded before delegates were set)
+        _ = vm.ResolveRelationItemsAsync();
     }
 
     private void OnPropertyRemoved(PropertyValueViewModel removed)

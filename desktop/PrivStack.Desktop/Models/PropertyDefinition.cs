@@ -14,7 +14,8 @@ public enum PropertyType
     Checkbox,
     Select,
     MultiSelect,
-    Url
+    Url,
+    Relation
 }
 
 /// <summary>
@@ -44,6 +45,14 @@ public sealed record PropertyDefinition
     [JsonPropertyName("default_value")]
     public string? DefaultValue { get; init; }
 
+    /// <summary>
+    /// For Relation properties: restricts which entity types can be linked.
+    /// Null or empty means all ILinkableItemProvider types are allowed.
+    /// Values are LinkType strings (e.g. "contact", "task", "page").
+    /// </summary>
+    [JsonPropertyName("allowed_link_types")]
+    public List<string>? AllowedLinkTypes { get; init; }
+
     [JsonPropertyName("icon")]
     public string? Icon { get; init; }
 
@@ -52,6 +61,15 @@ public sealed record PropertyDefinition
 
     [JsonPropertyName("group_id")]
     public string? GroupId { get; init; }
+}
+
+/// <summary>
+/// A single entity reference stored as a relation property value.
+/// </summary>
+public sealed record RelationEntry
+{
+    [JsonPropertyName("lt")] public string LinkType { get; init; } = "";
+    [JsonPropertyName("id")] public string EntityId { get; init; } = "";
 }
 
 /// <summary>

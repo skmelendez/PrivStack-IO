@@ -1,9 +1,11 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Services;
+using PrivStack.Sdk.Capabilities;
 using Serilog;
 
 namespace PrivStack.Desktop.ViewModels;
@@ -51,6 +53,30 @@ public partial class PropertyValueViewModel : ObservableObject
 
     [ObservableProperty]
     private string _urlValue = "";
+
+    // --- Relation properties ---
+
+    /// <summary>
+    /// Delegate for searching linkable entities. Set by the parent (InfoPanelViewModel).
+    /// Parameters: query, allowedLinkTypes, maxResults.
+    /// </summary>
+    public Func<string, List<string>?, int, Task<List<LinkableItem>>>? EntitySearcher { get; set; }
+
+    /// <summary>
+    /// Delegate for resolving a single entity by link type + ID. Set by the parent.
+    /// </summary>
+    public Func<string, string, Task<LinkableItem?>>? EntityResolver { get; set; }
+
+    /// <summary>
+    /// Resolved display entries for the relation property.
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<LinkableItem> _relationItems = [];
+
+    /// <summary>
+    /// Source-of-truth entry list serialized to/from JSON.
+    /// </summary>
+    private List<RelationEntry> _relationEntries = [];
 
     /// <summary>
     /// Invoked after the property is successfully removed from the entity.
@@ -110,6 +136,13 @@ public partial class PropertyValueViewModel : ObservableObject
             case PropertyType.Url:
                 UrlValue = v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
                 break;
+            case PropertyType.Relation:
+                if (v.ValueKind == JsonValueKind.Array)
+                {
+                    _relationEntries = JsonSerializer.Deserialize<List<RelationEntry>>(v.GetRawText()) ?? [];
+                    _ = ResolveRelationItemsAsync();
+                }
+                break;
         }
     }
 
@@ -154,6 +187,7 @@ public partial class PropertyValueViewModel : ObservableObject
             PropertyType.Select => JsonSerializer.SerializeToElement(SelectedOption),
             PropertyType.MultiSelect => JsonSerializer.SerializeToElement(SelectedOptions),
             PropertyType.Url => JsonSerializer.SerializeToElement(UrlValue),
+            PropertyType.Relation => JsonSerializer.SerializeToElement(_relationEntries),
             _ => JsonSerializer.SerializeToElement((string?)null),
         };
     }
@@ -234,6 +268,93 @@ public partial class PropertyValueViewModel : ObservableObject
         catch (Exception ex)
         {
             _log.Error(ex, "Failed to remove property '{Name}'", Definition.Name);
+        }
+    }
+
+    // --- Relation helpers ---
+
+    /// <summary>
+    /// Resolves display titles for all stored relation entries via EntityResolver.
+    /// </summary>
+    internal async Task ResolveRelationItemsAsync()
+    {
+        if (EntityResolver == null || _relationEntries.Count == 0)
+        {
+            RelationItems = [];
+            return;
+        }
+
+        var resolved = new List<LinkableItem>();
+        foreach (var entry in _relationEntries)
+        {
+            try
+            {
+                var item = await EntityResolver(entry.LinkType, entry.EntityId);
+                if (item != null)
+                    resolved.Add(item);
+                else
+                    resolved.Add(new LinkableItem
+                    {
+                        Id = entry.EntityId,
+                        LinkType = entry.LinkType,
+                        Title = $"{entry.LinkType}:{entry.EntityId[..Math.Min(8, entry.EntityId.Length)]}...",
+                    });
+            }
+            catch (Exception ex)
+            {
+                _log.Debug(ex, "Failed to resolve relation entry {LinkType}:{EntityId}", entry.LinkType, entry.EntityId);
+                resolved.Add(new LinkableItem
+                {
+                    Id = entry.EntityId,
+                    LinkType = entry.LinkType,
+                    Title = $"{entry.LinkType}:{entry.EntityId[..Math.Min(8, entry.EntityId.Length)]}...",
+                });
+            }
+        }
+        RelationItems = new ObservableCollection<LinkableItem>(resolved);
+    }
+
+    /// <summary>
+    /// Adds a linkable item to the relation and persists.
+    /// </summary>
+    public async Task AddRelationAsync(LinkableItem item)
+    {
+        if (_relationEntries.Any(e => e.EntityId == item.Id && e.LinkType == item.LinkType))
+            return;
+
+        _relationEntries.Add(new RelationEntry { LinkType = item.LinkType, EntityId = item.Id });
+        RelationItems.Add(item);
+        await SaveRelationAsync();
+    }
+
+    /// <summary>
+    /// Removes a linkable item from the relation and persists.
+    /// </summary>
+    public async Task RemoveRelationAsync(LinkableItem item)
+    {
+        var idx = _relationEntries.FindIndex(e => e.EntityId == item.Id && e.LinkType == item.LinkType);
+        if (idx < 0) return;
+
+        _relationEntries.RemoveAt(idx);
+        RelationItems.Remove(item);
+        await SaveRelationAsync();
+    }
+
+    private async Task SaveRelationAsync()
+    {
+        _isSaving = true;
+        try
+        {
+            var jsonValue = JsonSerializer.SerializeToElement(_relationEntries);
+            await _metadataService.UpdatePropertyAsync(_linkType, _entityId, Definition.Id, jsonValue);
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Failed to save relation property '{Name}'", Definition.Name);
+        }
+        finally
+        {
+            _isSaving = false;
         }
     }
 }
