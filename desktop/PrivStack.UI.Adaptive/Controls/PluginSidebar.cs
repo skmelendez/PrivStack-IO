@@ -216,7 +216,7 @@ public sealed class PluginSidebar : Border
 
         _mainBorder = new Border
         {
-            BorderThickness = new Thickness(0, 0, 1, 0),
+            BorderThickness = new Thickness(0),
             Child = innerPanel,
         };
 
@@ -229,7 +229,7 @@ public sealed class PluginSidebar : Border
             VerticalAlignment = VerticalAlignment.Center,
         };
         handlePill.Bind(BackgroundProperty,
-            handlePill.GetResourceObservable("SystemControlForegroundBaseMediumLowBrush"));
+            handlePill.GetResourceObservable("ThemeBorderSubtleBrush"));
 
         _resizeHandle = new Border
         {
@@ -279,8 +279,9 @@ public sealed class PluginSidebar : Border
 
     private void ApplyTheme()
     {
-        _mainBorder.Background = GetBrush("ThemeSurfaceBrush", Brushes.Transparent);
-        _mainBorder.BorderBrush = GetBrush("ThemeBorderSubtleBrush", Brushes.Gray);
+        _mainBorder.Background = GetBrush("ThemeSurfaceRecessedBrush",
+            GetBrush("ThemeSurfaceBrush", Brushes.Transparent));
+        _mainBorder.BorderBrush = Brushes.Transparent;
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

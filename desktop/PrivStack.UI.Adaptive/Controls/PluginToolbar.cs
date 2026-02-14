@@ -84,8 +84,8 @@ public sealed class PluginToolbar : Border
 
     public PluginToolbar()
     {
-        BorderThickness = new Thickness(0, 0, 0, 1);
-        Padding = new Thickness(16, 8, 16, 6);
+        BorderThickness = new Thickness(0);
+        Padding = new Thickness(20, 12, 20, 10);
 
         _titleBlock = new TextBlock
         {
@@ -94,7 +94,7 @@ public sealed class PluginToolbar : Border
             VerticalAlignment = VerticalAlignment.Center,
         };
         _titleBlock.Bind(TextBlock.FontSizeProperty,
-            _titleBlock.GetResourceObservable("ThemeFontSizeLgXl"));
+            _titleBlock.GetResourceObservable("ThemeFontSizeHeading2"));
         _titleBlock.Bind(TextBlock.ForegroundProperty,
             _titleBlock.GetResourceObservable("ThemeTextPrimaryBrush"));
 
@@ -174,7 +174,7 @@ public sealed class PluginToolbar : Border
     private void ApplyTheme()
     {
         Background = GetBrush("ThemeSurfaceBrush", Brushes.Transparent);
-        BorderBrush = GetBrush("ThemeBorderSubtleBrush", Brushes.Gray);
+        BorderBrush = Brushes.Transparent;
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
