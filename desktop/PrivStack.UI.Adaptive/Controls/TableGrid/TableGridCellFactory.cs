@@ -38,7 +38,7 @@ internal static class TableGridCellFactory
             Text = text,
             FontWeight = isHeader ? FontWeight.SemiBold : FontWeight.Normal,
             TextAlignment = textAlignment,
-            Padding = new Thickness(12, 8),
+            Padding = new Thickness(12, 10),
             TextWrapping = TextWrapping.Wrap,
             TextTrimming = TextTrimming.None
         };
@@ -62,8 +62,8 @@ internal static class TableGridCellFactory
 
         var border = new Border
         {
-            BorderThickness = isHeader ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 0, 1),
-            BorderBrush = GetBrush(themeSource, "ThemeBorderSubtleBrush"),
+            BorderThickness = isHeader ? new Thickness(0, 0, 0, 1) : new Thickness(0),
+            BorderBrush = isHeader ? GetBrush(themeSource, "ThemeBorderSubtleBrush") : null,
             Background = backgroundColor,
             Child = tb
         };
@@ -88,9 +88,10 @@ internal static class TableGridCellFactory
         var grip = new Border
         {
             Classes = { "col-resize-grip" },
-            Width = 4,
+            Width = 2,
             Cursor = new Cursor(StandardCursorType.SizeWestEast),
             Background = Brushes.Transparent,
+            Margin = new Thickness(-3, 0),
             Tag = colIndex
         };
 
@@ -173,9 +174,9 @@ internal static class TableGridCellFactory
             AcceptsReturn = false,
             BorderThickness = new Thickness(0),
             Background = Brushes.Transparent,
-            Padding = new Thickness(12, 8),
+            Padding = new Thickness(12, 10),
             MinWidth = 60,
-            MinHeight = 28,
+            MinHeight = 32,
             TextWrapping = TextWrapping.Wrap
         };
 
@@ -225,8 +226,8 @@ internal static class TableGridCellFactory
 
         var border = new Border
         {
-            BorderThickness = isHeader ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 0, 1),
-            BorderBrush = GetBrush(themeSource, "ThemeBorderSubtleBrush"),
+            BorderThickness = isHeader ? new Thickness(0, 0, 0, 1) : new Thickness(0),
+            BorderBrush = isHeader ? GetBrush(themeSource, "ThemeBorderSubtleBrush") : null,
             Background = backgroundColor,
             Child = tb
         };

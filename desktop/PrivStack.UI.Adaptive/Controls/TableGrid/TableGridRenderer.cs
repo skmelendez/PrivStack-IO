@@ -182,7 +182,7 @@ internal static class TableGridRenderer
                 frozenGrid.ColumnDefinitions.Add(new ColumnDefinition(
                     new GridLength(widths[c], GridUnitType.Pixel)));
                 frozenGrid.ColumnDefinitions.Add(new ColumnDefinition(
-                    new GridLength(4, GridUnitType.Pixel)));
+                    new GridLength(2, GridUnitType.Pixel)));
             }
 
             // Scrollable grid: 0px placeholder + remaining columns + grips
@@ -193,7 +193,7 @@ internal static class TableGridRenderer
                 grid.ColumnDefinitions.Add(new ColumnDefinition(
                     new GridLength(widths[c], GridUnitType.Pixel)));
                 grid.ColumnDefinitions.Add(new ColumnDefinition(
-                    new GridLength(4, GridUnitType.Pixel)));
+                    new GridLength(2, GridUnitType.Pixel)));
             }
         }
         else
@@ -205,7 +205,7 @@ internal static class TableGridRenderer
                 grid.ColumnDefinitions.Add(new ColumnDefinition(
                     new GridLength(widths[c], GridUnitType.Pixel)));
                 grid.ColumnDefinitions.Add(new ColumnDefinition(
-                    new GridLength(4, GridUnitType.Pixel)));
+                    new GridLength(2, GridUnitType.Pixel)));
             }
         }
     }
