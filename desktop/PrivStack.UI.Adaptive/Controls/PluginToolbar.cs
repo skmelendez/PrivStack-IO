@@ -6,6 +6,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Data;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -77,6 +78,8 @@ public sealed class PluginToolbar : Border
     private readonly TextBlock _subtitleBlock;
     private readonly TextBox _searchNormal;
     private readonly TextBox _searchCompact;
+    private readonly Border _searchNormalPill;
+    private readonly Border _searchCompactPill;
     private readonly ContentControl _actionsHost;
     private bool _suppressSearchSync;
 
@@ -97,17 +100,19 @@ public sealed class PluginToolbar : Border
             _titleBlock.GetResourceObservable("ThemeTextPrimaryBrush"));
 
         _searchNormal = BuildSearchBox();
-        _searchNormal.HorizontalAlignment = HorizontalAlignment.Center;
-        _searchNormal.MinWidth = 200;
-        _searchNormal.MaxWidth = 300;
-        _searchNormal.Bind(IsVisibleProperty,
-            _searchNormal.GetResourceObservable("ThemeIsNotCompactMode"));
+        _searchNormalPill = BuildSearchPill(_searchNormal);
+        _searchNormalPill.HorizontalAlignment = HorizontalAlignment.Center;
+        _searchNormalPill.MinWidth = 200;
+        _searchNormalPill.MaxWidth = 300;
+        _searchNormalPill.Bind(IsVisibleProperty,
+            _searchNormalPill.GetResourceObservable("ThemeIsNotCompactMode"));
 
         _searchCompact = BuildSearchBox();
-        _searchCompact.HorizontalAlignment = HorizontalAlignment.Stretch;
-        _searchCompact.Margin = new Thickness(0, 6, 0, 0);
-        _searchCompact.Bind(IsVisibleProperty,
-            _searchCompact.GetResourceObservable("ThemeIsCompactMode"));
+        _searchCompactPill = BuildSearchPill(_searchCompact);
+        _searchCompactPill.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _searchCompactPill.Margin = new Thickness(0, 6, 0, 0);
+        _searchCompactPill.Bind(IsVisibleProperty,
+            _searchCompactPill.GetResourceObservable("ThemeIsCompactMode"));
 
         _actionsHost = new ContentControl
         {
@@ -126,7 +131,7 @@ public sealed class PluginToolbar : Border
 
         var row0 = new Grid { MinHeight = 32 };
         row0.Children.Add(_titleBlock);
-        row0.Children.Add(_searchNormal);
+        row0.Children.Add(_searchNormalPill);
         row0.Children.Add(_actionsHost);
 
         var grid = new Grid();
@@ -135,11 +140,11 @@ public sealed class PluginToolbar : Border
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 
         Grid.SetRow(row0, 0);
-        Grid.SetRow(_searchCompact, 1);
+        Grid.SetRow(_searchCompactPill, 1);
         Grid.SetRow(_subtitleBlock, 2);
 
         grid.Children.Add(row0);
-        grid.Children.Add(_searchCompact);
+        grid.Children.Add(_searchCompactPill);
         grid.Children.Add(_subtitleBlock);
 
         Child = grid;
@@ -212,17 +217,17 @@ public sealed class PluginToolbar : Border
     {
         if (!IsSearchVisible)
         {
-            _searchNormal.IsVisible = false;
-            _searchCompact.IsVisible = false;
+            _searchNormalPill.IsVisible = false;
+            _searchCompactPill.IsVisible = false;
         }
         else
         {
-            _searchNormal.ClearValue(IsVisibleProperty);
-            _searchCompact.ClearValue(IsVisibleProperty);
-            _searchNormal.Bind(IsVisibleProperty,
-                _searchNormal.GetResourceObservable("ThemeIsNotCompactMode"));
-            _searchCompact.Bind(IsVisibleProperty,
-                _searchCompact.GetResourceObservable("ThemeIsCompactMode"));
+            _searchNormalPill.ClearValue(IsVisibleProperty);
+            _searchCompactPill.ClearValue(IsVisibleProperty);
+            _searchNormalPill.Bind(IsVisibleProperty,
+                _searchNormalPill.GetResourceObservable("ThemeIsNotCompactMode"));
+            _searchCompactPill.Bind(IsVisibleProperty,
+                _searchCompactPill.GetResourceObservable("ThemeIsCompactMode"));
         }
     }
 
@@ -232,13 +237,12 @@ public sealed class PluginToolbar : Border
         {
             VerticalAlignment = VerticalAlignment.Center,
             BorderThickness = new Thickness(0),
-            Padding = new Thickness(12, 8),
-            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(8, 6),
+            CornerRadius = new CornerRadius(0),
+            Background = Brushes.Transparent,
             Text = SearchText,
             Watermark = SearchWatermark,
         };
-        tb.Bind(TextBox.BackgroundProperty,
-            tb.GetResourceObservable("ThemeSurfaceElevatedBrush"));
         tb.Bind(TextBox.ForegroundProperty,
             tb.GetResourceObservable("ThemeTextPrimaryBrush"));
 
@@ -252,6 +256,47 @@ public sealed class PluginToolbar : Border
         };
 
         return tb;
+    }
+
+    private Border BuildSearchPill(TextBox inner)
+    {
+        // Magnifying glass icon (Material Design filled search icon)
+        var searchIcon = new Path
+        {
+            Data = StreamGeometry.Parse(
+                "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 " +
+                "6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5z" +
+                "m-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"),
+            Width = 14,
+            Height = 14,
+            Stretch = Stretch.Uniform,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(8, 0, 0, 0),
+        };
+        searchIcon.Bind(Path.FillProperty,
+            searchIcon.GetResourceObservable("ThemeTextMutedBrush"));
+
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children = { searchIcon, inner }
+        };
+
+        var pill = new Border
+        {
+            CornerRadius = new CornerRadius(9999),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(4, 0, 4, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = panel,
+        };
+        pill.Bind(Border.BackgroundProperty,
+            pill.GetResourceObservable("ThemeSurfaceElevatedBrush"));
+        pill.Bind(Border.BorderBrushProperty,
+            pill.GetResourceObservable("ThemeBorderSubtleBrush"));
+
+        return pill;
     }
 
     private IBrush? GetBrush(string key, IBrush? fallback)

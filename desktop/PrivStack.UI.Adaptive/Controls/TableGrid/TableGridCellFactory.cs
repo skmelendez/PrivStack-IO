@@ -36,9 +36,9 @@ internal static class TableGridCellFactory
         var tb = new TextBlock
         {
             Text = text,
-            FontWeight = isHeader ? FontWeight.Bold : FontWeight.Normal,
+            FontWeight = isHeader ? FontWeight.SemiBold : FontWeight.Normal,
             TextAlignment = textAlignment,
-            Padding = new Thickness(12, 6),
+            Padding = new Thickness(12, 8),
             TextWrapping = TextWrapping.Wrap,
             TextTrimming = TextTrimming.None
         };
@@ -62,8 +62,8 @@ internal static class TableGridCellFactory
 
         var border = new Border
         {
-            BorderThickness = new Thickness(1),
-            BorderBrush = GetBrush(themeSource, "ThemeBorderBrush"),
+            BorderThickness = isHeader ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 0, 1),
+            BorderBrush = GetBrush(themeSource, "ThemeBorderSubtleBrush"),
             Background = backgroundColor,
             Child = tb
         };
@@ -168,12 +168,12 @@ internal static class TableGridCellFactory
         var tb = new TextBox
         {
             Text = text,
-            FontWeight = isHeader ? FontWeight.Bold : FontWeight.Normal,
+            FontWeight = isHeader ? FontWeight.SemiBold : FontWeight.Normal,
             TextAlignment = textAlignment,
             AcceptsReturn = false,
             BorderThickness = new Thickness(0),
             Background = Brushes.Transparent,
-            Padding = new Thickness(12, 6),
+            Padding = new Thickness(12, 8),
             MinWidth = 60,
             MinHeight = 28,
             TextWrapping = TextWrapping.Wrap
@@ -225,8 +225,8 @@ internal static class TableGridCellFactory
 
         var border = new Border
         {
-            BorderThickness = new Thickness(1),
-            BorderBrush = GetBrush(themeSource, "ThemeBorderBrush"),
+            BorderThickness = isHeader ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 0, 1),
+            BorderBrush = GetBrush(themeSource, "ThemeBorderSubtleBrush"),
             Background = backgroundColor,
             Child = tb
         };
@@ -245,7 +245,7 @@ internal static class TableGridCellFactory
                 var themed = GetBrush(themeSource, themeHeaderKey);
                 if (themed != null) return themed;
             }
-            return GetBrush(themeSource, "ThemeTableHeaderBrush");
+            return GetBrush(themeSource, "ThemeSurfaceElevatedBrush");
         }
 
         if (isStriped && dataRowIndex % 2 == 1)
