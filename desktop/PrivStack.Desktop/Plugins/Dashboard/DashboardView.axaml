@@ -136,12 +136,12 @@
                         <StackPanel Spacing="4">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock Text="&#x25B8;"
-                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding !IsWorkspacePluginsExpanded}"/>
                                 <TextBlock Text="&#x25BE;"
-                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding IsWorkspacePluginsExpanded}"/>
@@ -302,12 +302,12 @@
                                 Command="{Binding ToggleStorageExpandedCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock Text="&#x25B8;"
-                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding !IsStorageExpanded}"/>
                                 <TextBlock Text="&#x25BE;"
-                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding IsStorageExpanded}"/>
@@ -672,12 +672,12 @@
                                                 CommandParameter="{Binding}">
                                             <Grid ColumnDefinitions="Auto,*,Auto">
                                                 <TextBlock Grid.Column="0" Text="&#x25B8;"
-                                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                                            VerticalAlignment="Center" Margin="0,0,10,0"
                                                            IsVisible="{Binding !IsExpanded}"/>
                                                 <TextBlock Grid.Column="0" Text="&#x25BE;"
-                                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
                                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                                                            VerticalAlignment="Center" Margin="0,0,10,0"
                                                            IsVisible="{Binding IsExpanded}"/>
