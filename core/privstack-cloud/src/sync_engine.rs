@@ -48,6 +48,8 @@ pub struct CloudSyncEngine {
     last_sync_at: Arc<RwLock<Option<DateTime<Utc>>>>,
     /// Persistent storage for cursor positions across restarts.
     entity_store: Arc<EntityStore>,
+    /// Server-provided throttling configuration (queried on startup).
+    rate_limits: RateLimitConfig,
 }
 
 /// Handle for sending commands to the sync engine.
@@ -166,6 +168,7 @@ pub fn create_cloud_sync_engine(
         cursors,
         last_sync_at,
         entity_store,
+        rate_limits: RateLimitConfig::default(),
     };
 
     (handle, inbound_tx, engine)
@@ -178,6 +181,34 @@ impl CloudSyncEngine {
             "cloud sync engine started for workspace {}",
             self.workspace_id
         );
+
+        // Fetch server rate-limit config; fall back to safe defaults on failure.
+        match self.api.get_rate_limits().await {
+            Ok(limits) => {
+                info!(
+                    "rate limits: {}/{} per {}s, batch_size={}, delay={}ms",
+                    limits.max_requests_per_window,
+                    limits.window_seconds,
+                    limits.window_seconds,
+                    limits.flush_batch_size,
+                    limits.inter_entity_delay_ms,
+                );
+                // Never decrease poll interval below what the server recommends.
+                let recommended = Duration::from_secs(limits.recommended_poll_interval_secs);
+                if recommended > self.poll_interval {
+                    info!(
+                        "increasing poll interval from {}s to {}s per server recommendation",
+                        self.poll_interval.as_secs(),
+                        limits.recommended_poll_interval_secs,
+                    );
+                    self.poll_interval = recommended;
+                }
+                self.rate_limits = limits;
+            }
+            Err(e) => {
+                warn!("failed to fetch rate limits, using defaults: {e}");
+            }
+        }
 
         let mut flush_interval = tokio::time::interval(Duration::from_secs(5));
         let mut poll_interval = tokio::time::interval(self.poll_interval);
@@ -263,11 +294,36 @@ impl CloudSyncEngine {
             by_entity.entry(entity_id).or_default().push(event);
         }
 
+        // Apply batch cap: only process flush_batch_size entities per cycle.
+        let batch_size = self.rate_limits.flush_batch_size as usize;
+        let mut entities_to_flush: Vec<(String, Vec<Event>)> = by_entity.into_iter().collect();
+
+        if entities_to_flush.len() > batch_size {
+            let overflow = entities_to_flush.split_off(batch_size);
+            for (_, events) in overflow {
+                for ev in events {
+                    self.outbox.push(ev);
+                }
+            }
+            debug!(
+                "flush batch capped at {batch_size} entities, {} events re-queued for next cycle",
+                self.outbox.pending_count()
+            );
+        }
+
         let creds = self.cred_manager.get_credentials().await?;
 
         let mut last_err: Option<CloudError> = None;
+        let inter_delay = Duration::from_millis(self.rate_limits.inter_entity_delay_ms);
+        let mut is_first = true;
 
-        for (entity_id, entity_events) in by_entity {
+        for (entity_id, entity_events) in entities_to_flush {
+            // Delay between entities to stay under rate limits.
+            if is_first {
+                is_first = false;
+            } else {
+                tokio::time::sleep(inter_delay).await;
+            }
             let dek = match self.dek_registry.get(&entity_id).await {
                 Ok(dek) => dek,
                 Err(e) => {
