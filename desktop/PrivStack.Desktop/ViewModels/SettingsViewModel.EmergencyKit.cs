@@ -3,8 +3,10 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
+using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.EmergencyKit;
 
 namespace PrivStack.Desktop.ViewModels;
@@ -104,7 +106,8 @@ public partial class SettingsViewModel
 
             if (file == null) return;
 
-            var workspaceName = _workspaceService?.GetActiveWorkspace()?.Name ?? "PrivStack";
+            var workspaceService = App.Services.GetRequiredService<IWorkspaceService>();
+            var workspaceName = workspaceService.GetActiveWorkspace()?.Name ?? "PrivStack";
             EmergencyKitPdfService.Generate(RegeneratedWords, workspaceName, file.Path.LocalPath);
             HasDownloadedRegeneratedKit = true;
             Log.Information("Regenerated Emergency Kit PDF saved");
