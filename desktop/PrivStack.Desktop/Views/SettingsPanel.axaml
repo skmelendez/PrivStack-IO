@@ -5,6 +5,7 @@
              xmlns:vm="using:PrivStack.Desktop.ViewModels"
              xmlns:models="using:PrivStack.Desktop.Models"
              xmlns:svc="using:PrivStack.Desktop.Services"
+             xmlns:views="using:PrivStack.Desktop.Views"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
              x:Class="PrivStack.Desktop.Views.SettingsPanel"
              x:DataType="vm:SettingsViewModel">
@@ -782,6 +783,17 @@
                                FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                TextWrapping="Wrap"/>
                 </StackPanel>
+            </Expander>
+
+            <!-- Cloud Sync Section -->
+            <Expander IsExpanded="False" Classes="settings-section"
+                      x:DataType="vm:SettingsViewModel">
+                <Expander.Header>
+                    <TextBlock Text="Cloud Sync" FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                </Expander.Header>
+                <views:CloudSyncSettingsSection DataContext="{Binding CloudSync}"
+                                                Margin="16,0,16,16"/>
             </Expander>
 
             <!-- Security Section -->

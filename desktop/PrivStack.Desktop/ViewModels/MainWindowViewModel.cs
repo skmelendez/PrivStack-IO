@@ -152,7 +152,9 @@ public partial class MainWindowViewModel : ViewModelBase
     public SpeechRecordingViewModel SpeechRecordingVM => _speechRecordingVM ??= new SpeechRecordingViewModel(_appSettings);
 
     private WorkspaceSwitcherViewModel? _workspaceSwitcherVM;
-    public WorkspaceSwitcherViewModel WorkspaceSwitcherVM => _workspaceSwitcherVM ??= new WorkspaceSwitcherViewModel(_workspaceService);
+    public WorkspaceSwitcherViewModel WorkspaceSwitcherVM => _workspaceSwitcherVM ??=
+        new WorkspaceSwitcherViewModel(_workspaceService,
+            App.Services.GetRequiredService<ICloudSyncService>());
 
     private SubscriptionBadgeViewModel? _subscriptionBadgeVM;
     public SubscriptionBadgeViewModel SubscriptionBadgeVM => _subscriptionBadgeVM ??=
@@ -161,7 +163,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private StorageStatePillViewModel? _storageStatePillVM;
     public StorageStatePillViewModel StorageStatePillVM => _storageStatePillVM ??=
         new StorageStatePillViewModel(_appSettings, SyncVM,
-            App.Services.GetRequiredService<IFileEventSyncService>());
+            App.Services.GetRequiredService<IFileEventSyncService>(),
+            App.Services.GetRequiredService<ICloudSyncService>());
 
     private EmojiPickerViewModel? _emojiPickerVM;
     public EmojiPickerViewModel EmojiPickerVM => _emojiPickerVM ??= new EmojiPickerViewModel(_ => { });

@@ -333,6 +333,34 @@
                         </Grid>
                     </Button>
 
+                    <!-- PrivStack Cloud -->
+                    <Button Classes="ws-item"
+                            IsEnabled="{Binding IsCloudSyncAvailable}"
+                            Command="{Binding SelectCloudSyncCommand}">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <controls:IconControl Grid.Column="0" Icon="Cloud" Size="18"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="PrivStack Cloud"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                <TextBlock Text="End-to-end encrypted cloud sync"
+                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            </StackPanel>
+                            <controls:IconControl Grid.Column="2" Icon="Check" Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  VerticalAlignment="Center">
+                                <controls:IconControl.IsVisible>
+                                    <Binding Path="SelectedSyncTier"
+                                             Converter="{x:Static ObjectConverters.Equal}"
+                                             ConverterParameter="{x:Static models:SyncTier.PrivStackCloud}"/>
+                                </controls:IconControl.IsVisible>
+                            </controls:IconControl>
+                        </Grid>
+                    </Button>
+
                     <!-- Custom -->
                     <Button Classes="ws-item"
                             Command="{Binding SelectStorageLocationTypeCommand}"
