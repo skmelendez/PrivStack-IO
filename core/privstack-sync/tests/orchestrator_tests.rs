@@ -602,14 +602,24 @@ async fn run_sync_with_peer_full_handshake() {
     };
 
     let (handle, mut event_rx, command_rx, orchestrator) =
-        create_orchestrator(local_peer, es, ev, config);
+        create_orchestrator(local_peer, es.clone(), ev.clone(), config);
 
     let join = tokio::spawn(async move {
         orchestrator.run(transport, command_rx).await
     });
 
-    // Share an entity so sync has something to work with
+    // Share an entity and record an event so entities_needing_sync finds it
     handle.share_entity(entity_id).await.unwrap();
+    let event = Event::new(
+        entity_id,
+        local_peer,
+        HybridTimestamp::now(),
+        EventPayload::EntityCreated {
+            entity_type: "note".to_string(),
+            json_data: r#"{"title":"test"}"#.to_string(),
+        },
+    );
+    record_event_with_stores(&handle, &es, &ev, local_peer, event).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // Trigger sync
