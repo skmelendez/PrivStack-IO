@@ -306,6 +306,13 @@ if [ "$RUN_TESTS" = true ]; then
     echo "==> Running .NET tests..."
     dotnet test "$DESKTOP_DIR/PrivStack.sln" -c "$DOTNET_CONFIG" --nologo -v quiet || TEST_EXIT=$?
 
+    # Express integration tests (if config exists)
+    WEB_ROOT="$(cd "$REPO_ROOT/.." && pwd)/PrivStack-Web"
+    if [ -f "$WEB_ROOT/api/vitest.integration.config.js" ]; then
+        echo "==> Running Express integration tests..."
+        (cd "$WEB_ROOT" && npx vitest run --config api/vitest.integration.config.js) || TEST_EXIT=$?
+    fi
+
     # Teardown unless --persist
     if [ "$COMPOSE_UP" = true ]; then
         if [ "$PERSIST_TEST_DATA" = true ]; then
