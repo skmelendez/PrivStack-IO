@@ -13,7 +13,7 @@ pub fn fake_minio_creds() -> StsCredentials {
     StsCredentials {
         access_key_id: "privstack-test".into(),
         secret_access_key: "privstack-test-secret".into(),
-        session_token: "integration-test-token".into(),
+        session_token: String::new(),
         expires_at: Utc::now() + Duration::hours(1),
         bucket: "privstack-cloud".into(),
         region: "us-east-1".into(),
@@ -25,7 +25,7 @@ pub fn expired_minio_creds() -> StsCredentials {
     StsCredentials {
         access_key_id: "privstack-test".into(),
         secret_access_key: "privstack-test-secret".into(),
-        session_token: "expired-token".into(),
+        session_token: String::new(),
         expires_at: Utc::now() - Duration::seconds(10),
         bucket: "privstack-cloud".into(),
         region: "us-east-1".into(),
