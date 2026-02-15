@@ -188,6 +188,7 @@
                                 <CheckBox Content="Contacts" IsChecked="{Binding ShowContacts}"/>
                                 <CheckBox Content="Events" IsChecked="{Binding ShowEvents}"/>
                                 <CheckBox Content="Journal" IsChecked="{Binding ShowJournal}"/>
+                                <CheckBox Content="Web Clips" IsChecked="{Binding ShowWebClips}"/>
                                 <CheckBox Content="Tags" IsChecked="{Binding ShowTags}"/>
                             </StackPanel>
                         </Expander>

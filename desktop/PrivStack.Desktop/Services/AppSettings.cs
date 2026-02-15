@@ -247,6 +247,9 @@ public class AppSettings
     [JsonPropertyName("connection_metadata")]
     public Dictionary<string, ConnectionMetadataEntry> ConnectionMetadata { get; set; } = [];
 
+    [JsonPropertyName("bridge_auth_token")]
+    public string? BridgeAuthToken { get; set; }
+
     [JsonPropertyName("plugin_settings")]
     public Dictionary<string, string> PluginSettings { get; set; } = [];
 

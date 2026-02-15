@@ -70,16 +70,17 @@ public sealed class GraphDataService
         var companyTask = LoadEntitiesAsync("company", "company", NodeType.Company);
         var groupTask = LoadEntitiesAsync("contact_group", "contact_group", NodeType.ContactGroup);
         var wikiSourceTask = LoadEntitiesAsync("wiki_source", "wiki_source", NodeType.WikiSource);
+        var webClipTask = LoadEntitiesAsync("web_clip", "web_clip", NodeType.WebClip);
 
         await Task.WhenAll(pageTask, taskTask, projectTask, contactTask, journalTask, eventTask,
             dealTask, transactionTask, snippetTask, rssTask, credentialTask, fileTask,
-            companyTask, groupTask, wikiSourceTask);
+            companyTask, groupTask, wikiSourceTask, webClipTask);
 
         // Add all nodes
         foreach (var nodes in new[] { pageTask.Result, taskTask.Result, projectTask.Result, contactTask.Result,
             journalTask.Result, eventTask.Result, dealTask.Result, transactionTask.Result,
             snippetTask.Result, rssTask.Result, credentialTask.Result, fileTask.Result,
-            companyTask.Result, groupTask.Result, wikiSourceTask.Result })
+            companyTask.Result, groupTask.Result, wikiSourceTask.Result, webClipTask.Result })
             foreach (var node in nodes)
                 graphData.Nodes[node.Id] = node;
 
