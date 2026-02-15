@@ -217,14 +217,27 @@ impl CloudSyncEngine {
 
         let creds = self.cred_manager.get_credentials().await?;
 
+        let mut last_err: Option<CloudError> = None;
+
         for (entity_id, entity_events) in by_entity {
+            let dek = match self.dek_registry.get(&entity_id).await {
+                Ok(dek) => dek,
+                Err(e) => {
+                    warn!("skipping flush for entity {entity_id} (no DEK): {e}");
+                    // Re-queue events so they aren't lost
+                    for ev in entity_events {
+                        self.outbox.push(ev);
+                    }
+                    last_err = Some(e);
+                    continue;
+                }
+            };
+
             let event_count = entity_events.len();
             let cursor_start = self.cursors.get(&entity_id).copied().unwrap_or(0);
             let cursor_end = cursor_start + event_count as i64;
 
-            // Serialize and encrypt with entity DEK
             let serialized = serde_json::to_vec(&entity_events)?;
-            let dek = self.dek_registry.get(&entity_id).await?;
             let encrypted = encrypt(&dek, &serialized)
                 .map_err(|e| CloudError::Envelope(format!("batch encryption failed: {e}")))?;
             let encrypted_bytes = serde_json::to_vec(&encrypted)?;
@@ -257,7 +270,10 @@ impl CloudSyncEngine {
             debug!("flushed {event_count} events for entity {entity_id} (cursor -> {cursor_end})");
         }
 
-        Ok(())
+        match last_err {
+            Some(e) => Err(e),
+            None => Ok(()),
+        }
     }
 
     /// Polls for new data from other devices, decrypts, and applies it.
