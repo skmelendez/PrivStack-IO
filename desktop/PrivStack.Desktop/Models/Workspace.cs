@@ -25,6 +25,19 @@ public record Workspace
     /// </summary>
     [JsonPropertyName("storage_location")]
     public StorageLocation? StorageLocation { get; init; }
+
+    /// <summary>
+    /// Sync tier — determines transport for this workspace.
+    /// </summary>
+    [JsonPropertyName("sync_tier")]
+    public SyncTier SyncTier { get; init; } = SyncTier.LocalOnly;
+
+    /// <summary>
+    /// Cloud workspace ID if registered with PrivStack Cloud.
+    /// Null for local-only or relay workspaces.
+    /// </summary>
+    [JsonPropertyName("cloud_workspace_id")]
+    public string? CloudWorkspaceId { get; init; }
 }
 
 /// <summary>

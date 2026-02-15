@@ -90,6 +90,24 @@ public enum PrivStackError
     /// <summary>Password too short (min 8 characters).</summary>
     PasswordTooShort = 27,
 
+    /// <summary>Invalid argument.</summary>
+    InvalidArgument = 28,
+
+    /// <summary>Cloud sync error (S3 transport, outbox, or orchestration failure).</summary>
+    CloudSyncError = 29,
+
+    /// <summary>Cloud storage quota exceeded.</summary>
+    QuotaExceeded = 30,
+
+    /// <summary>Share permission denied.</summary>
+    ShareDenied = 31,
+
+    /// <summary>Envelope encryption/decryption error.</summary>
+    EnvelopeError = 32,
+
+    /// <summary>Cloud API authentication error.</summary>
+    CloudAuthError = 33,
+
     /// <summary>Unknown error.</summary>
     Unknown = 99,
 }
