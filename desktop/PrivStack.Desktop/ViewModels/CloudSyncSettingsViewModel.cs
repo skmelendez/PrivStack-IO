@@ -411,10 +411,36 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             Devices.Clear();
             foreach (var d in devices)
                 Devices.Add(d);
+
+            // Persist latest tokens (may have been rotated by Rust on 401 refresh)
+            PersistCurrentTokens();
         }
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed to refresh cloud sync status");
+        }
+    }
+
+    private void PersistCurrentTokens()
+    {
+        try
+        {
+            var tokens = _cloudSync.GetCurrentTokens();
+            if (tokens == null) return;
+
+            var settings = _appSettings.Settings;
+            if (settings.CloudSyncAccessToken == tokens.AccessToken
+                && settings.CloudSyncRefreshToken == tokens.RefreshToken)
+                return;
+
+            settings.CloudSyncAccessToken = tokens.AccessToken;
+            settings.CloudSyncRefreshToken = tokens.RefreshToken;
+            settings.CloudSyncUserId = tokens.UserId;
+            _appSettings.Save();
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Failed to persist cloud sync tokens");
         }
     }
 

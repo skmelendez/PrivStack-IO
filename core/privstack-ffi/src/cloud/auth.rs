@@ -167,6 +167,38 @@ pub extern "C" fn privstack_cloudsync_is_authenticated() -> bool {
     handle.runtime.block_on(api.is_authenticated())
 }
 
+/// Returns the current auth tokens as JSON for persistence.
+///
+/// After Rust internally refreshes tokens on a 401, the new refresh token
+/// must be persisted by the caller to survive app restarts.
+///
+/// # Safety
+/// - `out_json` must be a valid pointer. Result must be freed with `privstack_free_string`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_cloudsync_get_auth_tokens(
+    out_json: *mut *mut c_char,
+) -> PrivStackError {
+    if out_json.is_null() {
+        return PrivStackError::NullPointer;
+    }
+
+    let handle = lock_handle();
+    let handle = match handle.as_ref() {
+        Some(h) => h,
+        None => return PrivStackError::NotInitialized,
+    };
+
+    let api = match handle.cloud_api.as_ref() {
+        Some(a) => a.clone(),
+        None => return PrivStackError::NotInitialized,
+    };
+
+    match handle.runtime.block_on(api.get_current_tokens()) {
+        Some(tokens) => write_json_out(out_json, &tokens),
+        None => PrivStackError::CloudAuthError,
+    }
+}
+
 /// Sets up a new cloud keypair with a passphrase.
 ///
 /// Generates X25519 keypair, encrypts private key with passphrase,

@@ -14,6 +14,7 @@ public interface ICloudSyncService
     // ── Authentication ──
     CloudAuthTokens Authenticate(string email, string password);
     void AuthenticateWithTokens(string accessToken, string refreshToken, long userId);
+    CloudAuthTokens? GetCurrentTokens();
     void Logout();
     bool IsAuthenticated { get; }
 

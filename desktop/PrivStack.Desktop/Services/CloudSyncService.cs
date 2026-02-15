@@ -36,6 +36,13 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
         ThrowIfError(NativeLib.CloudSyncAuthenticateWithTokens(accessToken, refreshToken, userId));
     }
 
+    public CloudAuthTokens? GetCurrentTokens()
+    {
+        var err = NativeLib.CloudSyncGetAuthTokens(out var ptr);
+        if (err != PrivStackError.Ok) return null;
+        return DeserializeAndFree<CloudAuthTokens>(ptr);
+    }
+
     public void Logout()
     {
         ThrowIfError(NativeLib.CloudSyncLogout());

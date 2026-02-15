@@ -469,6 +469,9 @@ internal static partial class NativeLibrary
     [return: MarshalAs(UnmanagedType.U1)]
     public static partial bool CloudSyncIsAuthenticated();
 
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_get_auth_tokens")]
+    public static partial PrivStackError CloudSyncGetAuthTokens(out nint outJson);
+
     [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_setup_passphrase", StringMarshalling = StringMarshalling.Utf8)]
     public static partial PrivStackError CloudSyncSetupPassphrase(string passphrase, out nint outMnemonic);
 

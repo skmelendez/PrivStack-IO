@@ -81,6 +81,17 @@ impl CloudApiClient {
         auth.user_id = None;
     }
 
+    /// Returns current auth tokens for persistence.
+    pub async fn get_current_tokens(&self) -> Option<AuthTokens> {
+        let auth = self.auth.read().await;
+        Some(AuthTokens {
+            access_token: auth.access_token.clone()?,
+            refresh_token: auth.refresh_token.clone()?,
+            user_id: auth.user_id?,
+            email: String::new(),
+        })
+    }
+
     // ── Auth ──
 
     pub async fn authenticate(&self, email: &str, password: &str) -> CloudResult<AuthTokens> {
