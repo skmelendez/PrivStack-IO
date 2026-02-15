@@ -4,14 +4,24 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// STS temporary credentials for S3 access.
+///
+/// The API returns `expiration` (ISO 8601 string) plus optional `prefix`/`endpoint`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StsCredentials {
     pub access_key_id: String,
     pub secret_access_key: String,
     pub session_token: String,
+    /// API field is `expiration`, aliased here for Rust convention.
+    #[serde(alias = "expiration")]
     pub expires_at: DateTime<Utc>,
     pub bucket: String,
     pub region: String,
+    /// S3 prefix scoped to the workspace (informational).
+    #[serde(default)]
+    pub prefix: Option<String>,
+    /// Custom S3 endpoint (MinIO in dev/test).
+    #[serde(default)]
+    pub endpoint: Option<String>,
 }
 
 impl StsCredentials {
