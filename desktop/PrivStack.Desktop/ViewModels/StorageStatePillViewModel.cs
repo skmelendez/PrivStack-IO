@@ -1,8 +1,11 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
+using PrivStack.Desktop.Models;
+using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
 
@@ -17,6 +20,8 @@ public partial class StorageStatePillViewModel : ViewModelBase
     private readonly IAppSettingsService _appSettings;
     private readonly SyncViewModel _syncVM;
     private readonly IFileEventSyncService _fileEventSync;
+    private readonly ICloudSyncService _cloudSync;
+    private DispatcherTimer? _cloudPollTimer;
 
     [ObservableProperty] private string _pillText = "Local";
     [ObservableProperty] private IBrush _pillColor = Brushes.Gray;
@@ -24,11 +29,13 @@ public partial class StorageStatePillViewModel : ViewModelBase
     public StorageStatePillViewModel(
         IAppSettingsService appSettings,
         SyncViewModel syncVM,
-        IFileEventSyncService fileEventSync)
+        IFileEventSyncService fileEventSync,
+        ICloudSyncService cloudSync)
     {
         _appSettings = appSettings;
         _syncVM = syncVM;
         _fileEventSync = fileEventSync;
+        _cloudSync = cloudSync;
 
         _syncVM.PropertyChanged += OnSyncPropertyChanged;
         Refresh();
@@ -53,6 +60,42 @@ public partial class StorageStatePillViewModel : ViewModelBase
         var storageLocation = activeWorkspace?.StorageLocation;
         var dirType = storageLocation?.Type ?? "Default";
         var fileSyncActive = _fileEventSync.IsActive;
+
+        // ── PrivStack Cloud sync ──
+        if (activeWorkspace?.SyncTier == SyncTier.PrivStackCloud && _cloudSync.IsAuthenticated)
+        {
+            if (_cloudSync.IsSyncing)
+            {
+                try
+                {
+                    var status = _cloudSync.GetStatus();
+                    if (status.PendingUploadCount > 0)
+                    {
+                        PillText = $"Syncing ({status.PendingUploadCount})";
+                        PillColor = ResolveBrush("ThemePrimaryBrush");
+                    }
+                    else
+                    {
+                        PillText = "Synced";
+                        PillColor = ResolveBrush("ThemeSuccessBrush");
+                    }
+                }
+                catch
+                {
+                    PillText = "Cloud Sync";
+                    PillColor = ResolveBrush("ThemeSuccessBrush");
+                }
+                EnsureCloudPollTimer();
+                return;
+            }
+
+            PillText = "Cloud (Paused)";
+            PillColor = ResolveBrush("ThemeWarningBrush");
+            StopCloudPollTimer();
+            return;
+        }
+
+        StopCloudPollTimer();
 
         // Cloud provider with active file sync
         if (dirType is "GoogleDrive" or "ICloud" && fileSyncActive)
@@ -103,6 +146,20 @@ public partial class StorageStatePillViewModel : ViewModelBase
 
         PillText = "Local";
         PillColor = ResolveBrush("ThemeSuccessBrush");
+    }
+
+    private void EnsureCloudPollTimer()
+    {
+        if (_cloudPollTimer != null) return;
+        _cloudPollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _cloudPollTimer.Tick += (_, _) => Refresh();
+        _cloudPollTimer.Start();
+    }
+
+    private void StopCloudPollTimer()
+    {
+        _cloudPollTimer?.Stop();
+        _cloudPollTimer = null;
     }
 
     private static IBrush ResolveBrush(string key)

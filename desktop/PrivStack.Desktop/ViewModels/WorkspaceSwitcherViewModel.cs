@@ -3,9 +3,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Models;
+using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.Plugin;
+using Serilog;
 
 namespace PrivStack.Desktop.ViewModels;
 
@@ -52,11 +54,15 @@ public partial class PluginPickerItem : ObservableObject
 /// </summary>
 public partial class WorkspaceSwitcherViewModel : ViewModelBase
 {
-    private readonly IWorkspaceService _workspaceService;
+    private static readonly ILogger Log = Serilog.Log.ForContext<WorkspaceSwitcherViewModel>();
 
-    public WorkspaceSwitcherViewModel(IWorkspaceService workspaceService)
+    private readonly IWorkspaceService _workspaceService;
+    private readonly ICloudSyncService _cloudSync;
+
+    public WorkspaceSwitcherViewModel(IWorkspaceService workspaceService, ICloudSyncService cloudSync)
     {
         _workspaceService = workspaceService;
+        _cloudSync = cloudSync;
     }
 
     [ObservableProperty]
@@ -91,6 +97,11 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
     public bool IsGoogleDriveAvailable => !string.IsNullOrEmpty(Services.CloudPathResolver.GetGoogleDrivePath());
     public bool IsICloudAvailable => !string.IsNullOrEmpty(Services.CloudPathResolver.GetICloudPath());
     public bool IsCustomDirectorySelected => SelectedDirectoryType == DataDirectoryType.Custom;
+
+    [ObservableProperty]
+    private SyncTier _selectedSyncTier = SyncTier.LocalOnly;
+
+    public bool IsCloudSyncAvailable => _cloudSync.IsAuthenticated && _cloudSync.HasKeypair;
 
     public string DataDirectoryDisplay => SelectedDirectoryType switch
     {
@@ -146,6 +157,7 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
         IsSelectingPlugins = false;
         NewWorkspaceName = string.Empty;
         SelectedDirectoryType = DataDirectoryType.Default;
+        SelectedSyncTier = SyncTier.LocalOnly;
         CustomDataDirectory = string.Empty;
         IsOpen = true;
     }
@@ -209,6 +221,14 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
     private void SelectStorageLocationType(DataDirectoryType type)
     {
         SelectedDirectoryType = type;
+        SelectedSyncTier = SyncTier.LocalOnly;
+    }
+
+    [RelayCommand]
+    private void SelectCloudSync()
+    {
+        SelectedSyncTier = SyncTier.PrivStackCloud;
+        SelectedDirectoryType = DataDirectoryType.Default;
     }
 
     [RelayCommand]
@@ -228,6 +248,19 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
         var workspace = _workspaceService.CreateWorkspace(_pendingWorkspaceName, storageLocation);
         _pendingWorkspaceId = workspace.Id;
         _pendingWorkspaceName = null;
+
+        // Register with PrivStack Cloud if selected
+        if (SelectedSyncTier == SyncTier.PrivStackCloud)
+        {
+            try
+            {
+                _cloudSync.RegisterWorkspace(workspace.Id, workspace.Name);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to register workspace with cloud");
+            }
+        }
 
         // Initialize whitelist config with core-only defaults before showing picker
         var settingsService = App.Services.GetRequiredService<IAppSettingsService>();
@@ -337,15 +370,16 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
                 Name = ws.Name,
                 IsActive = ws.Id == active?.Id,
                 CreatedAt = ws.CreatedAt,
-                StorageLabel = GetStorageLabel(ws.StorageLocation)
+                StorageLabel = GetStorageLabel(ws.StorageLocation, ws.SyncTier)
             });
         }
 
         OnPropertyChanged(nameof(FilteredWorkspaces));
     }
 
-    private static string GetStorageLabel(StorageLocation? location)
+    private static string GetStorageLabel(StorageLocation? location, SyncTier syncTier = SyncTier.LocalOnly)
     {
+        if (syncTier == SyncTier.PrivStackCloud) return "Cloud";
         if (location == null || location.Type == "Default") return "Local";
         return location.Type switch
         {
