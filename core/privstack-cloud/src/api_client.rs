@@ -426,6 +426,17 @@ impl CloudApiClient {
         Ok(resp.json().await?)
     }
 
+    // ── Rate Limits ──
+
+    pub async fn get_rate_limits(&self) -> CloudResult<RateLimitConfig> {
+        let resp = self
+            .auth_get("/api/cloud/rate-limits")
+            .await?
+            .error_for_status()
+            .map_err(|e| CloudError::Api(e.to_string()))?;
+        Ok(resp.json().await?)
+    }
+
     // ── Sharing ──
 
     pub async fn create_share(&self, req: &CreateShareRequest) -> CloudResult<ShareInfo> {

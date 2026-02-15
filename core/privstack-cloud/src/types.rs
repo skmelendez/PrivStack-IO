@@ -122,6 +122,28 @@ pub struct QuotaInfo {
     pub usage_percent: f64,
 }
 
+/// Server-provided rate-limit configuration for adaptive client throttling.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RateLimitConfig {
+    pub window_seconds: u64,
+    pub max_requests_per_window: u64,
+    pub recommended_poll_interval_secs: u64,
+    pub flush_batch_size: u32,
+    pub inter_entity_delay_ms: u64,
+}
+
+impl Default for RateLimitConfig {
+    fn default() -> Self {
+        Self {
+            window_seconds: 60,
+            max_requests_per_window: 600,
+            recommended_poll_interval_secs: 30,
+            flush_batch_size: 25,
+            inter_entity_delay_ms: 120,
+        }
+    }
+}
+
 /// Accepts either a JSON number or a string-encoded number (e.g. `"10.00"`).
 fn deserialize_f64_from_str_or_num<'de, D>(deserializer: D) -> Result<f64, D::Error>
 where
