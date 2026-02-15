@@ -11,7 +11,8 @@ public class CloudSyncSettingsViewModelTests
     private static CloudSyncSettingsViewModel CreateVm(
         ICloudSyncService? cloudSync = null,
         IWorkspaceService? workspaceService = null,
-        IMasterPasswordCache? passwordCache = null)
+        IMasterPasswordCache? passwordCache = null,
+        IDialogService? dialogService = null)
     {
         return new CloudSyncSettingsViewModel(
             cloudSync ?? Substitute.For<ICloudSyncService>(),
@@ -19,7 +20,8 @@ public class CloudSyncSettingsViewModelTests
             new OAuthLoginService(),
             new PrivStackApiClient(),
             Substitute.For<IAppSettingsService>(),
-            passwordCache ?? Substitute.For<IMasterPasswordCache>());
+            passwordCache ?? Substitute.For<IMasterPasswordCache>(),
+            dialogService ?? Substitute.For<IDialogService>());
     }
 
     // ========================================
@@ -108,57 +110,49 @@ public class CloudSyncSettingsViewModelTests
     // ========================================
 
     [Fact]
-    public async Task EnableForWorkspaceAsync_RegistersAndStartsSync()
+    public async Task EnableForWorkspaceAsync_ShowsRecoveryKit_WhenNewKeypair()
+    {
+        var cloudSync = Substitute.For<ICloudSyncService>();
+        cloudSync.HasKeypair.Returns(false);
+        cloudSync.SetupPassphrase("vault-password").Returns("word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12");
+
+        var passwordCache = Substitute.For<IMasterPasswordCache>();
+        passwordCache.Get().Returns("vault-password");
+
+        var workspaceService = Substitute.For<IWorkspaceService>();
+        workspaceService.GetActiveWorkspace().Returns(new Workspace { Id = "ws1", Name = "Test" });
+
+        var vm = CreateVm(cloudSync, workspaceService, passwordCache);
+        vm.IsAuthenticated = true;
+
+        await vm.EnableForWorkspaceCommand.ExecuteAsync(null);
+
+        vm.ShowRecoveryKit.Should().BeTrue();
+        vm.RecoveryWords.Should().HaveCount(12);
+        vm.HasDownloadedRecoveryKit.Should().BeFalse();
+        // Sync should NOT have started yet
+        cloudSync.DidNotReceive().StartSync(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task EnableForWorkspaceAsync_StartsSyncDirectly_WhenKeypairExists()
     {
         var cloudSync = Substitute.For<ICloudSyncService>();
         cloudSync.HasKeypair.Returns(true);
         cloudSync.GetStatus().Returns(new CloudSyncStatus { IsSyncing = true });
         cloudSync.ListDevices().Returns([]);
 
-        var passwordCache = Substitute.For<IMasterPasswordCache>();
-        passwordCache.Get().Returns("vault-password");
-
         var workspaceService = Substitute.For<IWorkspaceService>();
-        workspaceService.GetActiveWorkspace().Returns(new Workspace
-        {
-            Id = "ws1",
-            Name = "Test"
-        });
+        workspaceService.GetActiveWorkspace().Returns(new Workspace { Id = "ws1", Name = "Test" });
 
-        var vm = CreateVm(cloudSync, workspaceService, passwordCache);
+        var vm = CreateVm(cloudSync, workspaceService);
         vm.IsAuthenticated = true;
 
         await vm.EnableForWorkspaceCommand.ExecuteAsync(null);
 
-        cloudSync.Received(1).RegisterWorkspace("ws1", "Test");
+        vm.ShowRecoveryKit.Should().BeFalse();
         cloudSync.Received(1).StartSync("ws1");
         vm.IsSyncing.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task EnableForWorkspaceAsync_SetsUpKeypairAutomatically()
-    {
-        var cloudSync = Substitute.For<ICloudSyncService>();
-        cloudSync.HasKeypair.Returns(false);
-        cloudSync.GetStatus().Returns(new CloudSyncStatus());
-        cloudSync.ListDevices().Returns([]);
-
-        var passwordCache = Substitute.For<IMasterPasswordCache>();
-        passwordCache.Get().Returns("vault-password");
-
-        var workspaceService = Substitute.For<IWorkspaceService>();
-        workspaceService.GetActiveWorkspace().Returns(new Workspace
-        {
-            Id = "ws1",
-            Name = "Test"
-        });
-
-        var vm = CreateVm(cloudSync, workspaceService, passwordCache);
-        vm.IsAuthenticated = true;
-
-        await vm.EnableForWorkspaceCommand.ExecuteAsync(null);
-
-        cloudSync.Received(1).SetupPassphrase("vault-password");
     }
 
     [Fact]
@@ -171,11 +165,7 @@ public class CloudSyncSettingsViewModelTests
         passwordCache.Get().Returns(string.Empty);
 
         var workspaceService = Substitute.For<IWorkspaceService>();
-        workspaceService.GetActiveWorkspace().Returns(new Workspace
-        {
-            Id = "ws1",
-            Name = "Test"
-        });
+        workspaceService.GetActiveWorkspace().Returns(new Workspace { Id = "ws1", Name = "Test" });
 
         var vm = CreateVm(cloudSync, workspaceService, passwordCache);
         vm.IsAuthenticated = true;
@@ -184,6 +174,112 @@ public class CloudSyncSettingsViewModelTests
 
         vm.AuthError.Should().Contain("Vault is locked");
         cloudSync.DidNotReceive().SetupPassphrase(Arg.Any<string>());
+    }
+
+    // ========================================
+    // Recovery Kit Tests
+    // ========================================
+
+    [Fact]
+    public async Task AcknowledgeRecoveryKit_StartsSyncAndClearsWords()
+    {
+        var cloudSync = Substitute.For<ICloudSyncService>();
+        cloudSync.GetStatus().Returns(new CloudSyncStatus { IsSyncing = true });
+        cloudSync.ListDevices().Returns([]);
+
+        var workspaceService = Substitute.For<IWorkspaceService>();
+        workspaceService.GetActiveWorkspace().Returns(new Workspace { Id = "ws1", Name = "Test" });
+
+        var vm = CreateVm(cloudSync, workspaceService);
+        vm.ShowRecoveryKit = true;
+        vm.RecoveryWords = ["word1", "word2", "word3"];
+
+        await vm.AcknowledgeRecoveryKitCommand.ExecuteAsync(null);
+
+        vm.ShowRecoveryKit.Should().BeFalse();
+        vm.RecoveryWords.Should().BeEmpty();
+        cloudSync.Received(1).StartSync("ws1");
+    }
+
+    [Fact]
+    public async Task SaveRecoveryKitPdf_DoesNothing_WhenDialogCancelled()
+    {
+        var dialogService = Substitute.For<IDialogService>();
+        dialogService.ShowSaveFileDialogAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<(string, string)[]>())
+            .Returns((string?)null);
+
+        var vm = CreateVm(dialogService: dialogService);
+        vm.RecoveryWords = ["word1", "word2", "word3", "word4", "word5", "word6",
+                            "word7", "word8", "word9", "word10", "word11", "word12"];
+
+        await vm.SaveRecoveryKitPdfCommand.ExecuteAsync(null);
+
+        vm.HasDownloadedRecoveryKit.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SaveRecoveryKitPdf_DoesNothing_WhenNoWords()
+    {
+        var vm = CreateVm();
+        vm.RecoveryWords = [];
+
+        await vm.SaveRecoveryKitPdfCommand.ExecuteAsync(null);
+
+        vm.HasDownloadedRecoveryKit.Should().BeFalse();
+    }
+
+    // ========================================
+    // Recovery Form Tests (manual mnemonic entry)
+    // ========================================
+
+    [Fact]
+    public void ShowRecovery_TogglesRecoveryForm()
+    {
+        var vm = CreateVm();
+
+        vm.ShowRecoveryCommand.Execute(null);
+
+        vm.ShowRecoveryForm.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CancelRecovery_HidesRecoveryForm()
+    {
+        var vm = CreateVm();
+        vm.ShowRecoveryForm = true;
+
+        vm.CancelRecoveryCommand.Execute(null);
+
+        vm.ShowRecoveryForm.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RecoverFromMnemonicAsync_CallsService()
+    {
+        var cloudSync = Substitute.For<ICloudSyncService>();
+
+        var vm = CreateVm(cloudSync);
+        vm.ShowRecoveryForm = true;
+        vm.RecoveryMnemonic = "word1 word2 word3";
+
+        await vm.RecoverFromMnemonicCommand.ExecuteAsync(null);
+
+        cloudSync.Received(1).RecoverFromMnemonic("word1 word2 word3");
+        vm.ShowRecoveryForm.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RecoverFromMnemonicAsync_ValidatesInput()
+    {
+        var vm = CreateVm();
+        vm.ShowRecoveryForm = true;
+        vm.RecoveryMnemonic = "";
+
+        await vm.RecoverFromMnemonicCommand.ExecuteAsync(null);
+
+        vm.RecoveryError.Should().Contain("recovery words");
+        vm.ShowRecoveryForm.Should().BeTrue();
     }
 
     // ========================================
@@ -257,59 +353,6 @@ public class CloudSyncSettingsViewModelTests
 
         cloudSync.Received(1).StopSync();
         vm.IsSyncing.Should().BeFalse();
-    }
-
-    // ========================================
-    // Recovery Tests
-    // ========================================
-
-    [Fact]
-    public void ShowRecovery_TogglesRecoveryForm()
-    {
-        var vm = CreateVm();
-
-        vm.ShowRecoveryCommand.Execute(null);
-
-        vm.ShowRecoveryForm.Should().BeTrue();
-    }
-
-    [Fact]
-    public void CancelRecovery_HidesRecoveryForm()
-    {
-        var vm = CreateVm();
-        vm.ShowRecoveryForm = true;
-
-        vm.CancelRecoveryCommand.Execute(null);
-
-        vm.ShowRecoveryForm.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task RecoverFromMnemonicAsync_CallsService()
-    {
-        var cloudSync = Substitute.For<ICloudSyncService>();
-
-        var vm = CreateVm(cloudSync);
-        vm.ShowRecoveryForm = true;
-        vm.RecoveryMnemonic = "word1 word2 word3";
-
-        await vm.RecoverFromMnemonicCommand.ExecuteAsync(null);
-
-        cloudSync.Received(1).RecoverFromMnemonic("word1 word2 word3");
-        vm.ShowRecoveryForm.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task RecoverFromMnemonicAsync_ValidatesInput()
-    {
-        var vm = CreateVm();
-        vm.ShowRecoveryForm = true;
-        vm.RecoveryMnemonic = "";
-
-        await vm.RecoverFromMnemonicCommand.ExecuteAsync(null);
-
-        vm.RecoveryError.Should().Contain("recovery words");
-        vm.ShowRecoveryForm.Should().BeTrue();
     }
 
     // ========================================

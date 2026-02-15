@@ -62,6 +62,45 @@
         <!-- ==================== DASHBOARD ==================== -->
         <StackPanel Spacing="12" IsVisible="{Binding ShowDashboard}">
 
+            <!-- ======= RECOVERY KIT (shown once after first keypair creation) ======= -->
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="16"
+                    IsVisible="{Binding ShowRecoveryKit}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Save Your Workspace Recovery Kit"
+                               FontWeight="Bold"
+                               FontSize="{DynamicResource ThemeFontSizeSmMd}"/>
+
+                    <Border Background="{DynamicResource ThemeDangerBrush}"
+                            Opacity="0.1" CornerRadius="4" Padding="12">
+                        <!-- Outer border for color tint only -->
+                    </Border>
+                    <TextBlock Foreground="{DynamicResource ThemeDangerBrush}"
+                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                               TextWrapping="Wrap"
+                               Margin="0,-12,0,0"
+                               Text="Your workspace data is encrypted with a unique key. If you ever lose your master password, these 12 recovery words are the ONLY way to recover your cloud-synced workspace data. Save this PDF and store it somewhere safe. PrivStack cannot recover your data without it."/>
+
+                    <Button Command="{Binding SaveRecoveryKitPdfCommand}"
+                            Background="{DynamicResource ThemePrimaryBrush}"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="12,10" CornerRadius="6"
+                            FontWeight="SemiBold"
+                            Content="Save Recovery Kit PDF"/>
+
+                    <Button Command="{Binding AcknowledgeRecoveryKitCommand}"
+                            Background="Transparent"
+                            Foreground="{DynamicResource ThemeTextMutedBrush}"
+                            HorizontalAlignment="Center"
+                            Padding="12,6" CornerRadius="4"
+                            Cursor="Hand"
+                            IsEnabled="{Binding HasDownloadedRecoveryKit}"
+                            Content="I've saved my recovery kit — start syncing"/>
+                </StackPanel>
+            </Border>
+
             <!-- Enable for this workspace (shown when connected but workspace not yet cloud-enabled) -->
             <Border Background="{DynamicResource ThemeSurfaceBrush}"
                     CornerRadius="6" Padding="16"
@@ -209,9 +248,9 @@
                 </Border>
             </StackPanel>
 
-            <!-- ==================== RECOVERY FORM ==================== -->
+            <!-- ==================== WORKSPACE RECOVERY (manual mnemonic entry) ==================== -->
             <StackPanel Spacing="12" IsVisible="{Binding ShowRecoveryForm}">
-                <TextBlock Text="Enter your recovery words to restore your encryption key."
+                <TextBlock Text="Recover your cloud workspace encryption key using the 12 recovery words from your Cloud Recovery Kit PDF."
                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                            FontSize="{DynamicResource ThemeFontSizeSm}"
                            TextWrapping="Wrap"/>
@@ -219,7 +258,7 @@
                 <Border Background="{DynamicResource ThemeSurfaceBrush}"
                         CornerRadius="6" Padding="12">
                     <StackPanel Spacing="10">
-                        <TextBox Watermark="Recovery words (space-separated)"
+                        <TextBox Watermark="Enter all 12 recovery words separated by spaces"
                                  Text="{Binding RecoveryMnemonic, Mode=TwoWay}"
                                  AcceptsReturn="True"
                                  TextWrapping="Wrap"
@@ -242,7 +281,7 @@
                                     HorizontalContentAlignment="Center"
                                     Padding="12,8" CornerRadius="6"
                                     FontWeight="SemiBold"
-                                    Content="Recover"/>
+                                    Content="Recover Workspace"/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -254,19 +293,17 @@
                            TextWrapping="Wrap"/>
             </StackPanel>
 
-            <!-- Recovery link + Disconnect -->
-            <StackPanel Orientation="Horizontal" Spacing="16"
-                        IsVisible="{Binding !ShowRecoveryForm}">
-                <Button Command="{Binding ShowRecoveryCommand}"
-                        Background="Transparent"
-                        Padding="0"
-                        Cursor="Hand"
-                        HorizontalAlignment="Left">
-                    <TextBlock Text="Recover encryption key"
-                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                               Foreground="{DynamicResource ThemePrimaryBrush}"/>
-                </Button>
-            </StackPanel>
+            <!-- Recover workspace link -->
+            <Button Command="{Binding ShowRecoveryCommand}"
+                    IsVisible="{Binding !ShowRecoveryForm}"
+                    Background="Transparent"
+                    Padding="0"
+                    Cursor="Hand"
+                    HorizontalAlignment="Left">
+                <TextBlock Text="Recover workspace from recovery kit"
+                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                           Foreground="{DynamicResource ThemePrimaryBrush}"/>
+            </Button>
 
             <!-- Disconnect -->
             <Button Command="{Binding DisconnectCommand}"
