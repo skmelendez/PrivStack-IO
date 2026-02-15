@@ -2,6 +2,7 @@
 
 use super::{parse_cstr, write_json_out};
 use crate::{lock_handle, PrivStackError, HANDLE};
+use privstack_cloud::blob_sync::BlobSyncManager;
 use privstack_cloud::credential_manager::CredentialManager;
 use privstack_cloud::s3_transport::S3Transport;
 use privstack_cloud::sync_engine;
@@ -63,6 +64,13 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
         config.credential_refresh_margin_secs,
     ));
 
+    // Initialize blob sync manager (shares transport + cred_manager with sync engine)
+    let blob_mgr = Arc::new(BlobSyncManager::new(
+        api.clone(),
+        transport.clone(),
+        cred_manager.clone(),
+    ));
+
     let (event_tx, _event_rx) = tokio::sync::mpsc::channel(256);
 
     let (sync_handle, mut engine) = sync_engine::create_cloud_sync_engine(
@@ -81,6 +89,8 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
     });
 
     handle.cloud_sync_handle = Some(sync_handle);
+    handle.cloud_blob_mgr = Some(blob_mgr);
+    handle.cloud_user_id = Some(user_id);
     PrivStackError::Ok
 }
 
@@ -97,6 +107,9 @@ pub extern "C" fn privstack_cloudsync_stop_sync() -> PrivStackError {
         Some(h) => h,
         None => return PrivStackError::SyncNotRunning,
     };
+
+    handle.cloud_blob_mgr = None;
+    handle.cloud_user_id = None;
 
     match handle.runtime.block_on(sync_handle.stop()) {
         Ok(()) => PrivStackError::Ok,

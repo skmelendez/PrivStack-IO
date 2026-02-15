@@ -47,4 +47,9 @@ public interface ICloudSyncService
     // ── Devices ──
     void RegisterDevice(string name, string platform);
     List<CloudDeviceInfo> ListDevices();
+
+    // ── Blobs ──
+    void UploadBlob(string workspaceId, string blobId, string? entityId, byte[] data, byte[] dek);
+    byte[] DownloadBlob(string s3Key, byte[] dek);
+    List<CloudBlobMeta> GetEntityBlobs(string entityId);
 }

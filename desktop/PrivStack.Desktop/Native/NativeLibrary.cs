@@ -504,6 +504,23 @@ internal static partial class NativeLibrary
     [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_list_devices")]
     public static partial PrivStackError CloudSyncListDevices(out nint outJson);
 
+    // ── Cloud Sync Blobs ──
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_upload_blob", StringMarshalling = StringMarshalling.Utf8)]
+    public static unsafe partial PrivStackError CloudSyncUploadBlob(
+        string workspaceId, string blobId, string? entityId,
+        byte* dataPtr, nuint dataLen, byte* dekPtr);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_download_blob", StringMarshalling = StringMarshalling.Utf8)]
+    public static unsafe partial PrivStackError CloudSyncDownloadBlob(
+        string s3Key, byte* dekPtr, out nint outPtr, out nuint outLen);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_free_blob_data")]
+    public static partial void CloudSyncFreeBlobData(nint ptr, nuint len);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_get_entity_blobs", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncGetEntityBlobs(string entityId, out nint outJson);
+
     // ============================================================
     // License Functions
     // ============================================================

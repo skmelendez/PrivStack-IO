@@ -6,6 +6,7 @@
 //! Pattern: acquire HANDLE → validate inputs → block_on async call → write JSON to out pointer.
 
 mod auth;
+mod blobs;
 mod devices;
 mod sharing;
 mod sync;

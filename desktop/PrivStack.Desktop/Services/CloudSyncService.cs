@@ -169,6 +169,54 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
         return DeserializeAndFree<List<CloudDeviceInfo>>(ptr);
     }
 
+    // ── Blobs ──
+
+    public unsafe void UploadBlob(string workspaceId, string blobId, string? entityId,
+        byte[] data, byte[] dek)
+    {
+        if (dek.Length != 32)
+            throw new ArgumentException("DEK must be exactly 32 bytes", nameof(dek));
+
+        fixed (byte* dataPtr = data)
+        fixed (byte* dekPtr = dek)
+        {
+            var err = NativeLib.CloudSyncUploadBlob(
+                workspaceId, blobId, entityId,
+                dataPtr, (nuint)data.Length, dekPtr);
+            ThrowIfError(err);
+        }
+    }
+
+    public unsafe byte[] DownloadBlob(string s3Key, byte[] dek)
+    {
+        if (dek.Length != 32)
+            throw new ArgumentException("DEK must be exactly 32 bytes", nameof(dek));
+
+        fixed (byte* dekPtr = dek)
+        {
+            var err = NativeLib.CloudSyncDownloadBlob(s3Key, dekPtr, out var outPtr, out var outLen);
+            ThrowIfError(err);
+
+            try
+            {
+                var result = new byte[(int)outLen];
+                Marshal.Copy(outPtr, result, 0, (int)outLen);
+                return result;
+            }
+            finally
+            {
+                NativeLib.CloudSyncFreeBlobData(outPtr, outLen);
+            }
+        }
+    }
+
+    public List<CloudBlobMeta> GetEntityBlobs(string entityId)
+    {
+        var err = NativeLib.CloudSyncGetEntityBlobs(entityId, out var ptr);
+        ThrowIfError(err);
+        return DeserializeAndFree<List<CloudBlobMeta>>(ptr);
+    }
+
     // ── OS Lifecycle Hooks ──
 
     private void RegisterLifecycleHooks()
