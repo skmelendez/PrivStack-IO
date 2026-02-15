@@ -217,6 +217,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     public ThemeEditorViewModel ThemeEditor { get; }
     public ConnectionsViewModel Connections { get; }
+    public CloudSyncSettingsViewModel CloudSync { get; }
 
     public SettingsViewModel(
         IAppSettingsService settingsService,
@@ -231,7 +232,9 @@ public partial class SettingsViewModel : ViewModelBase
         ISystemNotificationService notificationService,
         CustomThemeStore customThemeStore,
         ConnectionService connectionService,
-        GitHubDeviceFlowService gitHubDeviceFlowService)
+        GitHubDeviceFlowService gitHubDeviceFlowService,
+        ICloudSyncService cloudSyncService,
+        IWorkspaceService workspaceService)
     {
         _settingsService = settingsService;
         _backupService = backupService;
@@ -248,6 +251,7 @@ public partial class SettingsViewModel : ViewModelBase
         ThemeEditor = new ThemeEditorViewModel(themeService, customThemeStore, settingsService);
         ThemeEditor.EditorClosed += OnThemeEditorClosed;
         Connections = new ConnectionsViewModel(connectionService, gitHubDeviceFlowService);
+        CloudSync = new CloudSyncSettingsViewModel(cloudSyncService, workspaceService);
 
         LoadPluginItems();
         LoadSettings();

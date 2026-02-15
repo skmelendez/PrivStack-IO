@@ -1,0 +1,349 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:PrivStack.Desktop.ViewModels"
+             xmlns:models="using:PrivStack.Desktop.Models"
+             mc:Ignorable="d" d:DesignWidth="440" d:DesignHeight="600"
+             x:Class="PrivStack.Desktop.Views.CloudSyncSettingsSection"
+             x:DataType="vm:CloudSyncSettingsViewModel">
+
+    <!-- ==================== AUTH FORM ==================== -->
+    <StackPanel Spacing="12">
+        <StackPanel Spacing="12" IsVisible="{Binding ShowAuthForm}">
+            <TextBlock Text="Sign in to sync your workspaces across devices with end-to-end encryption."
+                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                       TextWrapping="Wrap"/>
+
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="12">
+                <StackPanel Spacing="10">
+                    <TextBox Watermark="Email"
+                             Text="{Binding Email, Mode=TwoWay}"
+                             IsEnabled="{Binding !IsAuthenticating}"
+                             Padding="12,8"/>
+                    <TextBox Watermark="Password"
+                             PasswordChar="&#x2022;"
+                             Text="{Binding Password, Mode=TwoWay}"
+                             IsEnabled="{Binding !IsAuthenticating}"
+                             Padding="12,8"/>
+                    <Button Command="{Binding AuthenticateCommand}"
+                            Background="{DynamicResource ThemePrimaryBrush}"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="12,8" CornerRadius="6"
+                            FontWeight="SemiBold"
+                            IsEnabled="{Binding !IsAuthenticating}"
+                            Content="Sign In"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding AuthError}"
+                       IsVisible="{Binding AuthError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource ThemeDangerBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- ==================== PASSPHRASE SETUP ==================== -->
+        <StackPanel Spacing="12" IsVisible="{Binding ShowPassphraseSetup}">
+            <TextBlock Text="Create a passphrase to encrypt your cloud data. This passphrase never leaves your device."
+                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                       TextWrapping="Wrap"/>
+
+            <!-- Setup form (hidden once mnemonic is shown) -->
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="12"
+                    IsVisible="{Binding !ShowMnemonic}">
+                <StackPanel Spacing="10">
+                    <TextBox Watermark="Passphrase (min 8 characters)"
+                             PasswordChar="&#x2022;"
+                             Text="{Binding Passphrase, Mode=TwoWay}"
+                             Padding="12,8"/>
+                    <TextBox Watermark="Confirm passphrase"
+                             PasswordChar="&#x2022;"
+                             Text="{Binding ConfirmPassphrase, Mode=TwoWay}"
+                             Padding="12,8"/>
+                    <Button Command="{Binding SetupPassphraseCommand}"
+                            Background="{DynamicResource ThemePrimaryBrush}"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="12,8" CornerRadius="6"
+                            FontWeight="SemiBold"
+                            Content="Create Encryption Key"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Mnemonic display -->
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="16"
+                    IsVisible="{Binding ShowMnemonic}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Recovery Words"
+                               FontWeight="SemiBold"
+                               FontSize="{DynamicResource ThemeFontSizeSmMd}"/>
+                    <TextBlock Text="Write these words down and store them safely. They are the only way to recover your encryption key."
+                               Foreground="{DynamicResource ThemeDangerBrush}"
+                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                               TextWrapping="Wrap"/>
+                    <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                            CornerRadius="4" Padding="12">
+                        <TextBlock Text="{Binding MnemonicWords}"
+                                   FontFamily="Consolas, Menlo, monospace"
+                                   FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+                    <Button Command="{Binding DismissMnemonicCommand}"
+                            Background="{DynamicResource ThemePrimaryBrush}"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="12,8" CornerRadius="6"
+                            FontWeight="SemiBold"
+                            Content="I've saved my recovery words"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding PassphraseError}"
+                       IsVisible="{Binding PassphraseError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource ThemeDangerBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- ==================== PASSPHRASE ENTRY (UNLOCK) ==================== -->
+        <StackPanel Spacing="12" IsVisible="{Binding NeedsPassphraseEntry}">
+            <TextBlock Text="Enter your encryption passphrase to unlock cloud sync."
+                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                       TextWrapping="Wrap"/>
+
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="12">
+                <StackPanel Spacing="10">
+                    <TextBox Watermark="Encryption passphrase"
+                             PasswordChar="&#x2022;"
+                             Text="{Binding EnterPassphrase, Mode=TwoWay}"
+                             Padding="12,8"/>
+                    <Button Command="{Binding EnterPassphraseCommand}"
+                            Background="{DynamicResource ThemePrimaryBrush}"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="12,8" CornerRadius="6"
+                            FontWeight="SemiBold"
+                            Content="Unlock"/>
+                    <Button Command="{Binding ShowRecoveryCommand}"
+                            Background="Transparent"
+                            Padding="0"
+                            Cursor="Hand"
+                            HorizontalAlignment="Left">
+                        <TextBlock Text="Forgot passphrase? Use recovery words"
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding EnterPassphraseError}"
+                       IsVisible="{Binding EnterPassphraseError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource ThemeDangerBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- ==================== RECOVERY FORM ==================== -->
+        <StackPanel Spacing="12" IsVisible="{Binding ShowRecoveryForm}">
+            <TextBlock Text="Enter your recovery words to restore your encryption key."
+                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                       TextWrapping="Wrap"/>
+
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="12">
+                <StackPanel Spacing="10">
+                    <TextBox Watermark="Recovery words (space-separated)"
+                             Text="{Binding RecoveryMnemonic, Mode=TwoWay}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="80"
+                             Padding="12,8"/>
+                    <Grid ColumnDefinitions="*,8,*">
+                        <Button Grid.Column="0"
+                                Command="{Binding CancelRecoveryCommand}"
+                                Background="Transparent"
+                                Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Padding="12,8" CornerRadius="6"
+                                Content="Back"/>
+                        <Button Grid.Column="2"
+                                Command="{Binding RecoverFromMnemonicCommand}"
+                                Background="{DynamicResource ThemePrimaryBrush}"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Padding="12,8" CornerRadius="6"
+                                FontWeight="SemiBold"
+                                Content="Recover"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding RecoveryError}"
+                       IsVisible="{Binding RecoveryError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource ThemeDangerBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- ==================== SYNC DASHBOARD ==================== -->
+        <StackPanel Spacing="12" IsVisible="{Binding ShowSyncDashboard}">
+
+            <!-- Status Card -->
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="12">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                     Fill="{DynamicResource ThemeSuccessBrush}"
+                                     IsVisible="{Binding IsSyncing}"/>
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                     Fill="{DynamicResource ThemeWarningBrush}"
+                                     IsVisible="{Binding !IsSyncing}"/>
+                            <TextBlock FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                       FontWeight="SemiBold">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0}">
+                                        <Binding Path="IsSyncing"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                            <TextBlock FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                       FontWeight="SemiBold"
+                                       IsVisible="{Binding IsSyncing}"
+                                       Text="Syncing"/>
+                            <TextBlock FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                       FontWeight="SemiBold"
+                                       IsVisible="{Binding !IsSyncing}"
+                                       Text="Paused"/>
+                        </StackPanel>
+                        <TextBlock FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="Last sync: {0}">
+                                    <Binding Path="LastSyncDisplay"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                VerticalAlignment="Center">
+                        <Button Command="{Binding RefreshStatusCommand}"
+                                Background="Transparent"
+                                Padding="8,6" CornerRadius="4"
+                                Cursor="Hand"
+                                Content="Refresh"
+                                FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                        <Button Command="{Binding StartSyncCommand}"
+                                IsVisible="{Binding !IsSyncing}"
+                                Background="{DynamicResource ThemePrimaryBrush}"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                Padding="12,6" CornerRadius="4"
+                                FontWeight="SemiBold"
+                                FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                Cursor="Hand"
+                                Content="Start"/>
+                        <Button Command="{Binding StopSyncCommand}"
+                                IsVisible="{Binding IsSyncing}"
+                                Background="{DynamicResource ThemeWarningBrush}"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                Padding="12,6" CornerRadius="4"
+                                FontWeight="SemiBold"
+                                FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                Cursor="Hand"
+                                Content="Stop"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Quota Card -->
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="12"
+                    IsVisible="{Binding Quota, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="Storage"
+                                   FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Quota.Summary}"
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                    </Grid>
+                    <ProgressBar Minimum="0" Maximum="100"
+                                 Value="{Binding Quota.UsagePercent}"
+                                 Height="6" CornerRadius="3"
+                                 Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Devices List -->
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="12">
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="Devices"
+                                   FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1"
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="{}{0} connected">
+                                    <Binding Path="ConnectedDeviceCount"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Devices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:CloudDeviceInfo">
+                                <Border Padding="0,4">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding DeviceName}"
+                                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                                            <TextBlock Text="{Binding Platform}"
+                                                       FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Text="{Binding LastSeenAt, StringFormat='{}{0:MMM d, h:mm tt}'}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Disconnect -->
+            <Button Command="{Binding LogoutCommand}"
+                    Background="Transparent"
+                    Padding="12,6"
+                    Foreground="{DynamicResource ThemeDangerBrush}"
+                    CornerRadius="4"
+                    Cursor="Hand"
+                    HorizontalAlignment="Left"
+                    Content="Disconnect from Cloud"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>
