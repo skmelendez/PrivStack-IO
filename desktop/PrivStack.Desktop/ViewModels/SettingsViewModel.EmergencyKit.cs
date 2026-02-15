@@ -49,6 +49,23 @@ public partial class SettingsViewModel
         }
     }
 
+    /// <summary>
+    /// True when cloud sync is active and has a keypair — determines whether
+    /// to generate a unified recovery kit or a vault-only emergency kit.
+    /// </summary>
+    private bool IsCloudActive
+    {
+        get
+        {
+            try
+            {
+                var cloudSync = App.Services.GetRequiredService<ICloudSyncService>();
+                return cloudSync.IsAuthenticated && cloudSync.HasKeypair;
+            }
+            catch { return false; }
+        }
+    }
+
     [RelayCommand]
     private async Task RegenerateEmergencyKitAsync()
     {
@@ -59,11 +76,29 @@ public partial class SettingsViewModel
 
         try
         {
-            var mnemonic = await Task.Run(() => _authService.SetupRecovery());
+            string mnemonic;
+            if (IsCloudActive)
+            {
+                var cloudSync = App.Services.GetRequiredService<ICloudSyncService>();
+                var passwordCache = App.Services.GetRequiredService<IMasterPasswordCache>();
+                var vaultPassword = passwordCache.Get();
+                if (string.IsNullOrEmpty(vaultPassword))
+                {
+                    EmergencyKitError = "Vault is locked. Please unlock the app first.";
+                    return;
+                }
+                mnemonic = await Task.Run(() => cloudSync.SetupUnifiedRecovery(vaultPassword));
+            }
+            else
+            {
+                mnemonic = await Task.Run(() => _authService.SetupRecovery());
+            }
+
             RegeneratedWords = mnemonic.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             ShowRegeneratedWords = true;
             HasEmergencyKit = true;
-            Log.Information("Emergency Kit regenerated ({Count} words)", RegeneratedWords.Length);
+            Log.Information("Emergency Kit regenerated ({Count} words, unified={Unified})",
+                RegeneratedWords.Length, IsCloudActive);
         }
         catch (PrivStackException ex)
         {
@@ -108,7 +143,11 @@ public partial class SettingsViewModel
 
             var workspaceService = App.Services.GetRequiredService<IWorkspaceService>();
             var workspaceName = workspaceService.GetActiveWorkspace()?.Name ?? "PrivStack";
-            EmergencyKitPdfService.Generate(RegeneratedWords, workspaceName, file.Path.LocalPath);
+
+            if (IsCloudActive)
+                UnifiedRecoveryKitPdfService.Generate(RegeneratedWords, workspaceName, file.Path.LocalPath);
+            else
+                EmergencyKitPdfService.Generate(RegeneratedWords, workspaceName, file.Path.LocalPath);
             HasDownloadedRegeneratedKit = true;
             Log.Information("Regenerated Emergency Kit PDF saved");
         }

@@ -52,6 +52,13 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
         return MarshalAndFree(ptr);
     }
 
+    public string SetupUnifiedRecovery(string passphrase)
+    {
+        var err = NativeLib.CloudSyncSetupUnifiedRecovery(passphrase, out var ptr);
+        ThrowIfError(err);
+        return MarshalAndFree(ptr);
+    }
+
     public void EnterPassphrase(string passphrase)
     {
         ThrowIfError(NativeLib.CloudSyncEnterPassphrase(passphrase));

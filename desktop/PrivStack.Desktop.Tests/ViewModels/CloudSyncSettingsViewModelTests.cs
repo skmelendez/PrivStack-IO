@@ -114,7 +114,7 @@ public class CloudSyncSettingsViewModelTests
     {
         var cloudSync = Substitute.For<ICloudSyncService>();
         cloudSync.HasKeypair.Returns(false);
-        cloudSync.SetupPassphrase("vault-password").Returns("word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12");
+        cloudSync.SetupUnifiedRecovery("vault-password").Returns("word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12");
 
         var passwordCache = Substitute.For<IMasterPasswordCache>();
         passwordCache.Get().Returns("vault-password");
@@ -132,6 +132,29 @@ public class CloudSyncSettingsViewModelTests
         vm.HasDownloadedRecoveryKit.Should().BeFalse();
         // Sync should NOT have started yet
         cloudSync.DidNotReceive().StartSync(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task EnableForWorkspaceAsync_DoesNotCallSetupPassphrase()
+    {
+        var cloudSync = Substitute.For<ICloudSyncService>();
+        cloudSync.HasKeypair.Returns(false);
+        cloudSync.SetupUnifiedRecovery("vault-password").Returns("word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12");
+
+        var passwordCache = Substitute.For<IMasterPasswordCache>();
+        passwordCache.Get().Returns("vault-password");
+
+        var workspaceService = Substitute.For<IWorkspaceService>();
+        workspaceService.GetActiveWorkspace().Returns(new Workspace { Id = "ws1", Name = "Test" });
+
+        var vm = CreateVm(cloudSync, workspaceService, passwordCache);
+        vm.IsAuthenticated = true;
+
+        await vm.EnableForWorkspaceCommand.ExecuteAsync(null);
+
+        // SetupPassphrase should NOT be called — unified recovery is used instead
+        cloudSync.DidNotReceive().SetupPassphrase(Arg.Any<string>());
+        cloudSync.Received(1).SetupUnifiedRecovery("vault-password");
     }
 
     [Fact]
@@ -174,6 +197,7 @@ public class CloudSyncSettingsViewModelTests
 
         vm.AuthError.Should().Contain("Vault is locked");
         cloudSync.DidNotReceive().SetupPassphrase(Arg.Any<string>());
+        cloudSync.DidNotReceive().SetupUnifiedRecovery(Arg.Any<string>());
     }
 
     // ========================================

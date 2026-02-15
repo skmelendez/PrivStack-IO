@@ -291,7 +291,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
                     return;
                 }
 
-                var mnemonic = await Task.Run(() => _cloudSync.SetupPassphrase(vaultPassword));
+                var mnemonic = await Task.Run(() => _cloudSync.SetupUnifiedRecovery(vaultPassword));
                 RecoveryWords = mnemonic.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 ShowRecoveryKit = true;
                 HasDownloadedRecoveryKit = false;
@@ -346,14 +346,14 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         try
         {
             var path = await _dialogService.ShowSaveFileDialogAsync(
-                "Save Cloud Workspace Recovery Kit",
-                $"PrivStack-Cloud-Recovery-Kit-{DateTime.Now:yyyy-MM-dd}",
+                "Save PrivStack Recovery Kit",
+                $"PrivStack-Recovery-Kit-{DateTime.Now:yyyy-MM-dd}",
                 [("PDF", "pdf")]);
 
             if (path == null) return;
 
             var workspaceName = _workspaceService.GetActiveWorkspace()?.Name ?? "PrivStack";
-            CloudRecoveryKitPdfService.Generate(RecoveryWords, workspaceName, path);
+            UnifiedRecoveryKitPdfService.Generate(RecoveryWords, workspaceName, path);
             HasDownloadedRecoveryKit = true;
             Log.Information("Cloud workspace recovery kit PDF saved");
         }

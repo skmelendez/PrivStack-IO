@@ -19,6 +19,7 @@ public interface ICloudSyncService
 
     // ── Key Management ──
     string SetupPassphrase(string passphrase);
+    string SetupUnifiedRecovery(string passphrase);
     void EnterPassphrase(string passphrase);
     void RecoverFromMnemonic(string mnemonic);
     bool HasKeypair { get; }

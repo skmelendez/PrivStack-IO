@@ -15,4 +15,5 @@ public interface IAuthService
     string SetupRecovery();
     bool HasRecovery();
     void ResetWithRecovery(string mnemonic, string newPassword);
+    void ResetWithUnifiedRecovery(string mnemonic, string newPassword);
 }

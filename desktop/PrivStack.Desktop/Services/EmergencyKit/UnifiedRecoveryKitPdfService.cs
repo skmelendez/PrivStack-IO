@@ -5,17 +5,16 @@ using QuestPDF.Infrastructure;
 namespace PrivStack.Desktop.Services.EmergencyKit;
 
 /// <summary>
-/// Generates a printable Cloud Workspace Recovery Kit PDF containing
-/// the 12-word BIP39 mnemonic for recovering cloud-encrypted workspace data.
+/// Generates a unified Recovery Kit PDF that covers BOTH vault password
+/// recovery and cloud-synced workspace data recovery with a single mnemonic.
+/// Replaces the separate Emergency Kit and Cloud Recovery Kit PDFs when
+/// cloud sync is enabled.
 /// </summary>
-public static class CloudRecoveryKitPdfService
+public static class UnifiedRecoveryKitPdfService
 {
     /// <summary>
-    /// Generates the recovery kit PDF and saves it to <paramref name="outputPath"/>.
+    /// Generates the unified recovery kit PDF and saves it to <paramref name="outputPath"/>.
     /// </summary>
-    /// <param name="words">The 12 mnemonic recovery words.</param>
-    /// <param name="workspaceName">Name of the workspace this kit belongs to.</param>
-    /// <param name="outputPath">File path to write the PDF.</param>
     public static void Generate(string[] words, string workspaceName, string outputPath)
     {
         var generatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
@@ -31,8 +30,8 @@ public static class CloudRecoveryKitPdfService
 
                 page.Header().Column(col =>
                 {
-                    col.Item().Text("PrivStack Cloud Workspace Recovery Kit")
-                        .FontSize(22).Bold().FontColor(Colors.Black);
+                    col.Item().Text("PrivStack Recovery Kit")
+                        .FontSize(24).Bold().FontColor(Colors.Black);
 
                     col.Item().PaddingTop(4).Text($"Workspace: {workspaceName}")
                         .FontSize(12).FontColor(Colors.Grey.Darken1);
@@ -45,17 +44,17 @@ public static class CloudRecoveryKitPdfService
 
                 page.Content().PaddingTop(20).Column(col =>
                 {
-                    // What this is
+                    // Info box
                     col.Item().Background(Colors.Blue.Lighten5)
                         .Border(1).BorderColor(Colors.Blue.Lighten2)
                         .Padding(12).Column(info =>
                         {
-                            info.Item().Text("WHAT IS THIS?")
+                            info.Item().Text("UNIFIED RECOVERY KEY")
                                 .Bold().FontSize(13).FontColor(Colors.Blue.Darken2);
                             info.Item().PaddingTop(6).Text(
-                                "This document contains the recovery key for your cloud-synced workspace. " +
-                                "If you lose your master password or need to restore your encrypted cloud data " +
-                                "on a new device, these 12 words are the ONLY way to recover your workspace data.")
+                                "This document recovers BOTH your vault master password and your " +
+                                "cloud-synced workspace data. A single set of 12 words protects " +
+                                "all your encrypted data — local and cloud.")
                                 .FontSize(10).FontColor(Colors.Blue.Darken1);
                         });
 
@@ -67,19 +66,20 @@ public static class CloudRecoveryKitPdfService
                             warning.Item().Text("DO NOT LOSE THIS DOCUMENT")
                                 .Bold().FontSize(13).FontColor(Colors.Red.Darken2);
                             warning.Item().PaddingTop(6).Text(
-                                "Without these recovery words, your cloud-encrypted workspace data CANNOT be recovered. " +
-                                "Print this document and store it in a secure physical location (e.g., a safe or safety deposit box). " +
+                                "Without these recovery words, your encrypted data CANNOT be recovered. " +
+                                "Print this document and store it in a secure physical location " +
+                                "(e.g., a safe or safety deposit box). " +
                                 "Do not store it digitally or share it with anyone. " +
                                 "PrivStack cannot recover your data without these words.")
                                 .FontSize(10).FontColor(Colors.Red.Darken1);
                         });
 
-                    // Recovery words grid (4 columns x 3 rows)
+                    // Recovery words grid
                     col.Item().PaddingTop(24).Text("Your 12 Recovery Words")
                         .FontSize(16).Bold().FontColor(Colors.Black);
 
                     col.Item().PaddingTop(4).Text(
-                        "You will need all 12 words in the exact order shown below to recover your workspace.")
+                        "You will need all 12 words in the exact order shown below.")
                         .FontSize(10).FontColor(Colors.Grey.Darken1);
 
                     col.Item().PaddingTop(16).Table(table =>
@@ -109,29 +109,42 @@ public static class CloudRecoveryKitPdfService
                         }
                     });
 
-                    // Recovery instructions
-                    col.Item().PaddingTop(24).Text("How to Recover Your Workspace")
+                    // Recovery instructions — vault
+                    col.Item().PaddingTop(24).Text("Recover Your Password")
                         .FontSize(14).Bold().FontColor(Colors.Black);
 
                     col.Item().PaddingTop(8).Column(steps =>
                     {
-                        steps.Item().Text("1. Open PrivStack and connect to PrivStack Cloud in Settings.")
+                        steps.Item().Text("1. Open PrivStack and go to the unlock screen.")
                             .FontSize(10);
                         steps.Item().PaddingTop(4)
-                            .Text("2. In the Cloud Sync section, click \"Recover encryption key\".")
+                            .Text("2. Click \"Forgot Password? Recover with Emergency Kit\".")
                             .FontSize(10);
                         steps.Item().PaddingTop(4)
-                            .Text("3. Enter all 12 words exactly as shown above, separated by spaces.")
+                            .Text("3. Enter all 12 words exactly as shown above.")
                             .FontSize(10);
                         steps.Item().PaddingTop(4)
-                            .Text("4. Your cloud-encrypted workspace data will be accessible again.")
+                            .Text("4. Set a new master password when prompted.")
+                            .FontSize(10);
+                    });
+
+                    // Recovery instructions — cloud
+                    col.Item().PaddingTop(16).Text("Recover Cloud Workspace")
+                        .FontSize(14).Bold().FontColor(Colors.Black);
+
+                    col.Item().PaddingTop(8).Column(steps =>
+                    {
+                        steps.Item().Text(
+                            "When you recover your password using the steps above, your cloud " +
+                            "workspace data is automatically restored as well. No additional " +
+                            "steps are needed — the same 12 words recover everything.")
                             .FontSize(10);
                     });
                 });
 
                 page.Footer().AlignCenter().Text(text =>
                 {
-                    text.Span("PrivStack Cloud Recovery Kit").FontSize(8).FontColor(Colors.Grey.Medium);
+                    text.Span("PrivStack Recovery Kit").FontSize(8).FontColor(Colors.Grey.Medium);
                     text.Span($"  |  Generated {generatedAt}").FontSize(8).FontColor(Colors.Grey.Lighten1);
                 });
             });

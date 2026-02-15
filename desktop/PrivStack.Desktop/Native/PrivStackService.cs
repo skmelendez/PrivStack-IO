@@ -453,6 +453,24 @@ public sealed class PrivStackService : IPrivStackNative
         _log.Information("Master password reset with recovery completed");
     }
 
+    /// <summary>
+    /// Resets the master password using a recovery mnemonic and recovers
+    /// cloud keypair (best-effort). Unified recovery for vault + cloud.
+    /// </summary>
+    public void ResetWithUnifiedRecovery(string mnemonic, string newPassword)
+    {
+        ThrowIfNotInitialized();
+
+        _log.Information("Resetting master password with unified recovery (vault + cloud)");
+        var result = NativeLibrary.AuthResetWithUnifiedRecovery(mnemonic, newPassword);
+        if (result != PrivStackError.Ok)
+        {
+            _log.Error("Failed to reset with unified recovery: {Result}", result);
+            throw new PrivStackException($"Failed to reset with unified recovery: {result}", result);
+        }
+        _log.Information("Unified recovery completed (vault + cloud best-effort)");
+    }
+
     // ============================================================
     // Standard Vault Initialization
     // ============================================================

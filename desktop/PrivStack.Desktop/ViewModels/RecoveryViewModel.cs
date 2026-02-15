@@ -104,7 +104,7 @@ public partial class RecoveryViewModel : ViewModelBase
             var mnemonic = Mnemonic.Trim();
             var password = NewPassword;
 
-            await Task.Run(() => _authService.ResetWithRecovery(mnemonic, password));
+            await Task.Run(() => _authService.ResetWithUnifiedRecovery(mnemonic, password));
 
             _passwordCache?.Set(password);
 

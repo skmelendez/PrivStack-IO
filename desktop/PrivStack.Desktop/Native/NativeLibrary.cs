@@ -136,6 +136,12 @@ internal static partial class NativeLibrary
     [LibraryImport(LibraryName, EntryPoint = "privstack_auth_reset_with_recovery", StringMarshalling = StringMarshalling.Utf8)]
     public static partial PrivStackError AuthResetWithRecovery(string mnemonic, string newPassword);
 
+    /// <summary>
+    /// Resets the master password using a recovery mnemonic and recovers cloud keypair (best-effort).
+    /// </summary>
+    [LibraryImport(LibraryName, EntryPoint = "privstack_auth_reset_with_unified_recovery", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError AuthResetWithUnifiedRecovery(string mnemonic, string newPassword);
+
     // ============================================================
     // Database Maintenance
     // ============================================================
@@ -465,6 +471,9 @@ internal static partial class NativeLibrary
 
     [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_setup_passphrase", StringMarshalling = StringMarshalling.Utf8)]
     public static partial PrivStackError CloudSyncSetupPassphrase(string passphrase, out nint outMnemonic);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_setup_unified_recovery", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncSetupUnifiedRecovery(string passphrase, out nint outMnemonic);
 
     [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_enter_passphrase", StringMarshalling = StringMarshalling.Utf8)]
     public static partial PrivStackError CloudSyncEnterPassphrase(string passphrase);
