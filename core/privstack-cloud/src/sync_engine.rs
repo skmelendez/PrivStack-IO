@@ -17,12 +17,13 @@ use crate::outbox::Outbox;
 use crate::s3_transport::S3Transport;
 use crate::types::*;
 
+use chrono::{DateTime, Utc};
 use privstack_crypto::{decrypt, encrypt, EncryptedData};
 use privstack_types::Event;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, error, info, warn};
 
 /// Cloud sync engine — main orchestration loop.
@@ -42,12 +43,15 @@ pub struct CloudSyncEngine {
     poll_interval: Duration,
     /// Per-entity cursor positions for this device.
     cursors: HashMap<String, i64>,
+    /// Shared timestamp updated after each successful flush or poll.
+    last_sync_at: Arc<RwLock<Option<DateTime<Utc>>>>,
 }
 
 /// Handle for sending commands to the sync engine.
 #[derive(Clone)]
 pub struct CloudSyncHandle {
     command_tx: mpsc::Sender<CloudCommand>,
+    last_sync_at: Arc<RwLock<Option<DateTime<Utc>>>>,
 }
 
 impl CloudSyncHandle {
@@ -63,6 +67,10 @@ impl CloudSyncHandle {
             .send(CloudCommand::ForceFlush)
             .await
             .map_err(|_| CloudError::Api("sync engine not running".to_string()))
+    }
+
+    pub async fn last_sync_at(&self) -> Option<DateTime<Utc>> {
+        *self.last_sync_at.read().await
     }
 
     pub async fn share_entity(
@@ -102,7 +110,12 @@ pub fn create_cloud_sync_engine(
     let (command_tx, command_rx) = mpsc::channel(64);
     let (inbound_tx, inbound_rx) = mpsc::channel(512);
 
-    let handle = CloudSyncHandle { command_tx };
+    let last_sync_at = Arc::new(RwLock::new(None));
+
+    let handle = CloudSyncHandle {
+        command_tx,
+        last_sync_at: last_sync_at.clone(),
+    };
 
     let engine = CloudSyncEngine {
         api,
@@ -118,6 +131,7 @@ pub fn create_cloud_sync_engine(
         device_id,
         poll_interval,
         cursors: HashMap::new(),
+        last_sync_at,
     };
 
     (handle, inbound_tx, engine)
@@ -295,6 +309,10 @@ impl CloudSyncEngine {
             }
         }
 
+        if last_err.is_none() {
+            *self.last_sync_at.write().await = Some(Utc::now());
+        }
+
         match last_err {
             Some(e) => Err(e),
             None => Ok(()),
@@ -307,6 +325,9 @@ impl CloudSyncEngine {
             .api
             .get_pending_changes(&self.workspace_id, &self.device_id)
             .await?;
+
+        // Even if no pending changes, a successful poll means we're in sync
+        *self.last_sync_at.write().await = Some(Utc::now());
 
         if pending.pending.is_empty() {
             return Ok(());

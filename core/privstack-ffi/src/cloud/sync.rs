@@ -178,12 +178,17 @@ pub unsafe extern "C" fn privstack_cloudsync_get_status(
     let is_syncing = handle.cloud_sync_handle.is_some();
     let is_authenticated = handle.runtime.block_on(api.is_authenticated());
 
+    let last_sync_at = handle
+        .cloud_sync_handle
+        .as_ref()
+        .and_then(|h| handle.runtime.block_on(h.last_sync_at()));
+
     let status = CloudSyncStatus {
         is_syncing,
         is_authenticated,
         active_workspace: handle.cloud_active_workspace.clone(),
         pending_upload_count: 0,
-        last_sync_at: None,
+        last_sync_at,
         connected_devices: 0,
     };
 

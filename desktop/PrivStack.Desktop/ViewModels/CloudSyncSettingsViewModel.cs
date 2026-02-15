@@ -29,6 +29,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     private readonly IMasterPasswordCache _passwordCache;
     private readonly IDialogService _dialogService;
     private CancellationTokenSource? _oauthCts;
+    private CancellationTokenSource? _statusRefreshCts;
 
     public CloudSyncSettingsViewModel(
         ICloudSyncService cloudSync,
@@ -454,6 +455,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     {
         try
         {
+            _statusRefreshCts?.Cancel();
             await Task.Run(() => _cloudSync.StopSync());
             IsSyncing = false;
         }
@@ -544,6 +546,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     /// </summary>
     private void HandleSessionExpired()
     {
+        _statusRefreshCts?.Cancel();
         IsAuthenticated = false;
         IsSyncing = false;
         Quota = null;
@@ -587,8 +590,27 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         });
 
         await RefreshStatusAsync();
+        StartStatusRefreshTimer();
         Log.Information("Cloud sync started for workspace {WorkspaceId} (cloud={CloudId})",
             workspace.Id, cloudId);
+    }
+
+    private void StartStatusRefreshTimer()
+    {
+        _statusRefreshCts?.Cancel();
+        _statusRefreshCts = new CancellationTokenSource();
+        var ct = _statusRefreshCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(15), ct);
+                if (ct.IsCancellationRequested) break;
+                try { await RefreshStatusAsync(); }
+                catch { /* swallow — timer will retry */ }
+            }
+        }, ct);
     }
 
     private void LoadState()
