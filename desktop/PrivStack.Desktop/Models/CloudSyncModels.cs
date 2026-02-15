@@ -191,6 +191,27 @@ public record SharedWithMeInfo
 }
 
 /// <summary>
+/// Blob metadata for cloud-synced file attachments.
+/// </summary>
+public record CloudBlobMeta
+{
+    [JsonPropertyName("blob_id")]
+    public string BlobId { get; init; } = string.Empty;
+
+    [JsonPropertyName("entity_id")]
+    public string? EntityId { get; init; }
+
+    [JsonPropertyName("s3_key")]
+    public string S3Key { get; init; } = string.Empty;
+
+    [JsonPropertyName("size_bytes")]
+    public ulong SizeBytes { get; init; }
+
+    [JsonPropertyName("content_hash")]
+    public string? ContentHash { get; init; }
+}
+
+/// <summary>
 /// Device info for cloud-registered devices.
 /// </summary>
 public record CloudDeviceInfo
