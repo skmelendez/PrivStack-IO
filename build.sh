@@ -304,7 +304,7 @@ if [ "$RUN_TESTS" = true ]; then
     cargo test --manifest-path "$CORE_DIR/Cargo.toml" $CARGO_PROFILE_FLAG || TEST_EXIT=$?
 
     echo "==> Running .NET tests..."
-    dotnet test "$DESKTOP_DIR/PrivStack.sln" -c "$DOTNET_CONFIG" --nologo -v quiet || TEST_EXIT=$?
+    dotnet test "$DESKTOP_DIR/PrivStack.sln" -c "$DOTNET_CONFIG" --nologo -v minimal || TEST_EXIT=$?
 
     # Express integration tests (if config exists)
     WEB_ROOT="$(cd "$REPO_ROOT/.." && pwd)/PrivStack-Web"

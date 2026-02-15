@@ -62,13 +62,15 @@ public partial class StorageStatePillViewModel : ViewModelBase
         var fileSyncActive = _fileEventSync.IsActive;
 
         // ── PrivStack Cloud sync ──
-        if (activeWorkspace?.SyncTier == SyncTier.PrivStackCloud && _cloudSync.IsAuthenticated)
+        if (activeWorkspace?.SyncTier == SyncTier.PrivStackCloud)
         {
-            if (_cloudSync.IsSyncing)
+            EnsureCloudPollTimer();
+
+            if (_cloudSync.IsAuthenticated && _cloudSync.IsSyncing)
             {
                 try
                 {
-                    var quota = _cloudSync.GetQuota(activeWorkspace.Id);
+                    var quota = _cloudSync.GetQuota(activeWorkspace.CloudWorkspaceId!);
                     var pct = (int)Math.Round(quota.UsagePercent);
                     PillText = $"Cloud Sync ({pct}%)";
                     PillColor = quota.UsagePercent > 95
@@ -82,13 +84,18 @@ public partial class StorageStatePillViewModel : ViewModelBase
                     PillText = "Cloud Sync";
                     PillColor = ResolveBrush("ThemeSuccessBrush");
                 }
-                EnsureCloudPollTimer();
                 return;
             }
 
-            PillText = "Cloud (Paused)";
+            if (_cloudSync.IsAuthenticated)
+            {
+                PillText = "Cloud (Paused)";
+                PillColor = ResolveBrush("ThemeWarningBrush");
+                return;
+            }
+
+            PillText = "Cloud (Offline)";
             PillColor = ResolveBrush("ThemeWarningBrush");
-            StopCloudPollTimer();
             return;
         }
 
