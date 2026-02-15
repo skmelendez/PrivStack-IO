@@ -340,6 +340,35 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
         IsOpen = false;
 
         _workspaceService.SwitchWorkspace(wsId);
+
+        // Auto-start cloud sync if workspace was created with PrivStack Cloud
+        var workspace = _workspaceService.GetActiveWorkspace();
+        if (workspace?.SyncTier == SyncTier.PrivStackCloud && workspace.CloudWorkspaceId != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Setup keypair if needed
+                    if (!_cloudSync.HasKeypair)
+                    {
+                        var passwordCache = App.Services.GetRequiredService<IMasterPasswordCache>();
+                        var vaultPassword = passwordCache.Get();
+                        if (!string.IsNullOrEmpty(vaultPassword))
+                            _cloudSync.SetupUnifiedRecovery(vaultPassword);
+                    }
+
+                    _cloudSync.StartSync(workspace.CloudWorkspaceId);
+                    var count = _cloudSync.PushAllEntities();
+                    Log.Information("Cloud sync auto-started for new workspace {Id} (pushed {Count} entities)",
+                        workspace.Id, count);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to auto-start cloud sync for new workspace");
+                }
+            });
+        }
     }
 
     private void PopulateAvailablePlugins()
