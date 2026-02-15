@@ -329,8 +329,38 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Right side: Sync status + branding -->
+                            <!-- Right side: Update status + Subscription + Storage -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
+                                <!-- Update Status Indicator -->
+                                <Button Command="{Binding UpdateVM.StatusBarClickCommand}"
+                                        Background="Transparent" BorderThickness="0"
+                                        Padding="0" Margin="0"
+                                        MinHeight="0" MinWidth="0"
+                                        Cursor="Hand"
+                                        VerticalAlignment="Center">
+                                    <Button.Styles>
+                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                        </Style>
+                                    </Button.Styles>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <!-- Green dot when update is available -->
+                                        <Border Width="6" Height="6" CornerRadius="3"
+                                                Background="{DynamicResource ThemeSuccessBrush}"
+                                                VerticalAlignment="Center"
+                                                IsVisible="{Binding UpdateVM.IsStatusBarHighlighted}"/>
+                                        <TextBlock Text="{Binding UpdateVM.StatusBarText}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Styles>
+                                                <Style Selector="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryBrush}"/>
+                                                </Style>
+                                            </TextBlock.Styles>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Button>
+
                                 <!-- Subscription Badge -->
                                 <Button IsVisible="{Binding SubscriptionBadgeVM.IsBadgeVisible}"
                                         Command="{Binding SubscriptionBadgeVM.OpenModalCommand}"
@@ -438,38 +468,6 @@
             </Grid>
         </Border>
 
-        <!-- Update Panel Overlay -->
-        <Border HorizontalAlignment="Left" VerticalAlignment="Top"
-                Width="320"
-                ZIndex="1000"
-                IsVisible="{Binding IsUpdatePanelOpen}"
-                Background="{DynamicResource ThemeSurfaceBrush}"
-                BorderBrush="{DynamicResource ThemeBorderBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Margin="64,100,0,0"
-                BoxShadow="0 4 20 0 #40000000">
-            <Grid RowDefinitions="Auto,*">
-                <!-- Header -->
-                <Border Grid.Row="0" Padding="16,12"
-                        BorderBrush="{DynamicResource ThemeBorderBrush}"
-                        BorderThickness="0,0,0,1">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="Updates" FontSize="{DynamicResource ThemeFontSizeLg}" FontWeight="SemiBold"
-                                   VerticalAlignment="Center"/>
-                        <Button Grid.Column="1"
-                                Content="×"
-                                Command="{Binding ToggleUpdatePanelCommand}"
-                                Background="Transparent"
-                                FontSize="{DynamicResource ThemeFontSizeXl}"
-                                Padding="8,2"
-                                VerticalAlignment="Center"/>
-                    </Grid>
-                </Border>
-                <views:UpdatePanel Grid.Row="1" DataContext="{Binding UpdateVM}"/>
-            </Grid>
-        </Border>
-
         <!-- Settings Panel Overlay (anchored to sidebar, docked to bottom) -->
         <Border HorizontalAlignment="Left" VerticalAlignment="Stretch"
                 Width="520"
@@ -520,6 +518,9 @@
 
         <!-- Speech Recording Overlay -->
         <views:SpeechRecordingOverlay DataContext="{Binding SpeechRecordingVM}" ZIndex="1001"/>
+
+        <!-- Update Modal -->
+        <views:UpdateModal DataContext="{Binding UpdateVM}" ZIndex="1001"/>
 
         <!-- Subscription Detail Modal -->
         <views:SubscriptionDetailModal DataContext="{Binding SubscriptionBadgeVM}" ZIndex="1001"/>
