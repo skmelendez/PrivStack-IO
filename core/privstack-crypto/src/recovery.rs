@@ -51,6 +51,23 @@ pub fn open_recovery_blob(blob: &RecoveryBlob, mnemonic: &str) -> CryptoResult<D
     Ok(DerivedKey::from_bytes(bytes))
 }
 
+/// Encrypts the master key with a caller-provided mnemonic (no new mnemonic generated).
+///
+/// Used by the unified recovery flow to re-encrypt the vault recovery blob
+/// with the same mnemonic that protects the cloud keypair.
+pub fn create_recovery_blob_with_mnemonic(
+    master_key: &DerivedKey,
+    mnemonic: &str,
+) -> CryptoResult<RecoveryBlob> {
+    let recovery_key_bytes = mnemonic_to_key(mnemonic)?;
+    let recovery_key = DerivedKey::from_bytes(recovery_key_bytes);
+
+    let encrypted_key = encrypt(&recovery_key, master_key.as_bytes())?;
+    let created_at = chrono::Utc::now().timestamp();
+
+    Ok(RecoveryBlob { encrypted_key, created_at })
+}
+
 /// Re-encrypts a recovery blob for a new master key using the same mnemonic.
 ///
 /// This keeps the user's existing Emergency Kit PDF valid after a password change.
@@ -93,6 +110,36 @@ mod tests {
 
         let wrong = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         assert!(open_recovery_blob(&blob, wrong).is_err());
+    }
+
+    #[test]
+    fn round_trip_recovery_blob_with_mnemonic() {
+        let master_key = generate_random_key();
+        let mnemonic = crate::envelope::generate_recovery_mnemonic().unwrap();
+
+        let blob = create_recovery_blob_with_mnemonic(&master_key, &mnemonic).unwrap();
+        let recovered = open_recovery_blob(&blob, &mnemonic).unwrap();
+        assert_eq!(master_key.as_bytes(), recovered.as_bytes());
+    }
+
+    #[test]
+    fn same_mnemonic_decrypts_both_vault_blob_and_cloud_key() {
+        let master_key = generate_random_key();
+        let mnemonic = crate::envelope::generate_recovery_mnemonic().unwrap();
+
+        // Vault blob encrypted with shared mnemonic
+        let vault_blob = create_recovery_blob_with_mnemonic(&master_key, &mnemonic).unwrap();
+
+        // Cloud keypair encrypted with same mnemonic (simulated as another key)
+        let cloud_secret = generate_random_key();
+        let cloud_blob = create_recovery_blob_with_mnemonic(&cloud_secret, &mnemonic).unwrap();
+
+        // Both should decrypt with the same mnemonic
+        let recovered_vault = open_recovery_blob(&vault_blob, &mnemonic).unwrap();
+        let recovered_cloud = open_recovery_blob(&cloud_blob, &mnemonic).unwrap();
+
+        assert_eq!(master_key.as_bytes(), recovered_vault.as_bytes());
+        assert_eq!(cloud_secret.as_bytes(), recovered_cloud.as_bytes());
     }
 
     #[test]

@@ -6,7 +6,7 @@
 //! `"recovery_blob"`.
 
 use duckdb::params;
-use privstack_crypto::recovery::{create_recovery_blob, open_recovery_blob, reencrypt_recovery_blob, RecoveryBlob};
+use privstack_crypto::recovery::{create_recovery_blob, create_recovery_blob_with_mnemonic, open_recovery_blob, reencrypt_recovery_blob, RecoveryBlob};
 use privstack_crypto::{decrypt, derive_key, encrypt, EncryptedData, KdfParams, Salt};
 
 use crate::{Vault, VaultError, VaultManager, VaultResult, VERIFICATION_PLAINTEXT};
@@ -45,6 +45,36 @@ impl Vault {
         .map_err(|e| VaultError::Storage(e.to_string()))?;
 
         Ok(mnemonic)
+    }
+
+    /// Stores an encrypted recovery blob using a caller-provided mnemonic.
+    ///
+    /// Used by the unified recovery flow where a single mnemonic protects
+    /// both the vault master key and the cloud keypair.
+    pub fn setup_recovery_with_mnemonic(&self, mnemonic: &str) -> VaultResult<()> {
+        let key = self.get_key().ok_or(VaultError::Locked)?;
+
+        let blob = create_recovery_blob_with_mnemonic(&key, mnemonic)
+            .map_err(|e| VaultError::Crypto(e.to_string()))?;
+
+        let blob_json =
+            serde_json::to_vec(&blob).map_err(|e| VaultError::Storage(e.to_string()))?;
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| VaultError::Storage(e.to_string()))?;
+        let meta_table = format!("vault_{}_meta", self.table_prefix);
+
+        conn.execute(
+            &format!(
+                "INSERT OR REPLACE INTO {meta_table} (key, value) VALUES ('recovery_blob', ?)"
+            ),
+            params![blob_json],
+        )
+        .map_err(|e| VaultError::Storage(e.to_string()))?;
+
+        Ok(())
     }
 
     /// Checks whether a recovery blob has been configured for this vault.
@@ -212,6 +242,11 @@ impl VaultManager {
     /// Sets up recovery for a vault. Returns the 12-word mnemonic.
     pub fn setup_recovery(&self, vault_id: &str) -> VaultResult<String> {
         self.with_vault(vault_id, |v| v.setup_recovery())
+    }
+
+    /// Sets up recovery for a vault using a caller-provided mnemonic.
+    pub fn setup_recovery_with_mnemonic(&self, vault_id: &str, mnemonic: &str) -> VaultResult<()> {
+        self.with_vault(vault_id, |v| v.setup_recovery_with_mnemonic(mnemonic))
     }
 
     /// Checks whether recovery is configured for a vault.

@@ -44,4 +44,4 @@ pub use envelope::{
 };
 pub use error::{CryptoError, CryptoResult};
 pub use key::{derive_key, generate_random_key, DerivedKey, KdfParams, Salt, KEY_SIZE, SALT_SIZE};
-pub use recovery::{create_recovery_blob, open_recovery_blob, reencrypt_recovery_blob, RecoveryBlob};
+pub use recovery::{create_recovery_blob, create_recovery_blob_with_mnemonic, open_recovery_blob, reencrypt_recovery_blob, RecoveryBlob};
