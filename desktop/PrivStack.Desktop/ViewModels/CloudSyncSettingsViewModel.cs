@@ -482,9 +482,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
                 }
             }
 
-            await Task.Run(() => _cloudSync.StartSync(workspace.CloudWorkspaceId));
-            IsSyncing = true;
-            await RefreshStatusAsync();
+            await StartSyncForWorkspace(workspace);
         }
         catch (Exception ex)
         {
@@ -561,6 +559,12 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
 
     private async Task StartSyncForWorkspace(Workspace workspace)
     {
+        if (_cloudSync.IsSyncing)
+        {
+            Log.Debug("Sync already running — skipping StartSyncForWorkspace");
+            return;
+        }
+
         var cloudId = workspace.CloudWorkspaceId
             ?? throw new InvalidOperationException("Workspace has no CloudWorkspaceId");
         await Task.Run(() => _cloudSync.StartSync(cloudId));
