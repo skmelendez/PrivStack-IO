@@ -290,7 +290,11 @@ if [ "$RUN_TESTS" = true ]; then
     # Start test containers if compose file exists
     if [ -f "$COMPOSE_FILE" ]; then
         echo "==> Starting test containers (MinIO + MySQL)..."
-        docker compose -f "$COMPOSE_FILE" up -d --wait
+        # Start persistent services first, then run the init container separately.
+        # minio-setup exits after creating the bucket, which causes --wait to
+        # return non-zero and trip set -e.
+        docker compose -f "$COMPOSE_FILE" up -d --wait minio mysql
+        docker compose -f "$COMPOSE_FILE" run --rm minio-setup
         COMPOSE_UP=true
     fi
 
