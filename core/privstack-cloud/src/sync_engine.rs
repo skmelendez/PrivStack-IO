@@ -257,11 +257,11 @@ impl CloudSyncEngine {
             .get_pending_changes(&self.workspace_id, &self.device_id)
             .await?;
 
-        if pending.entities.is_empty() {
+        if pending.pending.is_empty() {
             return Ok(());
         }
 
-        for entity in &pending.entities {
+        for entity in &pending.pending {
             let dek = match self.dek_registry.get(&entity.entity_id).await {
                 Ok(dek) => dek,
                 Err(e) => {
@@ -270,15 +270,21 @@ impl CloudSyncEngine {
                 }
             };
 
+            // Fetch batch metadata for this entity from the server
+            let batches = self
+                .api
+                .get_batches(&self.workspace_id, &entity.entity_id, entity.device_cursor)
+                .await?;
+
             debug!(
                 "entity {} has {} new batches (cursor {} -> {})",
                 entity.entity_id,
-                entity.batches.len(),
+                batches.len(),
                 entity.device_cursor,
-                entity.current_cursor
+                entity.latest_cursor
             );
 
-            for batch in &entity.batches {
+            for batch in &batches {
                 let creds = self.cred_manager.get_credentials().await?;
                 let data = self.transport.download(&creds, &batch.s3_key).await?;
 

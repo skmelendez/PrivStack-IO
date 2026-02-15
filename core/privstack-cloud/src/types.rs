@@ -63,7 +63,29 @@ pub struct BatchMeta {
     pub cursor_end: i64,
     pub size_bytes: u64,
     pub event_count: u32,
+    /// MySQL TINYINT(1) arrives as `0`/`1`, not `true`/`false`.
+    #[serde(deserialize_with = "deserialize_bool_from_int_or_bool")]
     pub is_snapshot: bool,
+}
+
+/// Accepts a JSON boolean or a `0`/`1` integer.
+fn deserialize_bool_from_int_or_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de;
+
+    struct BoolVisitor;
+    impl<'de> de::Visitor<'de> for BoolVisitor {
+        type Value = bool;
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("a boolean or 0/1 integer")
+        }
+        fn visit_bool<E: de::Error>(self, v: bool) -> Result<bool, E> { Ok(v) }
+        fn visit_u64<E: de::Error>(self, v: u64) -> Result<bool, E> { Ok(v != 0) }
+        fn visit_i64<E: de::Error>(self, v: i64) -> Result<bool, E> { Ok(v != 0) }
+    }
+    deserializer.deserialize_any(BoolVisitor)
 }
 
 /// Sharing info for an entity.
@@ -170,18 +192,21 @@ pub struct DeviceInfo {
 }
 
 /// Entities with pending changes for a device.
+///
+/// The API returns `{ "pending": [...] }`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PendingChanges {
-    pub entities: Vec<PendingEntity>,
+    pub pending: Vec<PendingEntity>,
 }
 
-/// An entity with batches to download.
+/// An entity with newer data on the server.
+///
+/// Batches are NOT included — fetch them per-entity via `get_batches`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PendingEntity {
     pub entity_id: String,
-    pub current_cursor: i64,
+    pub latest_cursor: i64,
     pub device_cursor: i64,
-    pub batches: Vec<BatchMeta>,
 }
 
 /// Request to advance a cursor after batch upload.
