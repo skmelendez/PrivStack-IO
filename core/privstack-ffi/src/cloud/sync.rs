@@ -257,6 +257,71 @@ pub unsafe extern "C" fn privstack_cloudsync_push_event(
     }
 }
 
+/// Pushes all existing entities as FullSnapshot events to seed the cloud.
+///
+/// Called once after initial cloud sync enablement (or when the cloud has
+/// no data yet) to upload the full local state.  Returns the number of
+/// entities pushed.
+///
+/// # Safety
+/// - `out_count` must be a valid pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_cloudsync_push_all_entities(
+    out_count: *mut u32,
+) -> PrivStackError {
+    if out_count.is_null() {
+        return PrivStackError::NullPointer;
+    }
+
+    let handle = HANDLE.lock().unwrap();
+    let handle = match handle.as_ref() {
+        Some(h) => h,
+        None => return PrivStackError::NotInitialized,
+    };
+
+    let tx = match handle.cloud_event_tx.as_ref() {
+        Some(tx) => tx.clone(),
+        None => return PrivStackError::SyncNotRunning,
+    };
+
+    let ids = match handle.entity_store.list_all_entity_ids() {
+        Ok(ids) => ids,
+        Err(_) => return PrivStackError::StorageError,
+    };
+
+    let mut pushed: u32 = 0;
+    for id in &ids {
+        let entity = match handle.entity_store.get_entity(id) {
+            Ok(Some(e)) => e,
+            _ => continue,
+        };
+
+        let parsed_id = match EntityId::parse(&entity.id) {
+            Ok(eid) => eid,
+            Err(_) => continue,
+        };
+
+        let json_data = entity.data.to_string();
+        let event = Event::new(
+            parsed_id,
+            handle.peer_id,
+            HybridTimestamp::now(),
+            EventPayload::FullSnapshot {
+                entity_type: entity.entity_type.clone(),
+                json_data,
+            },
+        );
+
+        if tx.blocking_send(event).is_ok() {
+            pushed += 1;
+        }
+    }
+
+    unsafe { *out_count = pushed };
+    eprintln!("[cloud sync] initial sync: pushed {pushed}/{} entities", ids.len());
+    PrivStackError::Ok
+}
+
 // ── Compaction ──
 
 /// Returns true if the given batch count exceeds the compaction threshold.

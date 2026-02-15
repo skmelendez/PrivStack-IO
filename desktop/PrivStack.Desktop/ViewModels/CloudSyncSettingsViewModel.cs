@@ -543,8 +543,23 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         IsSyncing = true;
         OnPropertyChanged(nameof(ShowEnableForWorkspace));
         OnPropertyChanged(nameof(IsWorkspaceCloudEnabled));
+
+        // Push all existing entities as snapshots so the cloud has full state
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var count = _cloudSync.PushAllEntities();
+                Log.Information("Pushed {Count} entities for initial cloud sync", count);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to push existing entities for initial cloud sync");
+            }
+        });
+
         await RefreshStatusAsync();
-        Log.Information("Cloud sync enabled for workspace {WorkspaceId} (cloud={CloudId})",
+        Log.Information("Cloud sync started for workspace {WorkspaceId} (cloud={CloudId})",
             workspace.Id, cloudId);
     }
 
