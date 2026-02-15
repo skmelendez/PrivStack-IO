@@ -236,7 +236,23 @@ impl CloudApiClient {
                 "/api/cloud/workspaces",
                 &serde_json::json!({ "workspace_id": workspace_id, "workspace_name": name }),
             )
-            .await?
+            .await?;
+
+        let status = resp.status();
+
+        // 409 Conflict = workspace already registered — fetch existing instead of failing
+        if status == reqwest::StatusCode::CONFLICT {
+            debug!("Workspace {workspace_id} already registered, fetching existing");
+            let existing = self.list_workspaces().await?;
+            return existing
+                .into_iter()
+                .find(|ws| ws.workspace_id == workspace_id)
+                .ok_or_else(|| CloudError::Api(
+                    "workspace conflict but not found in list".to_string(),
+                ));
+        }
+
+        let resp = resp
             .error_for_status()
             .map_err(|e| CloudError::Api(e.to_string()))?;
 

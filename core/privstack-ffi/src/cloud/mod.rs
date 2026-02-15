@@ -18,6 +18,7 @@ use std::ffi::{c_char, CStr, CString};
 
 /// Converts a `CloudError` to the appropriate FFI error code.
 pub(crate) fn cloud_err(e: &CloudError) -> PrivStackError {
+    eprintln!("[FFI cloud_err] {e}");
     match e {
         CloudError::AuthRequired | CloudError::AuthFailed(_) => PrivStackError::CloudAuthError,
         CloudError::QuotaExceeded { .. } => PrivStackError::QuotaExceeded,
