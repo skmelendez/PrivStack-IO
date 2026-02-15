@@ -6,7 +6,7 @@
 
 use privstack_cloud::outbox::{FlushMode, Outbox};
 use privstack_types::{EntityId, Event, EventPayload, HybridTimestamp, PeerId};
-use std::time::Duration;
+
 
 fn make_event_for_entity(entity_id: EntityId) -> Event {
     Event::new(

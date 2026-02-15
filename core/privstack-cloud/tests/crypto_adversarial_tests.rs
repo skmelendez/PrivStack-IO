@@ -6,7 +6,7 @@
 
 use privstack_crypto::{
     decrypt, decrypt_string, encrypt, encrypt_string, generate_random_key, CryptoError,
-    DerivedKey, EncryptedData,
+    EncryptedData,
 };
 
 // ── Wrong Key ──
