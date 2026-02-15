@@ -14,6 +14,7 @@ namespace PrivStack.Desktop.ViewModels;
 /// <summary>
 /// ViewModel for the Cloud Sync section in Settings.
 /// Uses OAuth PKCE for authentication, then allows per-workspace cloud sync enablement.
+/// Encryption keypair is derived automatically from the vault password.
 /// </summary>
 public partial class CloudSyncSettingsViewModel : ViewModelBase
 {
@@ -24,6 +25,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     private readonly OAuthLoginService _oauthService;
     private readonly PrivStackApiClient _apiClient;
     private readonly IAppSettingsService _appSettings;
+    private readonly IMasterPasswordCache _passwordCache;
     private CancellationTokenSource? _oauthCts;
 
     public CloudSyncSettingsViewModel(
@@ -31,13 +33,15 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         IWorkspaceService workspaceService,
         OAuthLoginService oauthService,
         PrivStackApiClient apiClient,
-        IAppSettingsService appSettings)
+        IAppSettingsService appSettings,
+        IMasterPasswordCache passwordCache)
     {
         _cloudSync = cloudSync;
         _workspaceService = workspaceService;
         _oauthService = oauthService;
         _apiClient = apiClient;
         _appSettings = appSettings;
+        _passwordCache = passwordCache;
 
         LoadState();
     }
@@ -47,14 +51,10 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     // ========================================
 
     public bool ShowConnectButton => !IsAuthenticated;
-    public bool ShowPassphraseSetup => IsAuthenticated && !HasKeypair
-                                       && !NeedsPassphraseEntry && !ShowRecoveryForm;
-    public bool ShowPassphraseEntry => NeedsPassphraseEntry && !ShowRecoveryForm;
-    public bool ShowDashboard => IsAuthenticated && HasKeypair
-                                 && !NeedsPassphraseEntry && !ShowRecoveryForm;
+    public bool ShowDashboard => IsAuthenticated;
 
     /// <summary>
-    /// True when cloud sync is connected + keypair ready, but the active workspace
+    /// True when cloud sync is connected but the active workspace
     /// is NOT yet registered for cloud sync.
     /// </summary>
     public bool ShowEnableForWorkspace
@@ -86,7 +86,6 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowConnectButton))]
-    [NotifyPropertyChangedFor(nameof(ShowPassphraseSetup))]
     [NotifyPropertyChangedFor(nameof(ShowDashboard))]
     [NotifyPropertyChangedFor(nameof(ShowEnableForWorkspace))]
     [NotifyPropertyChangedFor(nameof(IsWorkspaceCloudEnabled))]
@@ -101,65 +100,8 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string? _authError;
 
-    // ========================================
-    // Passphrase Setup State
-    // ========================================
-
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPassphraseSetup))]
-    [NotifyPropertyChangedFor(nameof(ShowDashboard))]
-    [NotifyPropertyChangedFor(nameof(ShowEnableForWorkspace))]
-    [NotifyPropertyChangedFor(nameof(IsWorkspaceCloudEnabled))]
-    private bool _hasKeypair;
-
-    [ObservableProperty]
-    private string _passphrase = string.Empty;
-
-    [ObservableProperty]
-    private string _confirmPassphrase = string.Empty;
-
-    [ObservableProperty]
-    private string? _mnemonicWords;
-
-    [ObservableProperty]
-    private bool _showMnemonic;
-
-    [ObservableProperty]
-    private string? _passphraseError;
-
-    // ========================================
-    // Passphrase Entry State
-    // ========================================
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPassphraseEntry))]
-    [NotifyPropertyChangedFor(nameof(ShowPassphraseSetup))]
-    [NotifyPropertyChangedFor(nameof(ShowDashboard))]
-    [NotifyPropertyChangedFor(nameof(ShowEnableForWorkspace))]
-    [NotifyPropertyChangedFor(nameof(IsWorkspaceCloudEnabled))]
-    private bool _needsPassphraseEntry;
-
-    [ObservableProperty]
-    private string _enterPassphrase = string.Empty;
-
-    [ObservableProperty]
-    private string? _enterPassphraseError;
-
-    // ========================================
-    // Recovery State
-    // ========================================
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPassphraseSetup))]
-    [NotifyPropertyChangedFor(nameof(ShowPassphraseEntry))]
-    [NotifyPropertyChangedFor(nameof(ShowDashboard))]
-    private bool _showRecoveryForm;
-
-    [ObservableProperty]
-    private string _recoveryMnemonic = string.Empty;
-
-    [ObservableProperty]
-    private string? _recoveryError;
+    private bool _isEnabling;
 
     // ========================================
     // Sync Dashboard State
@@ -235,10 +177,6 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
                 userId));
 
             IsAuthenticated = true;
-            HasKeypair = _cloudSync.HasKeypair;
-            if (HasKeypair)
-                NeedsPassphraseEntry = true;
-
             Log.Information("Cloud sync connected via OAuth (userId={UserId})", userId);
         }
         catch (OperationCanceledException)
@@ -284,122 +222,9 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         finally
         {
             IsAuthenticated = false;
-            HasKeypair = false;
-            NeedsPassphraseEntry = false;
-            ShowRecoveryForm = false;
             IsSyncing = false;
             Quota = null;
             Devices.Clear();
-        }
-    }
-
-    // ========================================
-    // Passphrase Commands
-    // ========================================
-
-    [RelayCommand]
-    private async Task SetupPassphraseAsync()
-    {
-        PassphraseError = null;
-
-        if (string.IsNullOrWhiteSpace(Passphrase) || Passphrase.Length < 8)
-        {
-            PassphraseError = "Passphrase must be at least 8 characters.";
-            return;
-        }
-
-        if (Passphrase != ConfirmPassphrase)
-        {
-            PassphraseError = "Passphrases do not match.";
-            return;
-        }
-
-        try
-        {
-            var mnemonic = await Task.Run(() => _cloudSync.SetupPassphrase(Passphrase));
-            MnemonicWords = mnemonic;
-            ShowMnemonic = true;
-            HasKeypair = true;
-            Passphrase = string.Empty;
-            ConfirmPassphrase = string.Empty;
-        }
-        catch (Exception ex)
-        {
-            PassphraseError = $"Setup failed: {ex.Message}";
-            Log.Error(ex, "Passphrase setup failed");
-        }
-    }
-
-    [RelayCommand]
-    private void DismissMnemonic()
-    {
-        ShowMnemonic = false;
-        MnemonicWords = null;
-    }
-
-    [RelayCommand]
-    private async Task EnterPassphraseAsync()
-    {
-        EnterPassphraseError = null;
-
-        if (string.IsNullOrWhiteSpace(EnterPassphrase))
-        {
-            EnterPassphraseError = "Please enter your passphrase.";
-            return;
-        }
-
-        try
-        {
-            await Task.Run(() => _cloudSync.EnterPassphrase(EnterPassphrase));
-            NeedsPassphraseEntry = false;
-            EnterPassphrase = string.Empty;
-        }
-        catch (Exception ex)
-        {
-            EnterPassphraseError = $"Invalid passphrase: {ex.Message}";
-            Log.Warning(ex, "Passphrase entry failed");
-        }
-    }
-
-    [RelayCommand]
-    private void ShowRecovery()
-    {
-        ShowRecoveryForm = true;
-        NeedsPassphraseEntry = false;
-        RecoveryError = null;
-        RecoveryMnemonic = string.Empty;
-    }
-
-    [RelayCommand]
-    private void CancelRecovery()
-    {
-        ShowRecoveryForm = false;
-        NeedsPassphraseEntry = HasKeypair;
-    }
-
-    [RelayCommand]
-    private async Task RecoverFromMnemonicAsync()
-    {
-        RecoveryError = null;
-
-        if (string.IsNullOrWhiteSpace(RecoveryMnemonic))
-        {
-            RecoveryError = "Please enter your recovery words.";
-            return;
-        }
-
-        try
-        {
-            await Task.Run(() => _cloudSync.RecoverFromMnemonic(RecoveryMnemonic));
-            ShowRecoveryForm = false;
-            NeedsPassphraseEntry = false;
-            HasKeypair = true;
-            RecoveryMnemonic = string.Empty;
-        }
-        catch (Exception ex)
-        {
-            RecoveryError = $"Recovery failed: {ex.Message}";
-            Log.Error(ex, "Mnemonic recovery failed");
         }
     }
 
@@ -410,12 +235,33 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task EnableForWorkspaceAsync()
     {
+        if (IsEnabling) return;
+        IsEnabling = true;
+        AuthError = null;
+
         try
         {
             var workspace = _workspaceService.GetActiveWorkspace();
             if (workspace == null) return;
 
+            // 1. Register workspace (creates S3 prefix)
             await Task.Run(() => _cloudSync.RegisterWorkspace(workspace.Id, workspace.Name));
+
+            // 2. Auto-setup encryption keypair using vault password
+            if (!_cloudSync.HasKeypair)
+            {
+                var vaultPassword = _passwordCache.Get();
+                if (string.IsNullOrEmpty(vaultPassword))
+                {
+                    AuthError = "Vault is locked. Please unlock the app first.";
+                    return;
+                }
+
+                await Task.Run(() => _cloudSync.SetupPassphrase(vaultPassword));
+                Log.Information("Cloud encryption keypair created automatically");
+            }
+
+            // 3. Start syncing
             await Task.Run(() => _cloudSync.StartSync(workspace.Id));
 
             IsSyncing = true;
@@ -429,6 +275,10 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         {
             AuthError = $"Failed to enable: {ex.Message}";
             Log.Error(ex, "Failed to enable cloud sync for workspace");
+        }
+        finally
+        {
+            IsEnabling = false;
         }
     }
 
@@ -484,6 +334,17 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             var workspace = _workspaceService.GetActiveWorkspace();
             if (workspace == null) return;
 
+            // Auto-unlock keypair if needed
+            if (_cloudSync.HasKeypair)
+            {
+                var vaultPassword = _passwordCache.Get();
+                if (!string.IsNullOrEmpty(vaultPassword))
+                {
+                    try { await Task.Run(() => _cloudSync.EnterPassphrase(vaultPassword)); }
+                    catch { /* Already unlocked or wrong key — continue */ }
+                }
+            }
+
             await Task.Run(() => _cloudSync.StartSync(workspace.Id));
             IsSyncing = true;
             await RefreshStatusAsync();
@@ -503,11 +364,6 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         try
         {
             IsAuthenticated = _cloudSync.IsAuthenticated;
-            if (!IsAuthenticated) return;
-
-            HasKeypair = _cloudSync.HasKeypair;
-            if (HasKeypair)
-                NeedsPassphraseEntry = true;
         }
         catch (Exception ex)
         {
