@@ -8,6 +8,7 @@
 //! All functions use C-compatible types and handle errors via return codes.
 //! Zero domain logic — plugins consume generic vault, blob, and entity APIs.
 
+mod cloud;
 mod datasets;
 
 use privstack_blobstore::BlobStore;
@@ -98,6 +99,16 @@ pub enum PrivStackError {
     PasswordTooShort = 27,
     /// Invalid argument.
     InvalidArgument = 28,
+    /// Cloud sync error (S3 transport, outbox, or orchestration failure).
+    CloudSyncError = 29,
+    /// Cloud storage quota exceeded.
+    QuotaExceeded = 30,
+    /// Share permission denied.
+    ShareDenied = 31,
+    /// Envelope encryption/decryption error.
+    EnvelopeError = 32,
+    /// Cloud API authentication error.
+    CloudAuthError = 33,
     /// Unknown error.
     Unknown = 99,
 }
@@ -167,6 +178,12 @@ pub struct PrivStackHandle {
     // Wasm plugin host manager
     #[cfg(feature = "wasm-plugins")]
     plugin_host: PluginHostManager,
+    // Cloud sync (S3-backed multi-device sync + sharing)
+    cloud_api: Option<Arc<privstack_cloud::api_client::CloudApiClient>>,
+    cloud_sync_handle: Option<privstack_cloud::sync_engine::CloudSyncHandle>,
+    cloud_envelope_mgr: Option<Arc<TokioMutex<privstack_cloud::envelope::EnvelopeManager>>>,
+    cloud_share_mgr: Option<Arc<privstack_cloud::sharing::ShareManager>>,
+    cloud_config: Option<privstack_cloud::CloudConfig>,
 }
 
 /// Discovered peer info for JSON serialization.
@@ -551,6 +568,11 @@ fn init_core(path: &str) -> PrivStackError {
         vault_manager,
         blob_store,
         dataset_store,
+        cloud_api: None,
+        cloud_sync_handle: None,
+        cloud_envelope_mgr: None,
+        cloud_share_mgr: None,
+        cloud_config: None,
     });
 
     PrivStackError::Ok
@@ -717,6 +739,11 @@ where
         blob_store,
         dataset_store,
         plugin_host,
+        cloud_api: None,
+        cloud_sync_handle: None,
+        cloud_envelope_mgr: None,
+        cloud_share_mgr: None,
+        cloud_config: None,
     });
 
     PrivStackError::Ok
