@@ -1074,6 +1074,123 @@ pub unsafe extern "C" fn privstack_auth_reset_with_recovery(
     }
 }}
 
+/// Resets the master password using a recovery mnemonic and also recovers
+/// cloud keypair (best-effort). Unified recovery for both vault + cloud.
+///
+/// # Safety
+/// - `mnemonic` and `new_password` must be valid null-terminated UTF-8 strings.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_auth_reset_with_unified_recovery(
+    mnemonic: *const c_char,
+    new_password: *const c_char,
+) -> PrivStackError { unsafe {
+    if mnemonic.is_null() || new_password.is_null() {
+        return PrivStackError::NullPointer;
+    }
+
+    let mnemonic_str = match CStr::from_ptr(mnemonic).to_str() {
+        Ok(s) => s,
+        Err(_) => return PrivStackError::InvalidUtf8,
+    };
+
+    let new_pwd = match CStr::from_ptr(new_password).to_str() {
+        Ok(s) => s,
+        Err(_) => return PrivStackError::InvalidUtf8,
+    };
+
+    if new_pwd.len() < 8 {
+        return PrivStackError::PasswordTooShort;
+    }
+
+    let handle = HANDLE.lock().unwrap();
+    let handle = match handle.as_ref() {
+        Some(h) => h,
+        None => return PrivStackError::NotInitialized,
+    };
+
+    // 1. Vault recovery (mandatory)
+    match handle
+        .vault_manager
+        .reset_password_with_recovery("default", mnemonic_str, new_pwd)
+    {
+        Ok((old_kb, new_kb)) => {
+            // Re-encrypt entity and blob stores with new key
+            let _ = handle.entity_store.re_encrypt_all(&old_kb, &new_kb);
+            let _ = handle.blob_store.re_encrypt_all(&old_kb, &new_kb);
+        }
+        Err(privstack_vault::VaultError::RecoveryNotConfigured) => {
+            return PrivStackError::RecoveryNotConfigured;
+        }
+        Err(privstack_vault::VaultError::InvalidRecoveryMnemonic) => {
+            return PrivStackError::InvalidRecoveryMnemonic;
+        }
+        Err(privstack_vault::VaultError::PasswordTooShort) => {
+            return PrivStackError::PasswordTooShort;
+        }
+        Err(_) => {
+            return PrivStackError::AuthError;
+        }
+    }
+
+    // 2. Cloud recovery (best-effort — log failures, don't block vault recovery)
+    if let (Some(env_mgr), Some(api), Some(config)) = (
+        &handle.cloud_envelope_mgr,
+        &handle.cloud_api,
+        &handle.cloud_config,
+    ) {
+        let api = api.clone();
+        let config = config.clone();
+        let env_mgr = env_mgr.clone();
+
+        let cloud_result = handle.runtime.block_on(async {
+            if !api.is_authenticated().await {
+                return Err("cloud API not authenticated".to_string());
+            }
+
+            let workspaces = api.list_workspaces().await.map_err(|e| e.to_string())?;
+            let ws = workspaces.first().ok_or("no cloud workspace")?;
+
+            let user_id = api.user_id().await.ok_or("no user ID")?;
+
+            let transport = privstack_cloud::s3_transport::S3Transport::new(
+                config.s3_bucket.clone(),
+                config.s3_region.clone(),
+                config.s3_endpoint_override.clone(),
+            );
+
+            let cred_mgr = privstack_cloud::credential_manager::CredentialManager::new(
+                api.clone(),
+                ws.workspace_id.clone(),
+                config.credential_refresh_margin_secs,
+            );
+            let creds = cred_mgr.get_credentials().await.map_err(|e| e.to_string())?;
+
+            let recovery_path = privstack_cloud::compaction::recovery_key_s3_key(user_id, &ws.workspace_id);
+            let data = transport.download(&creds, &recovery_path).await.map_err(|e| e.to_string())?;
+
+            let encrypted: privstack_crypto::EncryptedData =
+                serde_json::from_slice(&data).map_err(|e| e.to_string())?;
+
+            let secret_key = privstack_crypto::envelope::decrypt_private_key_with_mnemonic(
+                &encrypted, mnemonic_str,
+            ).map_err(|e| e.to_string())?;
+
+            let keypair = privstack_crypto::envelope::CloudKeyPair::from_secret_bytes(
+                secret_key.to_bytes(),
+            );
+
+            env_mgr.lock().await.set_keypair(keypair);
+            Ok::<(), String>(())
+        });
+
+        if let Err(e) = cloud_result {
+            eprintln!("[FFI] Cloud key recovery skipped during unified recovery: {e}");
+        }
+    }
+
+    PrivStackError::Ok
+}}
+
 // ============================================================================
 // Vault Management Functions
 // ============================================================================
