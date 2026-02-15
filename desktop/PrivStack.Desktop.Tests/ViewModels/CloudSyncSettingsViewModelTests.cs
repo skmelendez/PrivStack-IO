@@ -260,6 +260,59 @@ public class CloudSyncSettingsViewModelTests
     }
 
     // ========================================
+    // Recovery Tests
+    // ========================================
+
+    [Fact]
+    public void ShowRecovery_TogglesRecoveryForm()
+    {
+        var vm = CreateVm();
+
+        vm.ShowRecoveryCommand.Execute(null);
+
+        vm.ShowRecoveryForm.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CancelRecovery_HidesRecoveryForm()
+    {
+        var vm = CreateVm();
+        vm.ShowRecoveryForm = true;
+
+        vm.CancelRecoveryCommand.Execute(null);
+
+        vm.ShowRecoveryForm.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RecoverFromMnemonicAsync_CallsService()
+    {
+        var cloudSync = Substitute.For<ICloudSyncService>();
+
+        var vm = CreateVm(cloudSync);
+        vm.ShowRecoveryForm = true;
+        vm.RecoveryMnemonic = "word1 word2 word3";
+
+        await vm.RecoverFromMnemonicCommand.ExecuteAsync(null);
+
+        cloudSync.Received(1).RecoverFromMnemonic("word1 word2 word3");
+        vm.ShowRecoveryForm.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RecoverFromMnemonicAsync_ValidatesInput()
+    {
+        var vm = CreateVm();
+        vm.ShowRecoveryForm = true;
+        vm.RecoveryMnemonic = "";
+
+        await vm.RecoverFromMnemonicCommand.ExecuteAsync(null);
+
+        vm.RecoveryError.Should().Contain("recovery words");
+        vm.ShowRecoveryForm.Should().BeTrue();
+    }
+
+    // ========================================
     // Quota & Device Tests
     // ========================================
 

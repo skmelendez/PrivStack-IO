@@ -209,6 +209,65 @@
                 </Border>
             </StackPanel>
 
+            <!-- ==================== RECOVERY FORM ==================== -->
+            <StackPanel Spacing="12" IsVisible="{Binding ShowRecoveryForm}">
+                <TextBlock Text="Enter your recovery words to restore your encryption key."
+                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                           FontSize="{DynamicResource ThemeFontSizeSm}"
+                           TextWrapping="Wrap"/>
+
+                <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                        CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="10">
+                        <TextBox Watermark="Recovery words (space-separated)"
+                                 Text="{Binding RecoveryMnemonic, Mode=TwoWay}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="80"
+                                 Padding="12,8"/>
+                        <Grid ColumnDefinitions="*,8,*">
+                            <Button Grid.Column="0"
+                                    Command="{Binding CancelRecoveryCommand}"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="12,8" CornerRadius="6"
+                                    Content="Cancel"/>
+                            <Button Grid.Column="2"
+                                    Command="{Binding RecoverFromMnemonicCommand}"
+                                    Background="{DynamicResource ThemePrimaryBrush}"
+                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="12,8" CornerRadius="6"
+                                    FontWeight="SemiBold"
+                                    Content="Recover"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="{Binding RecoveryError}"
+                           IsVisible="{Binding RecoveryError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Foreground="{DynamicResource ThemeDangerBrush}"
+                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Recovery link + Disconnect -->
+            <StackPanel Orientation="Horizontal" Spacing="16"
+                        IsVisible="{Binding !ShowRecoveryForm}">
+                <Button Command="{Binding ShowRecoveryCommand}"
+                        Background="Transparent"
+                        Padding="0"
+                        Cursor="Hand"
+                        HorizontalAlignment="Left">
+                    <TextBlock Text="Recover encryption key"
+                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                               Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                </Button>
+            </StackPanel>
+
             <!-- Disconnect -->
             <Button Command="{Binding DisconnectCommand}"
                     Background="Transparent"

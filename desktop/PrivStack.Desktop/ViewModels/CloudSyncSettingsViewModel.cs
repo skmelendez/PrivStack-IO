@@ -125,6 +125,19 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     public ObservableCollection<CloudDeviceInfo> Devices { get; } = [];
 
     // ========================================
+    // Recovery State
+    // ========================================
+
+    [ObservableProperty]
+    private bool _showRecoveryForm;
+
+    [ObservableProperty]
+    private string? _recoveryMnemonic;
+
+    [ObservableProperty]
+    private string? _recoveryError;
+
+    // ========================================
     // OAuth Connect
     // ========================================
 
@@ -352,6 +365,50 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to start cloud sync");
+        }
+    }
+
+    // ========================================
+    // Recovery Commands
+    // ========================================
+
+    [RelayCommand]
+    private void ShowRecovery()
+    {
+        ShowRecoveryForm = true;
+        RecoveryError = null;
+        RecoveryMnemonic = null;
+    }
+
+    [RelayCommand]
+    private void CancelRecovery()
+    {
+        ShowRecoveryForm = false;
+        RecoveryError = null;
+        RecoveryMnemonic = null;
+    }
+
+    [RelayCommand]
+    private async Task RecoverFromMnemonicAsync()
+    {
+        if (string.IsNullOrWhiteSpace(RecoveryMnemonic))
+        {
+            RecoveryError = "Please enter your recovery words.";
+            return;
+        }
+
+        RecoveryError = null;
+
+        try
+        {
+            await Task.Run(() => _cloudSync.RecoverFromMnemonic(RecoveryMnemonic.Trim()));
+            ShowRecoveryForm = false;
+            Log.Information("Cloud encryption key recovered from mnemonic");
+        }
+        catch (Exception ex)
+        {
+            RecoveryError = $"Recovery failed: {ex.Message}";
+            Log.Error(ex, "Cloud key recovery from mnemonic failed");
         }
     }
 
