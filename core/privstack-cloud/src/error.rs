@@ -50,3 +50,14 @@ pub enum CloudError {
     #[error("invalid configuration: {0}")]
     Config(String),
 }
+
+impl CloudError {
+    /// Returns true if this error represents a 429 rate-limit response.
+    pub fn is_rate_limited(&self) -> bool {
+        match self {
+            CloudError::Api(msg) => msg.contains("429"),
+            CloudError::Http(e) => e.status().is_some_and(|s| s.as_u16() == 429),
+            _ => false,
+        }
+    }
+}

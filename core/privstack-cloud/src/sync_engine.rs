@@ -254,20 +254,45 @@ impl CloudSyncEngine {
                 .upload(&creds, &s3_key, encrypted_bytes.clone())
                 .await?;
 
-            self.api
-                .advance_cursor(&AdvanceCursorRequest {
-                    workspace_id: self.workspace_id.clone(),
-                    device_id: self.device_id.clone(),
-                    entity_id: entity_id.clone(),
-                    cursor_position: cursor_end,
-                    batch_key: s3_key,
-                    size_bytes: encrypted_bytes.len() as u64,
-                    event_count: event_count as u32,
-                })
-                .await?;
+            let cursor_req = AdvanceCursorRequest {
+                workspace_id: self.workspace_id.clone(),
+                device_id: self.device_id.clone(),
+                entity_id: entity_id.clone(),
+                cursor_position: cursor_end,
+                batch_key: s3_key,
+                size_bytes: encrypted_bytes.len() as u64,
+                event_count: event_count as u32,
+            };
 
-            self.cursors.insert(entity_id.clone(), cursor_end);
-            debug!("flushed {event_count} events for entity {entity_id} (cursor -> {cursor_end})");
+            // Retry cursor advance with backoff (handles 429 rate limiting)
+            let mut cursor_ok = false;
+            for attempt in 0..3 {
+                match self.api.advance_cursor(&cursor_req).await {
+                    Ok(()) => {
+                        cursor_ok = true;
+                        break;
+                    }
+                    Err(e) if e.is_rate_limited() && attempt < 2 => {
+                        let backoff = Duration::from_millis(500 * (1 << attempt));
+                        warn!("cursor advance rate-limited, retrying in {backoff:?}");
+                        tokio::time::sleep(backoff).await;
+                    }
+                    Err(e) => {
+                        warn!("cursor advance failed for entity {entity_id}: {e}");
+                        for ev in entity_events {
+                            self.outbox.push(ev);
+                        }
+                        last_err = Some(e);
+                        cursor_ok = false;
+                        break;
+                    }
+                }
+            }
+
+            if cursor_ok {
+                self.cursors.insert(entity_id.clone(), cursor_end);
+                debug!("flushed {event_count} events for entity {entity_id} (cursor -> {cursor_end})");
+            }
         }
 
         match last_err {

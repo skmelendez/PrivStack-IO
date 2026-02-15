@@ -4451,7 +4451,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-blobstore"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "chrono",
  "duckdb",
@@ -4466,7 +4466,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-cloud"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "anyhow",
  "aws-config",
@@ -4499,7 +4499,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-crdt"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "criterion",
  "pretty_assertions",
@@ -4513,7 +4513,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-crypto"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "argon2",
  "base64",
@@ -4532,7 +4532,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-datasets"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "duckdb",
  "pretty_assertions",
@@ -4547,7 +4547,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-ffi"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "chrono",
  "hex",
@@ -4576,7 +4576,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-license"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "base64",
  "chrono",
@@ -4596,7 +4596,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-model"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "pretty_assertions",
  "serde",
@@ -4605,7 +4605,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-plugin-host"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4634,7 +4634,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-plugin-sdk"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "serde",
  "serde_json",
@@ -4643,7 +4643,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-ppk"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "ed25519-dalek",
  "hex",
@@ -4660,7 +4660,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-storage"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "chrono",
  "duckdb",
@@ -4678,7 +4678,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-sync"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4709,7 +4709,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-types"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "proptest",
  "serde",
@@ -4720,7 +4720,7 @@ dependencies = [
 
 [[package]]
 name = "privstack-vault"
-version = "1.10.2"
+version = "1.10.3"
 dependencies = [
  "chrono",
  "duckdb",
