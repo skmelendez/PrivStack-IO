@@ -1,0 +1,41 @@
+[package]
+name = "privstack-cloud"
+description = "Cloud sync engine for PrivStack — S3 transport, API client, outbox, sharing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+privstack-types.workspace = true
+privstack-crypto = { path = "../privstack-crypto" }
+privstack-storage = { path = "../privstack-storage" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+
+# AWS S3
+aws-sdk-s3 = "1"
+aws-sdk-sts = "1"
+aws-config = "1"
+aws-credential-types = "1"
+aws-types = "1"
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Crypto
+crypto_box = "0.9"
+
+# Hashing & encoding
+sha2 = "0.10"
+hex = "0.4"
+base64 = "0.22"
+
+[dev-dependencies]
+tokio-test.workspace = true
+tempfile.workspace = true
