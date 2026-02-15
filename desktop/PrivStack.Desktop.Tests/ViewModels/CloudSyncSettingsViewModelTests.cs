@@ -14,12 +14,15 @@ public class CloudSyncSettingsViewModelTests
         IMasterPasswordCache? passwordCache = null,
         IDialogService? dialogService = null)
     {
+        var appSettings = Substitute.For<IAppSettingsService>();
+        appSettings.Settings.Returns(new AppSettings());
+
         return new CloudSyncSettingsViewModel(
             cloudSync ?? Substitute.For<ICloudSyncService>(),
             workspaceService ?? Substitute.For<IWorkspaceService>(),
             new OAuthLoginService(),
             new PrivStackApiClient(),
-            Substitute.For<IAppSettingsService>(),
+            appSettings,
             passwordCache ?? Substitute.For<IMasterPasswordCache>(),
             dialogService ?? Substitute.For<IDialogService>());
     }

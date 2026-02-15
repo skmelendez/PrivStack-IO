@@ -210,6 +210,14 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
                 tokenResult.RefreshToken ?? string.Empty,
                 userId));
 
+            // Persist tokens for session restoration on next app launch
+            _appSettings.Settings.CloudSyncAccessToken = tokenResult.AccessToken;
+            _appSettings.Settings.CloudSyncRefreshToken = tokenResult.RefreshToken;
+            _appSettings.Settings.CloudSyncUserId = userId;
+            if (tokenResult.CloudConfig != null)
+                _appSettings.Settings.CloudSyncConfigJson = JsonSerializer.Serialize(tokenResult.CloudConfig);
+            _appSettings.Save();
+
             IsAuthenticated = true;
             Log.Information("Cloud sync connected via OAuth (userId={UserId})", userId);
         }
@@ -259,6 +267,13 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             IsSyncing = false;
             Quota = null;
             Devices.Clear();
+
+            // Clear persisted cloud sync auth
+            _appSettings.Settings.CloudSyncAccessToken = null;
+            _appSettings.Settings.CloudSyncRefreshToken = null;
+            _appSettings.Settings.CloudSyncUserId = null;
+            _appSettings.Settings.CloudSyncConfigJson = null;
+            _appSettings.Save();
         }
     }
 
@@ -511,11 +526,56 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     {
         try
         {
+            // Try to restore saved cloud sync session
+            if (!_cloudSync.IsAuthenticated)
+            {
+                RestoreSavedSession();
+            }
             IsAuthenticated = _cloudSync.IsAuthenticated;
         }
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed to load cloud sync state");
+        }
+    }
+
+    /// <summary>
+    /// Restores a previously saved cloud sync session (tokens + config).
+    /// Called on app startup so the user doesn't have to re-authenticate.
+    /// </summary>
+    private void RestoreSavedSession()
+    {
+        var settings = _appSettings.Settings;
+        if (string.IsNullOrEmpty(settings.CloudSyncAccessToken)
+            || settings.CloudSyncUserId == null)
+            return;
+
+        try
+        {
+            // Restore cloud config first (creates API client + envelope manager)
+            if (!string.IsNullOrEmpty(settings.CloudSyncConfigJson))
+            {
+                _cloudSync.Configure(settings.CloudSyncConfigJson);
+            }
+
+            // Restore auth tokens
+            _cloudSync.AuthenticateWithTokens(
+                settings.CloudSyncAccessToken,
+                settings.CloudSyncRefreshToken ?? string.Empty,
+                settings.CloudSyncUserId.Value);
+
+            Log.Information("Cloud sync session restored from saved tokens (userId={UserId})",
+                settings.CloudSyncUserId.Value);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to restore cloud sync session — user will need to re-authenticate");
+            // Clear stale tokens
+            settings.CloudSyncAccessToken = null;
+            settings.CloudSyncRefreshToken = null;
+            settings.CloudSyncUserId = null;
+            settings.CloudSyncConfigJson = null;
+            _appSettings.Save();
         }
     }
 

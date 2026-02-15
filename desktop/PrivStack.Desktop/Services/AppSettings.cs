@@ -230,6 +230,19 @@ public class AppSettings
     [JsonPropertyName("refresh_token")]
     public string? RefreshToken { get; set; }
 
+    // Cloud sync auth persistence — restored on app startup after vault unlock
+    [JsonPropertyName("cloud_sync_access_token")]
+    public string? CloudSyncAccessToken { get; set; }
+
+    [JsonPropertyName("cloud_sync_refresh_token")]
+    public string? CloudSyncRefreshToken { get; set; }
+
+    [JsonPropertyName("cloud_sync_user_id")]
+    public long? CloudSyncUserId { get; set; }
+
+    [JsonPropertyName("cloud_sync_config")]
+    public string? CloudSyncConfigJson { get; set; }
+
     // Connection metadata (non-sensitive, keyed by provider e.g. "github")
     [JsonPropertyName("connection_metadata")]
     public Dictionary<string, ConnectionMetadataEntry> ConnectionMetadata { get; set; } = [];
