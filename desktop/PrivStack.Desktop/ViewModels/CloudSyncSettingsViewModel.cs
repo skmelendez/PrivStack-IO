@@ -529,22 +529,17 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         var json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
         using var doc = JsonDocument.Parse(json);
 
-        if (doc.RootElement.TryGetProperty("sub", out var sub))
+        foreach (var claimName in new[] { "sub", "id", "user_id" })
         {
-            if (sub.ValueKind == JsonValueKind.Number)
-                return sub.GetInt64();
-            if (long.TryParse(sub.GetString(), out var id))
-                return id;
+            if (doc.RootElement.TryGetProperty(claimName, out var claim))
+            {
+                if (claim.ValueKind == JsonValueKind.Number)
+                    return claim.GetInt64();
+                if (long.TryParse(claim.GetString(), out var id))
+                    return id;
+            }
         }
 
-        if (doc.RootElement.TryGetProperty("user_id", out var uid))
-        {
-            if (uid.ValueKind == JsonValueKind.Number)
-                return uid.GetInt64();
-            if (long.TryParse(uid.GetString(), out var id))
-                return id;
-        }
-
-        throw new InvalidOperationException("JWT does not contain a user ID (sub or user_id claim)");
+        throw new InvalidOperationException("JWT does not contain a user ID (sub, id, or user_id claim)");
     }
 }

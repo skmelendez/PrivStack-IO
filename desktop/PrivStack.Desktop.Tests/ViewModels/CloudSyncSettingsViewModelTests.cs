@@ -401,6 +401,20 @@ public class CloudSyncSettingsViewModelTests
     }
 
     [Fact]
+    public void ExtractUserIdFromJwt_ParsesIdClaim()
+    {
+        // Matches the actual PrivStack API JWT format: { id, email, role }
+        var payload = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("{\"id\":7,\"email\":\"a@b.com\",\"role\":\"user\"}"))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var jwt = $"header.{payload}.signature";
+
+        var userId = CloudSyncSettingsViewModel.ExtractUserIdFromJwt(jwt);
+
+        userId.Should().Be(7);
+    }
+
+    [Fact]
     public void ExtractUserIdFromJwt_ThrowsOnMissingSub()
     {
         var payload = Convert.ToBase64String(
