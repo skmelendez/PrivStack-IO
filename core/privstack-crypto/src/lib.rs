@@ -24,6 +24,7 @@
 mod cipher;
 mod document;
 pub mod encryptor;
+pub mod envelope;
 mod error;
 mod key;
 
@@ -35,5 +36,10 @@ pub use document::{
     EncryptedDocumentMetadata,
 };
 pub use encryptor::{DataEncryptor, EncryptorError, EncryptorResult, PassthroughEncryptor};
+pub use envelope::{
+    decrypt_private_key, decrypt_private_key_with_mnemonic, encrypt_private_key,
+    encrypt_private_key_with_mnemonic, generate_cloud_keypair, generate_recovery_mnemonic,
+    mnemonic_to_key, open_dek, seal_dek, CloudKeyPair, PassphraseProtectedKey, SealedEnvelope,
+};
 pub use error::{CryptoError, CryptoResult};
 pub use key::{derive_key, generate_random_key, DerivedKey, KdfParams, Salt, KEY_SIZE, SALT_SIZE};

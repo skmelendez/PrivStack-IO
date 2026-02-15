@@ -18,5 +18,9 @@ rand = "0.8"
 zeroize = { version = "1.8", features = ["derive"] }
 base64 = "0.22"
 
+# Envelope encryption (cloud sync sharing)
+crypto_box = "0.9"
+bip39 = { version = "2", default-features = false }
+
 [dev-dependencies]
 proptest.workspace = true
