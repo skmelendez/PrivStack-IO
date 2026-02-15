@@ -466,14 +466,14 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             var workspace = _workspaceService.GetActiveWorkspace();
             if (workspace?.CloudWorkspaceId == null) return;
 
-            // Auto-unlock keypair if needed
-            if (_cloudSync.HasKeypair)
+            // Unlock keypair with cached vault password if not yet in memory
+            if (!_cloudSync.HasKeypair)
             {
                 var vaultPassword = _passwordCache.Get();
                 if (!string.IsNullOrEmpty(vaultPassword))
                 {
                     try { await Task.Run(() => _cloudSync.EnterPassphrase(vaultPassword)); }
-                    catch { /* Already unlocked or wrong key — continue */ }
+                    catch { /* S3 download failed or wrong key — continue without keypair */ }
                 }
             }
 

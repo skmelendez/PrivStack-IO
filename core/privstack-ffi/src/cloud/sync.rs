@@ -8,6 +8,7 @@ use privstack_cloud::credential_manager::CredentialManager;
 use privstack_cloud::s3_transport::S3Transport;
 use privstack_cloud::sync_engine;
 use privstack_cloud::types::*;
+use privstack_crypto::{DerivedKey, KEY_SIZE};
 use privstack_types::{EntityId, Event, EventPayload, HybridTimestamp};
 use std::ffi::c_char;
 use std::sync::Arc;
@@ -77,6 +78,17 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
         Some(r) => r.clone(),
         None => return PrivStackError::NotInitialized,
     };
+
+    // Populate workspace-level default DEK from the vault master key.
+    // All entities share this key unless a per-entity DEK is registered.
+    if let Some(key_bytes) = handle.vault_manager.default_key_bytes() {
+        if key_bytes.len() == KEY_SIZE {
+            let mut arr = [0u8; KEY_SIZE];
+            arr.copy_from_slice(&key_bytes);
+            let dek = DerivedKey::from_bytes(arr);
+            handle.runtime.block_on(dek_registry.set_default(dek));
+        }
+    }
 
     let active_ws_id = ws_id.clone();
     let (event_tx, _event_rx) = tokio::sync::mpsc::channel(256);

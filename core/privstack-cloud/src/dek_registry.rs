@@ -11,16 +11,28 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Thread-safe entity DEK registry for cloud sync encryption.
+///
+/// Supports both per-entity DEKs (for future sharing granularity) and a
+/// workspace-level default DEK used as fallback when no entity-specific
+/// key has been registered.
 #[derive(Clone)]
 pub struct DekRegistry {
     deks: Arc<RwLock<HashMap<String, DerivedKey>>>,
+    default_dek: Arc<RwLock<Option<DerivedKey>>>,
 }
 
 impl DekRegistry {
     pub fn new() -> Self {
         Self {
             deks: Arc::new(RwLock::new(HashMap::new())),
+            default_dek: Arc::new(RwLock::new(None)),
         }
+    }
+
+    /// Sets the workspace-level default DEK used for all entities that
+    /// don't have a per-entity key registered.
+    pub async fn set_default(&self, dek: DerivedKey) {
+        *self.default_dek.write().await = Some(dek);
     }
 
     /// Registers a DEK for an entity.
@@ -29,12 +41,17 @@ impl DekRegistry {
     }
 
     /// Retrieves a cloned DEK for an entity.
+    ///
+    /// Looks up a per-entity key first, then falls back to the workspace
+    /// default DEK. Returns an error only if neither is available.
     pub async fn get(&self, entity_id: &str) -> CloudResult<DerivedKey> {
-        self.deks
+        if let Some(dek) = self.deks.read().await.get(entity_id).cloned() {
+            return Ok(dek);
+        }
+        self.default_dek
             .read()
             .await
-            .get(entity_id)
-            .cloned()
+            .clone()
             .ok_or_else(|| {
                 CloudError::Envelope(format!("no DEK registered for entity {entity_id}"))
             })
