@@ -26,15 +26,24 @@ impl StsCredentials {
 }
 
 /// A cloud-registered workspace.
+///
+/// The register endpoint returns a minimal `{ workspace_id, s3_prefix, id }`,
+/// while the list endpoint returns all columns. Missing fields use defaults.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CloudWorkspace {
+    #[serde(default)]
     pub id: i64,
+    #[serde(default)]
     pub user_id: i64,
     pub workspace_id: String,
+    #[serde(default)]
     pub workspace_name: String,
     pub s3_prefix: String,
+    #[serde(default)]
     pub storage_used_bytes: u64,
+    #[serde(default)]
     pub storage_quota_bytes: u64,
+    #[serde(default = "Utc::now")]
     pub created_at: DateTime<Utc>,
 }
 
