@@ -257,7 +257,7 @@ impl SyncOrchestrator {
                         }
                         SyncCommand::SyncWithPeer { peer_id } => {
                             info!("[SYNC] SyncWithPeer command for {}", peer_id);
-                            self.sync_with_peer(&transport, peer_id).await;
+                            self.sync_with_peer(&transport, peer_id, true).await;
                         }
                     }
                 }
@@ -304,6 +304,20 @@ impl SyncOrchestrator {
                 return;
             }
         }
+
+        // Apply the event to the entity store so the entity row exists with an
+        // up-to-date modified_at timestamp. This is required for
+        // entities_needing_sync() to detect the change. In the FFI flow the
+        // entity row is created before the event is emitted, but the sync
+        // engine must be self-contained so it works in standalone / test
+        // scenarios as well.
+        let peer_id = self.engine.peer_id();
+        let es = self.entity_store.clone();
+        let ev = event.clone();
+        let _ = tokio::task::spawn_blocking(move || {
+            let applicator = crate::applicator::EventApplicator::new(peer_id);
+            applicator.apply_event(&ev, &es, None, None)
+        }).await;
 
         // Invalidate the sync ledger for this entity so every peer re-checks it.
         // This handles the race where periodic_sync already marked the entity as
@@ -397,7 +411,7 @@ impl SyncOrchestrator {
                 // Mark as synced so we don't re-emit PeerDiscovered or re-sync every tick.
                 self.synced_peers.insert(peer.peer_id);
                 let peer_id = peer.peer_id;
-                self.sync_with_peer(transport, peer_id).await;
+                self.sync_with_peer(transport, peer_id, false).await;
                 return;
             }
 
@@ -415,13 +429,21 @@ impl SyncOrchestrator {
     /// Full sync with a specific peer.
     /// Uses the sync_ledger table for per-entity tracking — survives restarts,
     /// handles chunking naturally, and scales to any number of peers.
-    async fn sync_with_peer(&mut self, transport: &Arc<TokioMutex<dyn SyncTransport>>, peer_id: PeerId) {
+    ///
+    /// When `explicit` is true (from a user-initiated SyncWithPeer command),
+    /// emits SyncStarted/SyncCompleted even when there are no entities to sync.
+    /// When false (periodic or discovery-triggered), no-op syncs are silent to
+    /// avoid polluting the event channel with stale SyncCompleted{0,0} events.
+    async fn sync_with_peer(
+        &mut self,
+        transport: &Arc<TokioMutex<dyn SyncTransport>>,
+        peer_id: PeerId,
+        explicit: bool,
+    ) {
         if self.shared_entities.is_empty() {
             debug!("[SYNC] No entities to sync");
             return;
         }
-
-        let _ = self.event_tx.send(SyncEvent::SyncStarted { peer_id }).await;
 
         // Query the ledger for entities that need syncing with this peer.
         // Returns entities with no ledger entry (never synced) OR modified since last sync.
@@ -459,13 +481,17 @@ impl SyncOrchestrator {
 
         if entity_ids.is_empty() {
             debug!("[SYNC] No changed entities to sync with {}", peer_id);
-            let _ = self.event_tx.send(SyncEvent::SyncCompleted {
-                peer_id,
-                events_sent: 0,
-                events_received: 0,
-            }).await;
+            if explicit {
+                let _ = self.event_tx.send(SyncEvent::SyncCompleted {
+                    peer_id,
+                    events_sent: 0,
+                    events_received: 0,
+                }).await;
+            }
             return;
         }
+
+        let _ = self.event_tx.send(SyncEvent::SyncStarted { peer_id }).await;
 
         // Chunk large syncs. The ledger tracks per-entity, so remaining
         // entities will be picked up on the next cycle automatically.
@@ -750,7 +776,7 @@ impl SyncOrchestrator {
     async fn sync_entity_to_all(&mut self, transport: &Arc<TokioMutex<dyn SyncTransport>>, _entity_id: EntityId) {
         let peers: Vec<PeerId> = self.synced_peers.iter().copied().collect();
         for peer_id in peers {
-            self.sync_with_peer(transport, peer_id).await;
+            self.sync_with_peer(transport, peer_id, true).await;
         }
     }
 
@@ -760,7 +786,7 @@ impl SyncOrchestrator {
         }
         let peers: Vec<PeerId> = self.synced_peers.iter().copied().collect();
         for peer_id in peers {
-            self.sync_with_peer(transport, peer_id).await;
+            self.sync_with_peer(transport, peer_id, false).await;
         }
     }
 

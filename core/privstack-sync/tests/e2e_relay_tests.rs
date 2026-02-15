@@ -48,13 +48,14 @@ impl RelayProcess {
         let relay_bin = match find_relay_bin() {
             Some(bin) => bin,
             None => {
-                // Auto-build the relay binary
+                // Auto-build the relay binary from its standalone crate directory
+                let relay_dir = repo_root.join("relay");
                 let status = std::process::Command::new("cargo")
-                    .args(["build", "-p", "privstack-relay"])
-                    .current_dir(repo_root)
+                    .args(["build"])
+                    .current_dir(&relay_dir)
                     .status()
                     .expect("Failed to run cargo build for privstack-relay");
-                assert!(status.success(), "cargo build -p privstack-relay failed");
+                assert!(status.success(), "cargo build for privstack-relay failed");
                 find_relay_bin().expect("Relay binary not found after successful build")
             }
         };
