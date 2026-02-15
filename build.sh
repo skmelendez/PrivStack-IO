@@ -202,6 +202,24 @@ if [ "$SKIP_DESKTOP" = false ]; then
     echo "    Desktop build complete."
 fi
 
+# ── Step 2a: Build bridge (native messaging relay) ────────────
+BRIDGE_DIR="$REPO_ROOT/bridge/PrivStack.Bridge"
+BRIDGE_CSPROJ="$BRIDGE_DIR/PrivStack.Bridge.csproj"
+
+if [ "$SKIP_DESKTOP" = false ] && [ -f "$BRIDGE_CSPROJ" ]; then
+    echo "==> Building bridge (native messaging relay)..."
+    dotnet build "$BRIDGE_CSPROJ" -c "$DOTNET_CONFIG" --nologo -v quiet
+
+    # Copy bridge binary + runtime files next to the desktop app so FindBridgePath() discovers it
+    DESKTOP_BIN="$DESKTOP_DIR/PrivStack.Desktop/bin/$DOTNET_CONFIG/net9.0"
+    BRIDGE_BIN="$BRIDGE_DIR/bin/$DOTNET_CONFIG/net9.0"
+
+    if [ -d "$DESKTOP_BIN" ] && [ -d "$BRIDGE_BIN" ]; then
+        cp "$BRIDGE_BIN"/privstack-bridge* "$DESKTOP_BIN/" 2>/dev/null || true
+        echo "    Bridge copied to desktop output."
+    fi
+fi
+
 # ── Step 2b: Clean plugins ────────────────────────────────────
 PLUGINS_OUTPUT_DIR="$REPO_ROOT/plugins"
 

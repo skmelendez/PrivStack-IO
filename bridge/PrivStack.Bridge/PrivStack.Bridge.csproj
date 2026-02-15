@@ -5,12 +5,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>PrivStack.Bridge</RootNamespace>
+    <AssemblyName>privstack-bridge</AssemblyName>
     <Version>1.0.0</Version>
-
-    <!-- AOT for small, fast native binary -->
-    <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- AOT + single-file for distribution (only effective during dotnet publish) -->
+    <PublishAot>true</PublishAot>
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
   </PropertyGroup>
 </Project>
