@@ -19,6 +19,10 @@ public record LatestReleaseInfo
     [JsonIgnore]
     public string? PublishedAt => Platforms.Values.FirstOrDefault()?.PublishedAt;
 
+    /// <summary>Release notes (from the first platform group).</summary>
+    [JsonIgnore]
+    public string? ReleaseNotes => Platforms.Values.FirstOrDefault()?.ReleaseNotes;
+
     /// <summary>Flattened list of all release artifacts across all platforms.</summary>
     [JsonIgnore]
     public IReadOnlyList<ReleasePlatformInfo> AllReleases =>
@@ -35,6 +39,9 @@ public record PlatformReleaseGroup
 
     [JsonPropertyName("published_at")]
     public string? PublishedAt { get; init; }
+
+    [JsonPropertyName("release_notes")]
+    public string? ReleaseNotes { get; init; }
 
     [JsonPropertyName("releases")]
     public List<ReleasePlatformInfo> Releases { get; init; } = [];

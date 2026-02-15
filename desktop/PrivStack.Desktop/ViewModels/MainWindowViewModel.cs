@@ -209,10 +209,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isSyncPanelOpen;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsAnyOverlayPanelOpen))]
-    private bool _isUpdatePanelOpen;
-
-    [ObservableProperty]
     private bool _isUserMenuOpen;
 
     [ObservableProperty]
@@ -220,7 +216,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isSettingsPanelOpen;
 
     public bool IsAnyOverlayPanelOpen =>
-        IsSyncPanelOpen || IsUpdatePanelOpen || IsSettingsPanelOpen;
+        IsSyncPanelOpen || IsSettingsPanelOpen;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SidebarCollapseTooltip))]
@@ -713,7 +709,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private async Task ToggleSyncPanel()
     {
         IsSyncPanelOpen = !IsSyncPanelOpen;
-        IsUpdatePanelOpen = false;
         if (IsSyncPanelOpen)
         {
             await SyncVM.RefreshStatus();
@@ -723,14 +718,6 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             SyncVM.StopRefreshTimer();
         }
-    }
-
-    [RelayCommand]
-    private void ToggleUpdatePanel()
-    {
-        IsUpdatePanelOpen = !IsUpdatePanelOpen;
-        IsSyncPanelOpen = false;
-        IsSettingsPanelOpen = false;
     }
 
     [RelayCommand]
@@ -764,7 +751,6 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         IsUserMenuOpen = false;
         IsSyncPanelOpen = true;
-        IsUpdatePanelOpen = false;
         IsSettingsPanelOpen = false;
         await SyncVM.RefreshStatus();
         SyncVM.StartRefreshTimer();
@@ -774,9 +760,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void OpenUpdateFromMenu()
     {
         IsUserMenuOpen = false;
-        IsUpdatePanelOpen = true;
-        IsSyncPanelOpen = false;
-        IsSettingsPanelOpen = false;
+        UpdateVM.StatusBarClickCommand.Execute(null);
     }
 
     [RelayCommand]
@@ -785,7 +769,6 @@ public partial class MainWindowViewModel : ViewModelBase
         IsUserMenuOpen = false;
         IsSettingsPanelOpen = true;
         IsSyncPanelOpen = false;
-        IsUpdatePanelOpen = false;
     }
 
     [RelayCommand]
@@ -802,7 +785,6 @@ public partial class MainWindowViewModel : ViewModelBase
             IsSyncPanelOpen = false;
             SyncVM.StopRefreshTimer();
         }
-        IsUpdatePanelOpen = false;
         IsSettingsPanelOpen = false;
         IsUserMenuOpen = false;
     }
