@@ -4,6 +4,7 @@
 //              references and image files dropped onto the canvas surface.
 // ============================================================================
 
+using System.Text.Json;
 using Avalonia;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -13,6 +14,12 @@ namespace PrivStack.UI.Adaptive.Controls.InfiniteCanvas;
 
 public sealed partial class InfiniteCanvasControl
 {
+    private static readonly DataFormat<string> PageRefFormat =
+        DataFormat.CreateStringPlatformFormat("privstack/page-ref");
+
+    private static readonly DataFormat<string> EntityRefFormat =
+        DataFormat.CreateStringPlatformFormat("privstack/entity-ref");
+
     private Point? _dropGhostPosition;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -40,10 +47,11 @@ public sealed partial class InfiniteCanvasControl
             return;
         }
 
-        var hasPageRef = e.Data.Contains("privstack/page-ref");
-        var hasFiles = e.Data.Contains(DataFormats.Files);
+        var hasPageRef = e.DataTransfer.Contains(PageRefFormat);
+        var hasEntityRef = e.DataTransfer.Contains(EntityRefFormat);
+        var hasFiles = e.DataTransfer.Contains(DataFormat.File);
 
-        if (hasPageRef || hasFiles)
+        if (hasPageRef || hasEntityRef || hasFiles)
         {
             e.DragEffects = DragDropEffects.Copy;
             _dropGhostPosition = e.GetPosition(this);
@@ -74,9 +82,9 @@ public sealed partial class InfiniteCanvasControl
         var (wx, wy) = ScreenToWorld(pos);
 
         // Handle page reference drop
-        if (e.Data.Contains("privstack/page-ref"))
+        if (e.DataTransfer.Contains(PageRefFormat))
         {
-            var pageRefData = e.Data.Get("privstack/page-ref") as string;
+            var pageRefData = e.DataTransfer.TryGetValue(PageRefFormat);
             if (string.IsNullOrEmpty(pageRefData)) return;
 
             // Expected format: "pageId|pageTitle"
@@ -105,10 +113,56 @@ public sealed partial class InfiniteCanvasControl
             return;
         }
 
-        // Handle file drops (images)
-        if (e.Data.Contains(DataFormats.Files))
+        // Handle entity reference drop
+        if (e.DataTransfer.Contains(EntityRefFormat))
         {
-            var files = e.Data.GetFiles();
+            var json = e.DataTransfer.TryGetValue(EntityRefFormat);
+            if (string.IsNullOrEmpty(json)) return;
+
+            EntityRefDropPayload? payload;
+            try
+            {
+                payload = JsonSerializer.Deserialize<EntityRefDropPayload>(json);
+            }
+            catch
+            {
+                return;
+            }
+            if (payload == null || string.IsNullOrEmpty(payload.EntityId)) return;
+
+            var badgeColor = "#888888";
+            var styles = EntityRefStyles;
+            if (styles != null && styles.TryGetValue(payload.EntityType, out var style))
+                badgeColor = style.BadgeColor;
+
+            var element = new CanvasElement
+            {
+                Id = Guid.NewGuid().ToString(),
+                Type = CanvasElementType.EntityReference,
+                X = wx,
+                Y = wy,
+                Width = 240,
+                Height = 70,
+                Text = payload.Title,
+                Label = payload.Subtitle,
+                Color = badgeColor,
+                EntityType = payload.EntityType,
+                EntityId = payload.EntityId,
+                ZIndex = data.NextZIndex(),
+            };
+
+            data.Elements.Add(element);
+            ClearSelection();
+            Select(element.Id);
+            NotifyDataChanged();
+            InvalidateVisual();
+            return;
+        }
+
+        // Handle file drops (images)
+        if (e.DataTransfer.Contains(DataFormat.File))
+        {
+            var files = e.DataTransfer.TryGetFiles();
             if (files == null) return;
 
             var offsetX = 0.0;

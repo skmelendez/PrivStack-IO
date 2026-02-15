@@ -22,6 +22,7 @@ public static class CanvasElementType
     public const string PageReference = "page_ref";
     public const string GroupFrame = "group_frame";
     public const string Image = "image";
+    public const string EntityReference = "entity_ref";
 }
 
 /// <summary>
@@ -89,6 +90,12 @@ public sealed class CanvasElement
 
     [JsonPropertyName("label")]
     public string? Label { get; set; }
+
+    [JsonPropertyName("entity_type")]
+    public string? EntityType { get; set; }
+
+    [JsonPropertyName("entity_id")]
+    public string? EntityId { get; set; }
 }
 
 /// <summary>
