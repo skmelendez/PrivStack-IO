@@ -354,6 +354,30 @@ public record OAuthTokenResponse
 
     [JsonPropertyName("expires_in")]
     public int ExpiresIn { get; init; }
+
+    [JsonPropertyName("cloud_config")]
+    public OAuthCloudConfig? CloudConfig { get; init; }
+}
+
+public record OAuthCloudConfig
+{
+    [JsonPropertyName("api_base_url")]
+    public string ApiBaseUrl { get; init; } = string.Empty;
+
+    [JsonPropertyName("s3_bucket")]
+    public string S3Bucket { get; init; } = string.Empty;
+
+    [JsonPropertyName("s3_region")]
+    public string S3Region { get; init; } = string.Empty;
+
+    [JsonPropertyName("s3_endpoint_override")]
+    public string? S3EndpointOverride { get; init; }
+
+    [JsonPropertyName("credential_refresh_margin_secs")]
+    public int CredentialRefreshMarginSecs { get; init; }
+
+    [JsonPropertyName("poll_interval_secs")]
+    public int PollIntervalSecs { get; init; }
 }
 
 public record OfficialPluginsResponse

@@ -218,6 +218,13 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             var tokenResult = await _apiClient.ExchangeCodeForTokenAsync(
                 callback.Code, codeVerifier, callback.RedirectUri, _oauthCts.Token);
 
+            // Configure cloud sync engine with server-provided S3/API settings
+            if (tokenResult.CloudConfig != null)
+            {
+                var configJson = JsonSerializer.Serialize(tokenResult.CloudConfig);
+                await Task.Run(() => _cloudSync.Configure(configJson));
+            }
+
             // Extract user ID from JWT access token
             var userId = ExtractUserIdFromJwt(tokenResult.AccessToken);
 
