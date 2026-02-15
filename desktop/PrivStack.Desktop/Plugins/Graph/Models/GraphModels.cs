@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace PrivStack.Desktop.Plugins.Graph.Models;
 
-public enum NodeType { Note, Task, Contact, Event, Journal, Company, ContactGroup, RssArticle, Snippet, Tag, Project, Deal, Transaction, Credential, File, WikiSource }
+public enum NodeType { Note, Task, Contact, Event, Journal, Company, ContactGroup, RssArticle, Snippet, Tag, Project, Deal, Transaction, Credential, File, WikiSource, WebClip }
 
 public record GraphNode
 {

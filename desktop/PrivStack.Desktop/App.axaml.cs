@@ -425,6 +425,14 @@ public partial class App : Application
         // Start the reminder scheduler for OS notifications
         Services.GetRequiredService<ReminderSchedulerService>().Start();
 
+        // Start IPC server for browser extension bridge
+        Services.GetRequiredService<IIpcServer>().Start();
+
+        // Register native messaging host for browser extension discovery
+        var bridgePath = FindBridgePath();
+        if (bridgePath != null)
+            NativeMessagingRegistrar.Register(bridgePath, appSettings);
+
         // Check license expiration state for read-only enforcement banner
         var licensing = Services.GetRequiredService<ILicensingService>();
         Services.GetRequiredService<LicenseExpirationService>().CheckLicenseStatus(licensing);
@@ -435,6 +443,31 @@ public partial class App : Application
         };
         desktop.MainWindow = mainWindow;
         mainWindow.Show();
+    }
+
+    /// <summary>
+    /// Locates the privstack-bridge binary relative to the app installation.
+    /// </summary>
+    private static string? FindBridgePath()
+    {
+        var appDir = AppDomain.CurrentDomain.BaseDirectory;
+
+        // Check common locations relative to the app
+        string[] candidates =
+        [
+            Path.Combine(appDir, "privstack-bridge"),
+            Path.Combine(appDir, "privstack-bridge.exe"),
+            Path.Combine(appDir, "..", "bridge", "privstack-bridge"),
+            Path.Combine(appDir, "..", "bridge", "privstack-bridge.exe"),
+        ];
+
+        foreach (var candidate in candidates)
+        {
+            var resolved = Path.GetFullPath(candidate);
+            if (File.Exists(resolved)) return resolved;
+        }
+
+        return null;
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

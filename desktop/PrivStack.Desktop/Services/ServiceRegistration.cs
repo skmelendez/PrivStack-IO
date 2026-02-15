@@ -5,6 +5,7 @@ using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.Connections;
 using PrivStack.Desktop.Services.FileSync;
 using PrivStack.Desktop.Services.Plugin;
+using PrivStack.Desktop.Services.Ipc;
 using PrivStack.Desktop.Services.Update;
 using PrivStack.Desktop.ViewModels;
 using PrivStack.Sdk;
@@ -77,6 +78,11 @@ public static class ServiceRegistration
         services.AddSingleton<ViewStatePrefetchService>();
         services.AddSingleton<LinkProviderCacheService>();
         services.AddSingleton<IDatasetService, DatasetService>();
+
+        // IPC server for browser extension bridge
+        services.AddSingleton<IpcMessageRouter>();
+        services.AddSingleton<IpcServer>();
+        services.AddSingleton<IIpcServer>(sp => sp.GetRequiredService<IpcServer>());
 
         // ViewModels (transient — created fresh each resolution)
         services.AddTransient<MainWindowViewModel>();

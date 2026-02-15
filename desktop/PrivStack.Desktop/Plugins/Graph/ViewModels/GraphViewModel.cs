@@ -50,6 +50,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     [ObservableProperty] private bool _showContacts = true;
     [ObservableProperty] private bool _showEvents = true;
     [ObservableProperty] private bool _showJournal = true;
+    [ObservableProperty] private bool _showWebClips = true;
     [ObservableProperty] private bool _showTags = true;
     [ObservableProperty] private bool _showOrphanedTags = true;
 
@@ -122,6 +123,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             _showContacts = _settings.Get("show_contacts", true);
             _showEvents = _settings.Get("show_events", true);
             _showJournal = _settings.Get("show_journal", true);
+            _showWebClips = _settings.Get("show_web_clips", true);
             _showTags = _settings.Get("show_tags", true);
             _showOrphanedTags = _settings.Get("show_orphaned_tags", true);
             _orphanMode = (OrphanFilterMode)_settings.Get("orphan_mode", (int)OrphanFilterMode.Show);
@@ -188,6 +190,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
         if (ShowContacts) { includeNodeTypes.Add(NodeType.Contact); includeNodeTypes.Add(NodeType.Company); includeNodeTypes.Add(NodeType.ContactGroup); }
         if (ShowEvents) includeNodeTypes.Add(NodeType.Event);
         if (ShowJournal) includeNodeTypes.Add(NodeType.Journal);
+        if (ShowWebClips) includeNodeTypes.Add(NodeType.WebClip);
         if (ShowTags) includeNodeTypes.Add(NodeType.Tag);
 
         var candidateNodes = _fullGraphData.Nodes.Where(kv => MatchesBasicFilters(kv.Value, includeNodeTypes)).ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -259,7 +262,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     [RelayCommand] private void DecreaseDepth() { if (LocalDepth > 1) { LocalDepth--; if (IsLocalView) _ = LoadGraphAsync(); } }
     [RelayCommand] private void ToggleIncludeTag(string tag) { if (IncludeTags.Contains(tag)) IncludeTags.Remove(tag); else IncludeTags.Add(tag); OnPropertyChanged(nameof(IncludeTags)); _ = LoadGraphAsync(); }
     [RelayCommand] private void ToggleExcludeTag(string tag) { if (ExcludeTags.Contains(tag)) ExcludeTags.Remove(tag); else ExcludeTags.Add(tag); OnPropertyChanged(nameof(ExcludeTags)); _ = LoadGraphAsync(); }
-    [RelayCommand] private void ClearFilters() { SearchText = string.Empty; IncludeTags.Clear(); ExcludeTags.Clear(); MinLinkCount = 0; MaxNodes = 200; OrphanMode = OrphanFilterMode.Show; ShowNotes = ShowTasks = ShowContacts = ShowEvents = ShowJournal = ShowTags = true; OnPropertyChanged(nameof(IncludeTags)); OnPropertyChanged(nameof(ExcludeTags)); _ = LoadGraphAsync(); }
+    [RelayCommand] private void ClearFilters() { SearchText = string.Empty; IncludeTags.Clear(); ExcludeTags.Clear(); MinLinkCount = 0; MaxNodes = 200; OrphanMode = OrphanFilterMode.Show; ShowNotes = ShowTasks = ShowContacts = ShowEvents = ShowJournal = ShowWebClips = ShowTags = true; OnPropertyChanged(nameof(IncludeTags)); OnPropertyChanged(nameof(ExcludeTags)); _ = LoadGraphAsync(); }
     [RelayCommand] private void ReheatSimulation() => RequestReheat?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void ToggleExperimentalPanel() => IsExperimentalPanelOpen = !IsExperimentalPanelOpen;
     [RelayCommand] private void SetVisualizationMode(GraphVisualizationMode mode) { if (VisualizationMode != mode) { VisualizationMode = mode; VisualizationModeChanged?.Invoke(this, mode); } }
@@ -303,6 +306,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     partial void OnShowContactsChanged(bool value) { Save("show_contacts", value); if (!_isInitializing) _ = LoadGraphAsync(); }
     partial void OnShowEventsChanged(bool value) { Save("show_events", value); if (!_isInitializing) _ = LoadGraphAsync(); }
     partial void OnShowJournalChanged(bool value) { Save("show_journal", value); if (!_isInitializing) _ = LoadGraphAsync(); }
+    partial void OnShowWebClipsChanged(bool value) { Save("show_web_clips", value); if (!_isInitializing) _ = LoadGraphAsync(); }
     partial void OnShowTagsChanged(bool value) { Save("show_tags", value); if (!_isInitializing) _ = LoadGraphAsync(); }
     partial void OnShowOrphanedTagsChanged(bool value) { Save("show_orphaned_tags", value); if (!_isInitializing) ApplyFilters(); }
     partial void OnHighlightDepthChanged(int value) { Save("highlight_depth", value); }
