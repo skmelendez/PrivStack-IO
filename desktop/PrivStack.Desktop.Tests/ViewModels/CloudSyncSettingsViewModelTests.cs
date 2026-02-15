@@ -1,5 +1,6 @@
 using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Native;
+using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.ViewModels;
 
@@ -13,116 +14,28 @@ public class CloudSyncSettingsViewModelTests
     {
         return new CloudSyncSettingsViewModel(
             cloudSync ?? Substitute.For<ICloudSyncService>(),
-            workspaceService ?? Substitute.For<IWorkspaceService>());
+            workspaceService ?? Substitute.For<IWorkspaceService>(),
+            new OAuthLoginService(),
+            new PrivStackApiClient(),
+            Substitute.For<IAppSettingsService>());
     }
 
     // ========================================
-    // Auth State Tests
+    // Visibility State Tests
     // ========================================
 
     [Fact]
-    public void ShowsAuthForm_WhenNotAuthenticated()
+    public void ShowsConnectButton_WhenNotAuthenticated()
     {
         var cloudSync = Substitute.For<ICloudSyncService>();
         cloudSync.IsAuthenticated.Returns(false);
 
         var vm = CreateVm(cloudSync);
 
-        vm.ShowAuthForm.Should().BeTrue();
+        vm.ShowConnectButton.Should().BeTrue();
         vm.ShowPassphraseSetup.Should().BeFalse();
-        vm.ShowSyncDashboard.Should().BeFalse();
+        vm.ShowDashboard.Should().BeFalse();
     }
-
-    [Fact]
-    public async Task AuthenticateAsync_SetsAuthenticated_OnSuccess()
-    {
-        var cloudSync = Substitute.For<ICloudSyncService>();
-        cloudSync.IsAuthenticated.Returns(false);
-        cloudSync.Authenticate("test@example.com", "password123")
-            .Returns(new CloudAuthTokens
-            {
-                AccessToken = "tok",
-                RefreshToken = "ref",
-                UserId = 1,
-                Email = "test@example.com"
-            });
-
-        var vm = CreateVm(cloudSync);
-        vm.Email = "test@example.com";
-        vm.Password = "password123";
-
-        await vm.AuthenticateCommand.ExecuteAsync(null);
-
-        vm.IsAuthenticated.Should().BeTrue();
-        vm.AuthenticatedEmail.Should().Be("test@example.com");
-        vm.Email.Should().BeEmpty();
-        vm.Password.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task AuthenticateAsync_SetsError_OnFailure()
-    {
-        var cloudSync = Substitute.For<ICloudSyncService>();
-        cloudSync.Authenticate(Arg.Any<string>(), Arg.Any<string>())
-            .Returns(_ => throw new PrivStackException("Invalid credentials", PrivStackError.AuthError));
-
-        var vm = CreateVm(cloudSync);
-        vm.Email = "test@example.com";
-        vm.Password = "wrong";
-
-        await vm.AuthenticateCommand.ExecuteAsync(null);
-
-        vm.IsAuthenticated.Should().BeFalse();
-        vm.AuthError.Should().NotBeNullOrEmpty();
-    }
-
-    [Fact]
-    public async Task AuthenticateAsync_PreventsReentrantCalls()
-    {
-        var callCount = 0;
-        var cloudSync = Substitute.For<ICloudSyncService>();
-        cloudSync.Authenticate(Arg.Any<string>(), Arg.Any<string>())
-            .Returns(_ =>
-            {
-                Interlocked.Increment(ref callCount);
-                Thread.Sleep(50);
-                return new CloudAuthTokens { Email = "test@example.com" };
-            });
-
-        var vm = CreateVm(cloudSync);
-        vm.Email = "test@example.com";
-        vm.Password = "password123";
-
-        // First call should proceed; second should be skipped (IsAuthenticating guard)
-        var t1 = vm.AuthenticateCommand.ExecuteAsync(null);
-        var t2 = vm.AuthenticateCommand.ExecuteAsync(null);
-        await Task.WhenAll(t1, t2);
-
-        callCount.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task LogoutAsync_ClearsState()
-    {
-        var cloudSync = Substitute.For<ICloudSyncService>();
-        cloudSync.IsAuthenticated.Returns(true);
-        cloudSync.HasKeypair.Returns(true);
-
-        var vm = CreateVm(cloudSync);
-        vm.IsAuthenticated = true;
-        vm.HasKeypair = true;
-        vm.AuthenticatedEmail = "test@example.com";
-
-        await vm.LogoutCommand.ExecuteAsync(null);
-
-        vm.IsAuthenticated.Should().BeFalse();
-        vm.HasKeypair.Should().BeFalse();
-        vm.AuthenticatedEmail.Should().BeNull();
-    }
-
-    // ========================================
-    // Passphrase Tests
-    // ========================================
 
     [Fact]
     public void ShowsPassphraseSetup_WhenAuthenticated_NoKeypair()
@@ -137,9 +50,97 @@ public class CloudSyncSettingsViewModelTests
         vm.NeedsPassphraseEntry = false;
 
         vm.ShowPassphraseSetup.Should().BeTrue();
-        vm.ShowAuthForm.Should().BeFalse();
-        vm.ShowSyncDashboard.Should().BeFalse();
+        vm.ShowConnectButton.Should().BeFalse();
+        vm.ShowDashboard.Should().BeFalse();
     }
+
+    [Fact]
+    public void ShowsDashboard_WhenAuthenticatedWithKeypair()
+    {
+        var vm = CreateVm();
+        vm.IsAuthenticated = true;
+        vm.HasKeypair = true;
+        vm.NeedsPassphraseEntry = false;
+
+        vm.ShowDashboard.Should().BeTrue();
+        vm.ShowConnectButton.Should().BeFalse();
+        vm.ShowPassphraseSetup.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShowsPassphraseEntry_WhenNeedsPassphrase()
+    {
+        var vm = CreateVm();
+        vm.IsAuthenticated = true;
+        vm.HasKeypair = true;
+        vm.NeedsPassphraseEntry = true;
+
+        vm.ShowPassphraseEntry.Should().BeTrue();
+        vm.ShowDashboard.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShowEnableForWorkspace_WhenDashboardAndWorkspaceNotCloud()
+    {
+        var workspaceService = Substitute.For<IWorkspaceService>();
+        workspaceService.GetActiveWorkspace().Returns(new Workspace
+        {
+            Id = "ws1",
+            Name = "Test",
+            SyncTier = SyncTier.LocalOnly
+        });
+
+        var vm = CreateVm(workspaceService: workspaceService);
+        vm.IsAuthenticated = true;
+        vm.HasKeypair = true;
+        vm.NeedsPassphraseEntry = false;
+
+        vm.ShowEnableForWorkspace.Should().BeTrue();
+        vm.IsWorkspaceCloudEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsWorkspaceCloudEnabled_WhenWorkspaceIsCloud()
+    {
+        var workspaceService = Substitute.For<IWorkspaceService>();
+        workspaceService.GetActiveWorkspace().Returns(new Workspace
+        {
+            Id = "ws1",
+            Name = "Test",
+            SyncTier = SyncTier.PrivStackCloud
+        });
+
+        var vm = CreateVm(workspaceService: workspaceService);
+        vm.IsAuthenticated = true;
+        vm.HasKeypair = true;
+        vm.NeedsPassphraseEntry = false;
+
+        vm.IsWorkspaceCloudEnabled.Should().BeTrue();
+        vm.ShowEnableForWorkspace.Should().BeFalse();
+    }
+
+    // ========================================
+    // Disconnect Tests
+    // ========================================
+
+    [Fact]
+    public async Task DisconnectAsync_ClearsState()
+    {
+        var cloudSync = Substitute.For<ICloudSyncService>();
+        var vm = CreateVm(cloudSync);
+        vm.IsAuthenticated = true;
+        vm.HasKeypair = true;
+
+        await vm.DisconnectCommand.ExecuteAsync(null);
+
+        vm.IsAuthenticated.Should().BeFalse();
+        vm.HasKeypair.Should().BeFalse();
+        vm.IsSyncing.Should().BeFalse();
+    }
+
+    // ========================================
+    // Passphrase Tests
+    // ========================================
 
     [Fact]
     public async Task SetupPassphraseAsync_ValidatesMatch()
@@ -188,7 +189,6 @@ public class CloudSyncSettingsViewModelTests
         var cloudSync = Substitute.For<ICloudSyncService>();
         cloudSync.IsAuthenticated.Returns(true);
         cloudSync.HasKeypair.Returns(true);
-        cloudSync.GetStatus().Returns(new CloudSyncStatus());
 
         var vm = CreateVm(cloudSync);
         vm.NeedsPassphraseEntry = true;
@@ -205,7 +205,6 @@ public class CloudSyncSettingsViewModelTests
     {
         var cloudSync = Substitute.For<ICloudSyncService>();
         cloudSync.IsAuthenticated.Returns(true);
-        cloudSync.GetStatus().Returns(new CloudSyncStatus());
 
         var vm = CreateVm(cloudSync);
         vm.ShowRecoveryForm = true;
@@ -218,22 +217,34 @@ public class CloudSyncSettingsViewModelTests
         vm.HasKeypair.Should().BeTrue();
     }
 
+    [Fact]
+    public void ShowRecovery_TogglesRecoveryForm()
+    {
+        var vm = CreateVm();
+        vm.NeedsPassphraseEntry = true;
+
+        vm.ShowRecoveryCommand.Execute(null);
+
+        vm.ShowRecoveryForm.Should().BeTrue();
+        vm.NeedsPassphraseEntry.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CancelRecovery_RestoresPassphraseEntry()
+    {
+        var vm = CreateVm();
+        vm.HasKeypair = true;
+        vm.ShowRecoveryForm = true;
+
+        vm.CancelRecoveryCommand.Execute(null);
+
+        vm.ShowRecoveryForm.Should().BeFalse();
+        vm.NeedsPassphraseEntry.Should().BeTrue();
+    }
+
     // ========================================
     // Sync Dashboard Tests
     // ========================================
-
-    [Fact]
-    public void ShowsSyncDashboard_WhenAuthenticatedWithKeypair()
-    {
-        var vm = CreateVm();
-        vm.IsAuthenticated = true;
-        vm.HasKeypair = true;
-        vm.NeedsPassphraseEntry = false;
-
-        vm.ShowSyncDashboard.Should().BeTrue();
-        vm.ShowAuthForm.Should().BeFalse();
-        vm.ShowPassphraseSetup.Should().BeFalse();
-    }
 
     [Fact]
     public async Task RefreshStatusAsync_UpdatesAllFields()
@@ -356,5 +367,49 @@ public class CloudSyncSettingsViewModelTests
         vm.Devices.Should().HaveCount(2);
         vm.Devices[0].DeviceName.Should().Be("MacBook");
         vm.Devices[1].DeviceName.Should().Be("Desktop");
+    }
+
+    // ========================================
+    // JWT Extraction Tests
+    // ========================================
+
+    [Fact]
+    public void ExtractUserIdFromJwt_ParsesNumericSub()
+    {
+        // JWT with payload: {"sub": 42}
+        var payload = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("{\"sub\":42}"))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var jwt = $"header.{payload}.signature";
+
+        var userId = CloudSyncSettingsViewModel.ExtractUserIdFromJwt(jwt);
+
+        userId.Should().Be(42);
+    }
+
+    [Fact]
+    public void ExtractUserIdFromJwt_ParsesStringSub()
+    {
+        var payload = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("{\"sub\":\"123\"}"))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var jwt = $"header.{payload}.signature";
+
+        var userId = CloudSyncSettingsViewModel.ExtractUserIdFromJwt(jwt);
+
+        userId.Should().Be(123);
+    }
+
+    [Fact]
+    public void ExtractUserIdFromJwt_ThrowsOnMissingSub()
+    {
+        var payload = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("{\"name\":\"test\"}"))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var jwt = $"header.{payload}.signature";
+
+        var act = () => CloudSyncSettingsViewModel.ExtractUserIdFromJwt(jwt);
+
+        act.Should().Throw<InvalidOperationException>();
     }
 }

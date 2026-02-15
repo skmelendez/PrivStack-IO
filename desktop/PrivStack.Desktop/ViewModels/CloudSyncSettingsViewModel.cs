@@ -1,8 +1,11 @@
 using System.Collections.ObjectModel;
+using System.Text;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Native;
+using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
 using Serilog;
 
@@ -10,7 +13,7 @@ namespace PrivStack.Desktop.ViewModels;
 
 /// <summary>
 /// ViewModel for the Cloud Sync section in Settings.
-/// Manages authentication, passphrase setup, sync status, quota, and devices.
+/// Uses OAuth PKCE for authentication, then allows per-workspace cloud sync enablement.
 /// </summary>
 public partial class CloudSyncSettingsViewModel : ViewModelBase
 {
@@ -18,13 +21,23 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
 
     private readonly ICloudSyncService _cloudSync;
     private readonly IWorkspaceService _workspaceService;
+    private readonly OAuthLoginService _oauthService;
+    private readonly PrivStackApiClient _apiClient;
+    private readonly IAppSettingsService _appSettings;
+    private CancellationTokenSource? _oauthCts;
 
     public CloudSyncSettingsViewModel(
         ICloudSyncService cloudSync,
-        IWorkspaceService workspaceService)
+        IWorkspaceService workspaceService,
+        OAuthLoginService oauthService,
+        PrivStackApiClient apiClient,
+        IAppSettingsService appSettings)
     {
         _cloudSync = cloudSync;
         _workspaceService = workspaceService;
+        _oauthService = oauthService;
+        _apiClient = apiClient;
+        _appSettings = appSettings;
 
         LoadState();
     }
@@ -33,31 +46,57 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     // Visibility States
     // ========================================
 
-    public bool ShowAuthForm => !IsAuthenticated;
-    public bool ShowPassphraseSetup => IsAuthenticated && !HasKeypair && !NeedsPassphraseEntry && !ShowRecoveryForm;
-    public bool ShowSyncDashboard => IsAuthenticated && HasKeypair && !NeedsPassphraseEntry && !ShowRecoveryForm;
+    public bool ShowConnectButton => !IsAuthenticated;
+    public bool ShowPassphraseSetup => IsAuthenticated && !HasKeypair
+                                       && !NeedsPassphraseEntry && !ShowRecoveryForm;
+    public bool ShowPassphraseEntry => NeedsPassphraseEntry && !ShowRecoveryForm;
+    public bool ShowDashboard => IsAuthenticated && HasKeypair
+                                 && !NeedsPassphraseEntry && !ShowRecoveryForm;
+
+    /// <summary>
+    /// True when cloud sync is connected + keypair ready, but the active workspace
+    /// is NOT yet registered for cloud sync.
+    /// </summary>
+    public bool ShowEnableForWorkspace
+    {
+        get
+        {
+            if (!ShowDashboard) return false;
+            var ws = _workspaceService.GetActiveWorkspace();
+            return ws?.SyncTier != SyncTier.PrivStackCloud;
+        }
+    }
+
+    /// <summary>
+    /// True when the active workspace is cloud-enabled (show full sync dashboard).
+    /// </summary>
+    public bool IsWorkspaceCloudEnabled
+    {
+        get
+        {
+            if (!ShowDashboard) return false;
+            var ws = _workspaceService.GetActiveWorkspace();
+            return ws?.SyncTier == SyncTier.PrivStackCloud;
+        }
+    }
 
     // ========================================
     // Authentication State
     // ========================================
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowAuthForm))]
+    [NotifyPropertyChangedFor(nameof(ShowConnectButton))]
     [NotifyPropertyChangedFor(nameof(ShowPassphraseSetup))]
-    [NotifyPropertyChangedFor(nameof(ShowSyncDashboard))]
+    [NotifyPropertyChangedFor(nameof(ShowDashboard))]
+    [NotifyPropertyChangedFor(nameof(ShowEnableForWorkspace))]
+    [NotifyPropertyChangedFor(nameof(IsWorkspaceCloudEnabled))]
     private bool _isAuthenticated;
 
     [ObservableProperty]
-    private string? _authenticatedEmail;
-
-    [ObservableProperty]
-    private string _email = string.Empty;
-
-    [ObservableProperty]
-    private string _password = string.Empty;
-
-    [ObservableProperty]
     private bool _isAuthenticating;
+
+    [ObservableProperty]
+    private bool _isWaitingForBrowser;
 
     [ObservableProperty]
     private string? _authError;
@@ -68,7 +107,9 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPassphraseSetup))]
-    [NotifyPropertyChangedFor(nameof(ShowSyncDashboard))]
+    [NotifyPropertyChangedFor(nameof(ShowDashboard))]
+    [NotifyPropertyChangedFor(nameof(ShowEnableForWorkspace))]
+    [NotifyPropertyChangedFor(nameof(IsWorkspaceCloudEnabled))]
     private bool _hasKeypair;
 
     [ObservableProperty]
@@ -87,12 +128,15 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     private string? _passphraseError;
 
     // ========================================
-    // Passphrase Entry State (unlock existing keypair)
+    // Passphrase Entry State
     // ========================================
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPassphraseEntry))]
     [NotifyPropertyChangedFor(nameof(ShowPassphraseSetup))]
-    [NotifyPropertyChangedFor(nameof(ShowSyncDashboard))]
+    [NotifyPropertyChangedFor(nameof(ShowDashboard))]
+    [NotifyPropertyChangedFor(nameof(ShowEnableForWorkspace))]
+    [NotifyPropertyChangedFor(nameof(IsWorkspaceCloudEnabled))]
     private bool _needsPassphraseEntry;
 
     [ObservableProperty]
@@ -107,7 +151,8 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPassphraseSetup))]
-    [NotifyPropertyChangedFor(nameof(ShowSyncDashboard))]
+    [NotifyPropertyChangedFor(nameof(ShowPassphraseEntry))]
+    [NotifyPropertyChangedFor(nameof(ShowDashboard))]
     private bool _showRecoveryForm;
 
     [ObservableProperty]
@@ -138,49 +183,88 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     public ObservableCollection<CloudDeviceInfo> Devices { get; } = [];
 
     // ========================================
-    // Commands
+    // OAuth Connect
     // ========================================
 
     [RelayCommand]
-    private async Task AuthenticateAsync()
+    private async Task ConnectAsync()
     {
         if (IsAuthenticating) return;
-        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password)) return;
 
         IsAuthenticating = true;
+        IsWaitingForBrowser = true;
         AuthError = null;
+        _oauthCts = new CancellationTokenSource();
 
         try
         {
-            var tokens = await Task.Run(() => _cloudSync.Authenticate(Email, Password));
-            AuthenticatedEmail = tokens.Email;
-            IsAuthenticated = true;
-            Email = string.Empty;
-            Password = string.Empty;
+            var codeVerifier = OAuthLoginService.GenerateCodeVerifier();
+            var codeChallenge = OAuthLoginService.ComputeCodeChallenge(codeVerifier);
+            var state = OAuthLoginService.GenerateState();
 
-            // Check if keypair exists; if so we need passphrase entry
+            var authorizeUrl = $"{PrivStackApiClient.ApiBaseUrl}/connect/authorize" +
+                $"?client_id=privstack-desktop" +
+                $"&response_type=code" +
+                $"&scope=cloud_sync" +
+                $"&code_challenge={Uri.EscapeDataString(codeChallenge)}" +
+                $"&code_challenge_method=S256" +
+                $"&state={Uri.EscapeDataString(state)}";
+
+            var callback = await _oauthService.AuthorizeAsync(
+                authorizeUrl, state, _oauthCts.Token);
+
+            IsWaitingForBrowser = false;
+
+            var tokenResult = await _apiClient.ExchangeCodeForTokenAsync(
+                callback.Code, codeVerifier, callback.RedirectUri, _oauthCts.Token);
+
+            // Extract user ID from JWT access token
+            var userId = ExtractUserIdFromJwt(tokenResult.AccessToken);
+
+            // Authenticate the Rust cloud sync core with these tokens
+            await Task.Run(() => _cloudSync.AuthenticateWithTokens(
+                tokenResult.AccessToken,
+                tokenResult.RefreshToken ?? string.Empty,
+                userId));
+
+            IsAuthenticated = true;
             HasKeypair = _cloudSync.HasKeypair;
             if (HasKeypair)
                 NeedsPassphraseEntry = true;
+
+            Log.Information("Cloud sync connected via OAuth (userId={UserId})", userId);
         }
-        catch (PrivStackException ex)
+        catch (OperationCanceledException)
+        {
+            // User cancelled
+        }
+        catch (OAuthException ex)
         {
             AuthError = ex.Message;
-            Log.Warning(ex, "Cloud sync authentication failed");
+            Log.Warning(ex, "Cloud sync OAuth failed");
         }
         catch (Exception ex)
         {
-            AuthError = $"Authentication failed: {ex.Message}";
-            Log.Error(ex, "Cloud sync authentication error");
+            AuthError = $"Connection failed: {ex.Message}";
+            Log.Error(ex, "Cloud sync OAuth error");
         }
         finally
         {
             IsAuthenticating = false;
+            IsWaitingForBrowser = false;
+            _oauthCts?.Dispose();
+            _oauthCts = null;
         }
     }
 
     [RelayCommand]
-    private async Task LogoutAsync()
+    private void CancelConnect()
+    {
+        _oauthCts?.Cancel();
+    }
+
+    [RelayCommand]
+    private async Task DisconnectAsync()
     {
         try
         {
@@ -188,7 +272,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Cloud sync logout error");
+            Log.Warning(ex, "Cloud sync disconnect error");
         }
         finally
         {
@@ -196,12 +280,15 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             HasKeypair = false;
             NeedsPassphraseEntry = false;
             ShowRecoveryForm = false;
-            AuthenticatedEmail = null;
             IsSyncing = false;
             Quota = null;
             Devices.Clear();
         }
     }
+
+    // ========================================
+    // Passphrase Commands
+    // ========================================
 
     [RelayCommand]
     private async Task SetupPassphraseAsync()
@@ -259,7 +346,6 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             await Task.Run(() => _cloudSync.EnterPassphrase(EnterPassphrase));
             NeedsPassphraseEntry = false;
             EnterPassphrase = string.Empty;
-            await RefreshStatusAsync();
         }
         catch (Exception ex)
         {
@@ -302,7 +388,6 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             NeedsPassphraseEntry = false;
             HasKeypair = true;
             RecoveryMnemonic = string.Empty;
-            await RefreshStatusAsync();
         }
         catch (Exception ex)
         {
@@ -310,6 +395,39 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
             Log.Error(ex, "Mnemonic recovery failed");
         }
     }
+
+    // ========================================
+    // Enable for Workspace
+    // ========================================
+
+    [RelayCommand]
+    private async Task EnableForWorkspaceAsync()
+    {
+        try
+        {
+            var workspace = _workspaceService.GetActiveWorkspace();
+            if (workspace == null) return;
+
+            await Task.Run(() => _cloudSync.RegisterWorkspace(workspace.Id, workspace.Name));
+            await Task.Run(() => _cloudSync.StartSync(workspace.Id));
+
+            IsSyncing = true;
+            OnPropertyChanged(nameof(ShowEnableForWorkspace));
+            OnPropertyChanged(nameof(IsWorkspaceCloudEnabled));
+            await RefreshStatusAsync();
+
+            Log.Information("Cloud sync enabled for workspace {WorkspaceId}", workspace.Id);
+        }
+        catch (Exception ex)
+        {
+            AuthError = $"Failed to enable: {ex.Message}";
+            Log.Error(ex, "Failed to enable cloud sync for workspace");
+        }
+    }
+
+    // ========================================
+    // Sync Dashboard Commands
+    // ========================================
 
     [RelayCommand]
     private async Task RefreshStatusAsync()
@@ -324,9 +442,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
 
             var workspace = _workspaceService.GetActiveWorkspace();
             if (workspace?.CloudWorkspaceId != null)
-            {
                 Quota = await Task.Run(() => _cloudSync.GetQuota(workspace.Id));
-            }
 
             var devices = await Task.Run(() => _cloudSync.ListDevices());
             Devices.Clear();
@@ -336,6 +452,20 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed to refresh cloud sync status");
+        }
+    }
+
+    [RelayCommand]
+    private async Task StopSyncAsync()
+    {
+        try
+        {
+            await Task.Run(() => _cloudSync.StopSync());
+            IsSyncing = false;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to stop cloud sync");
         }
     }
 
@@ -357,19 +487,9 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
-    private async Task StopSyncAsync()
-    {
-        try
-        {
-            await Task.Run(() => _cloudSync.StopSync());
-            IsSyncing = false;
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Failed to stop cloud sync");
-        }
-    }
+    // ========================================
+    // Helpers
+    // ========================================
 
     private void LoadState()
     {
@@ -386,5 +506,45 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         {
             Log.Warning(ex, "Failed to load cloud sync state");
         }
+    }
+
+    /// <summary>
+    /// Extracts the user ID (sub claim) from a JWT access token without a JWT library.
+    /// </summary>
+    internal static long ExtractUserIdFromJwt(string jwt)
+    {
+        var parts = jwt.Split('.');
+        if (parts.Length < 2)
+            throw new InvalidOperationException("Invalid JWT format");
+
+        var payload = parts[1];
+        // Fix base64url padding
+        payload = payload.Replace('-', '+').Replace('_', '/');
+        switch (payload.Length % 4)
+        {
+            case 2: payload += "=="; break;
+            case 3: payload += "="; break;
+        }
+
+        var json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+        using var doc = JsonDocument.Parse(json);
+
+        if (doc.RootElement.TryGetProperty("sub", out var sub))
+        {
+            if (sub.ValueKind == JsonValueKind.Number)
+                return sub.GetInt64();
+            if (long.TryParse(sub.GetString(), out var id))
+                return id;
+        }
+
+        if (doc.RootElement.TryGetProperty("user_id", out var uid))
+        {
+            if (uid.ValueKind == JsonValueKind.Number)
+                return uid.GetInt64();
+            if (long.TryParse(uid.GetString(), out var id))
+                return id;
+        }
+
+        throw new InvalidOperationException("JWT does not contain a user ID (sub or user_id claim)");
     }
 }

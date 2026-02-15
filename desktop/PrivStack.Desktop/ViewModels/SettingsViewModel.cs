@@ -234,7 +234,9 @@ public partial class SettingsViewModel : ViewModelBase
         ConnectionService connectionService,
         GitHubDeviceFlowService gitHubDeviceFlowService,
         ICloudSyncService cloudSyncService,
-        IWorkspaceService workspaceService)
+        IWorkspaceService workspaceService,
+        OAuthLoginService oauthLoginService,
+        PrivStackApiClient apiClient)
     {
         _settingsService = settingsService;
         _backupService = backupService;
@@ -251,7 +253,8 @@ public partial class SettingsViewModel : ViewModelBase
         ThemeEditor = new ThemeEditorViewModel(themeService, customThemeStore, settingsService);
         ThemeEditor.EditorClosed += OnThemeEditorClosed;
         Connections = new ConnectionsViewModel(connectionService, gitHubDeviceFlowService);
-        CloudSync = new CloudSyncSettingsViewModel(cloudSyncService, workspaceService);
+        CloudSync = new CloudSyncSettingsViewModel(cloudSyncService, workspaceService,
+            oauthLoginService, apiClient, settingsService);
 
         LoadPluginItems();
         LoadSettings();

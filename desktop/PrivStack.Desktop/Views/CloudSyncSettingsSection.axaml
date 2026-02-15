@@ -8,35 +8,47 @@
              x:Class="PrivStack.Desktop.Views.CloudSyncSettingsSection"
              x:DataType="vm:CloudSyncSettingsViewModel">
 
-    <!-- ==================== AUTH FORM ==================== -->
     <StackPanel Spacing="12">
-        <StackPanel Spacing="12" IsVisible="{Binding ShowAuthForm}">
-            <TextBlock Text="Sign in to sync your workspaces across devices with end-to-end encryption."
+
+        <!-- ==================== CONNECT (OAuth) ==================== -->
+        <StackPanel Spacing="12" IsVisible="{Binding ShowConnectButton}">
+            <TextBlock Text="Sync your workspaces across devices with end-to-end encryption."
                        Foreground="{DynamicResource ThemeTextMutedBrush}"
                        FontSize="{DynamicResource ThemeFontSizeSm}"
                        TextWrapping="Wrap"/>
 
+            <Button Command="{Binding ConnectCommand}"
+                    Background="{DynamicResource ThemePrimaryBrush}"
+                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="12,10" CornerRadius="6"
+                    FontWeight="SemiBold"
+                    IsVisible="{Binding !IsWaitingForBrowser}"
+                    IsEnabled="{Binding !IsAuthenticating}"
+                    Content="Connect to PrivStack Cloud"/>
+
+            <!-- Waiting for browser -->
             <Border Background="{DynamicResource ThemeSurfaceBrush}"
-                    CornerRadius="6" Padding="12">
-                <StackPanel Spacing="10">
-                    <TextBox Watermark="Email"
-                             Text="{Binding Email, Mode=TwoWay}"
-                             IsEnabled="{Binding !IsAuthenticating}"
-                             Padding="12,8"/>
-                    <TextBox Watermark="Password"
-                             PasswordChar="&#x2022;"
-                             Text="{Binding Password, Mode=TwoWay}"
-                             IsEnabled="{Binding !IsAuthenticating}"
-                             Padding="12,8"/>
-                    <Button Command="{Binding AuthenticateCommand}"
-                            Background="{DynamicResource ThemePrimaryBrush}"
-                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            Padding="12,8" CornerRadius="6"
-                            FontWeight="SemiBold"
-                            IsEnabled="{Binding !IsAuthenticating}"
-                            Content="Sign In"/>
+                    CornerRadius="6" Padding="16"
+                    IsVisible="{Binding IsWaitingForBrowser}">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="Waiting for browser sign-in..."
+                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                    <TextBlock Text="Complete the sign-in in your browser, then return here."
+                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                               TextWrapping="Wrap"/>
+                    <Button Command="{Binding CancelConnectCommand}"
+                            Background="Transparent"
+                            Foreground="{DynamicResource ThemeTextMutedBrush}"
+                            HorizontalAlignment="Center"
+                            Padding="12,6" CornerRadius="4"
+                            Cursor="Hand"
+                            Content="Cancel"/>
                 </StackPanel>
             </Border>
 
@@ -54,7 +66,6 @@
                        FontSize="{DynamicResource ThemeFontSizeSm}"
                        TextWrapping="Wrap"/>
 
-            <!-- Setup form (hidden once mnemonic is shown) -->
             <Border Background="{DynamicResource ThemeSurfaceBrush}"
                     CornerRadius="6" Padding="12"
                     IsVisible="{Binding !ShowMnemonic}">
@@ -116,7 +127,7 @@
         </StackPanel>
 
         <!-- ==================== PASSPHRASE ENTRY (UNLOCK) ==================== -->
-        <StackPanel Spacing="12" IsVisible="{Binding NeedsPassphraseEntry}">
+        <StackPanel Spacing="12" IsVisible="{Binding ShowPassphraseEntry}">
             <TextBlock Text="Enter your encryption passphrase to unlock cloud sync."
                        Foreground="{DynamicResource ThemeTextMutedBrush}"
                        FontSize="{DynamicResource ThemeFontSizeSm}"
@@ -201,142 +212,157 @@
                        TextWrapping="Wrap"/>
         </StackPanel>
 
-        <!-- ==================== SYNC DASHBOARD ==================== -->
-        <StackPanel Spacing="12" IsVisible="{Binding ShowSyncDashboard}">
+        <!-- ==================== DASHBOARD ==================== -->
+        <StackPanel Spacing="12" IsVisible="{Binding ShowDashboard}">
 
-            <!-- Status Card -->
+            <!-- Enable for this workspace (shown when connected but workspace not yet cloud-enabled) -->
             <Border Background="{DynamicResource ThemeSurfaceBrush}"
-                    CornerRadius="6" Padding="12">
-                <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Grid.Column="0" Spacing="4">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
-                                     Fill="{DynamicResource ThemeSuccessBrush}"
-                                     IsVisible="{Binding IsSyncing}"/>
-                            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
-                                     Fill="{DynamicResource ThemeWarningBrush}"
-                                     IsVisible="{Binding !IsSyncing}"/>
-                            <TextBlock FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                       FontWeight="SemiBold">
+                    CornerRadius="6" Padding="16"
+                    IsVisible="{Binding ShowEnableForWorkspace}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Cloud sync is connected. Enable it for your current workspace to start syncing."
+                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                               TextWrapping="Wrap"/>
+                    <Button Command="{Binding EnableForWorkspaceCommand}"
+                            Background="{DynamicResource ThemePrimaryBrush}"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="12,10" CornerRadius="6"
+                            FontWeight="SemiBold"
+                            Content="Enable for this workspace"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Full sync dashboard (shown when workspace is cloud-enabled) -->
+            <StackPanel Spacing="12" IsVisible="{Binding IsWorkspaceCloudEnabled}">
+                <!-- Status Card -->
+                <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                        CornerRadius="6" Padding="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                         Fill="{DynamicResource ThemeSuccessBrush}"
+                                         IsVisible="{Binding IsSyncing}"/>
+                                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                         Fill="{DynamicResource ThemeWarningBrush}"
+                                         IsVisible="{Binding !IsSyncing}"/>
+                                <TextBlock FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                           FontWeight="SemiBold"
+                                           IsVisible="{Binding IsSyncing}"
+                                           Text="Syncing"/>
+                                <TextBlock FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                           FontWeight="SemiBold"
+                                           IsVisible="{Binding !IsSyncing}"
+                                           Text="Paused"/>
+                            </StackPanel>
+                            <TextBlock FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}">
                                 <TextBlock.Text>
-                                    <MultiBinding StringFormat="{}{0}">
-                                        <Binding Path="IsSyncing"/>
+                                    <MultiBinding StringFormat="Last sync: {0}">
+                                        <Binding Path="LastSyncDisplay"/>
                                     </MultiBinding>
                                 </TextBlock.Text>
                             </TextBlock>
-                            <TextBlock FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                       FontWeight="SemiBold"
-                                       IsVisible="{Binding IsSyncing}"
-                                       Text="Syncing"/>
-                            <TextBlock FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                       FontWeight="SemiBold"
-                                       IsVisible="{Binding !IsSyncing}"
-                                       Text="Paused"/>
                         </StackPanel>
-                        <TextBlock FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                   Foreground="{DynamicResource ThemeTextMutedBrush}">
-                            <TextBlock.Text>
-                                <MultiBinding StringFormat="Last sync: {0}">
-                                    <Binding Path="LastSyncDisplay"/>
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </TextBlock>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
-                                VerticalAlignment="Center">
-                        <Button Command="{Binding RefreshStatusCommand}"
-                                Background="Transparent"
-                                Padding="8,6" CornerRadius="4"
-                                Cursor="Hand"
-                                Content="Refresh"
-                                FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                        <Button Command="{Binding StartSyncCommand}"
-                                IsVisible="{Binding !IsSyncing}"
-                                Background="{DynamicResource ThemePrimaryBrush}"
-                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                Padding="12,6" CornerRadius="4"
-                                FontWeight="SemiBold"
-                                FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                Cursor="Hand"
-                                Content="Start"/>
-                        <Button Command="{Binding StopSyncCommand}"
-                                IsVisible="{Binding IsSyncing}"
-                                Background="{DynamicResource ThemeWarningBrush}"
-                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                Padding="12,6" CornerRadius="4"
-                                FontWeight="SemiBold"
-                                FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                Cursor="Hand"
-                                Content="Stop"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- Quota Card -->
-            <Border Background="{DynamicResource ThemeSurfaceBrush}"
-                    CornerRadius="6" Padding="12"
-                    IsVisible="{Binding Quota, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <StackPanel Spacing="8">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="Storage"
-                                   FontSize="{DynamicResource ThemeFontSizeSm}"
-                                   FontWeight="SemiBold"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Quota.Summary}"
-                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                    VerticalAlignment="Center">
+                            <Button Command="{Binding RefreshStatusCommand}"
+                                    Background="Transparent"
+                                    Padding="8,6" CornerRadius="4"
+                                    Cursor="Hand"
+                                    Content="Refresh"
+                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                            <Button Command="{Binding StartSyncCommand}"
+                                    IsVisible="{Binding !IsSyncing}"
+                                    Background="{DynamicResource ThemePrimaryBrush}"
+                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                    Padding="12,6" CornerRadius="4"
+                                    FontWeight="SemiBold"
+                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                    Cursor="Hand"
+                                    Content="Start"/>
+                            <Button Command="{Binding StopSyncCommand}"
+                                    IsVisible="{Binding IsSyncing}"
+                                    Background="{DynamicResource ThemeWarningBrush}"
+                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                    Padding="12,6" CornerRadius="4"
+                                    FontWeight="SemiBold"
+                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                    Cursor="Hand"
+                                    Content="Stop"/>
+                        </StackPanel>
                     </Grid>
-                    <ProgressBar Minimum="0" Maximum="100"
-                                 Value="{Binding Quota.UsagePercent}"
-                                 Height="6" CornerRadius="3"
-                                 Foreground="{DynamicResource ThemePrimaryBrush}"/>
-                </StackPanel>
-            </Border>
+                </Border>
 
-            <!-- Devices List -->
-            <Border Background="{DynamicResource ThemeSurfaceBrush}"
-                    CornerRadius="6" Padding="12">
-                <StackPanel Spacing="8">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="Devices"
-                                   FontSize="{DynamicResource ThemeFontSizeSm}"
-                                   FontWeight="SemiBold"/>
-                        <TextBlock Grid.Column="1"
-                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                   Foreground="{DynamicResource ThemeTextMutedBrush}">
-                            <TextBlock.Text>
-                                <MultiBinding StringFormat="{}{0} connected">
-                                    <Binding Path="ConnectedDeviceCount"/>
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </TextBlock>
-                    </Grid>
-                    <ItemsControl ItemsSource="{Binding Devices}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:CloudDeviceInfo">
-                                <Border Padding="0,4">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="{Binding DeviceName}"
-                                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
-                                            <TextBlock Text="{Binding Platform}"
+                <!-- Quota Card -->
+                <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                        CornerRadius="6" Padding="12"
+                        IsVisible="{Binding Quota, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Storage"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Quota.Summary}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        </Grid>
+                        <ProgressBar Minimum="0" Maximum="100"
+                                     Value="{Binding Quota.UsagePercent}"
+                                     Height="6" CornerRadius="3"
+                                     Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Devices List -->
+                <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                        CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Devices"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0} connected">
+                                        <Binding Path="ConnectedDeviceCount"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Devices}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:CloudDeviceInfo">
+                                    <Border Padding="0,4">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding DeviceName}"
+                                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                                                <TextBlock Text="{Binding Platform}"
+                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1"
                                                        FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="1"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                   VerticalAlignment="Center"
-                                                   Text="{Binding LastSeenAt, StringFormat='{}{0:MMM d, h:mm tt}'}"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
+                                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                       VerticalAlignment="Center"
+                                                       Text="{Binding LastSeenAt, StringFormat='{}{0:MMM d, h:mm tt}'}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
 
             <!-- Disconnect -->
-            <Button Command="{Binding LogoutCommand}"
+            <Button Command="{Binding DisconnectCommand}"
                     Background="Transparent"
                     Padding="12,6"
                     Foreground="{DynamicResource ThemeDangerBrush}"
@@ -344,6 +370,12 @@
                     Cursor="Hand"
                     HorizontalAlignment="Left"
                     Content="Disconnect from Cloud"/>
+
+            <TextBlock Text="{Binding AuthError}"
+                       IsVisible="{Binding AuthError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource ThemeDangerBrush}"
+                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                       TextWrapping="Wrap"/>
         </StackPanel>
     </StackPanel>
 </UserControl>

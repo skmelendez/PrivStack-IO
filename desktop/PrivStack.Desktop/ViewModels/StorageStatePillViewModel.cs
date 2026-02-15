@@ -68,17 +68,14 @@ public partial class StorageStatePillViewModel : ViewModelBase
             {
                 try
                 {
-                    var status = _cloudSync.GetStatus();
-                    if (status.PendingUploadCount > 0)
-                    {
-                        PillText = $"Syncing ({status.PendingUploadCount})";
-                        PillColor = ResolveBrush("ThemePrimaryBrush");
-                    }
-                    else
-                    {
-                        PillText = "Synced";
-                        PillColor = ResolveBrush("ThemeSuccessBrush");
-                    }
+                    var quota = _cloudSync.GetQuota(activeWorkspace.Id);
+                    var pct = (int)Math.Round(quota.UsagePercent);
+                    PillText = $"Cloud Sync ({pct}%)";
+                    PillColor = quota.UsagePercent > 95
+                        ? ResolveBrush("ThemeDangerBrush")
+                        : quota.UsagePercent > 80
+                            ? ResolveBrush("ThemeWarningBrush")
+                            : ResolveBrush("ThemeSuccessBrush");
                 }
                 catch
                 {
