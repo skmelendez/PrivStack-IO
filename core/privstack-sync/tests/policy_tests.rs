@@ -3199,8 +3199,13 @@ async fn personal_policy_on_event_send_denied() {
     let policy = PersonalSyncPolicy::new();
     let peer = PeerId::new();
     let entity = EntityId::new();
+    let other_entity = EntityId::new();
 
-    // Not shared - should return empty
+    // Activate selective sharing by sharing a different entity,
+    // so the peer_entities map is non-empty and filtering kicks in
+    policy.share(other_entity, peer).await;
+
+    // entity is not shared with peer - should return empty
     let events = make_events(entity, peer, 3);
     let sent = policy.on_event_send(&peer, &entity, &events).await.unwrap();
     assert!(sent.is_empty());
