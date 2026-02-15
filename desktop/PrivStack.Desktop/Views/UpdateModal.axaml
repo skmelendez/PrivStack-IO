@@ -1,0 +1,177 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PrivStack.Desktop.ViewModels"
+             x:Class="PrivStack.Desktop.Views.UpdateModal"
+             x:DataType="vm:UpdateViewModel"
+             IsVisible="{Binding IsUpdateModalOpen}">
+
+    <!-- Full-screen backdrop -->
+    <Panel>
+        <Border Background="#80000000"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                PointerPressed="OnBackdropPressed"/>
+
+        <!-- Centered card -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                Width="440"
+                Background="{DynamicResource ThemeSurfaceBrush}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                BoxShadow="0 8 32 0 #60000000"
+                Padding="0">
+            <StackPanel>
+                <!-- Header -->
+                <Border Padding="24,16"
+                        BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
+                        BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <Border Width="8" Height="8"
+                                    Background="{DynamicResource ThemeSuccessBrush}"
+                                    CornerRadius="4"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Text="Update Available"
+                                       FontSize="{DynamicResource ThemeFontSizeLg}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="×"
+                                Command="{Binding CloseModalCommand}"
+                                Background="Transparent"
+                                FontSize="{DynamicResource ThemeFontSizeXl}"
+                                Padding="8,2"
+                                Cursor="Hand"
+                                VerticalAlignment="Center">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+                                </Style>
+                            </Button.Styles>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Body -->
+                <Border Padding="24,20">
+                    <StackPanel Spacing="16">
+                        <!-- Version transition -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       FontSize="{DynamicResource ThemeFontSizeSmMd}">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="v{0}">
+                                        <Binding Path="CurrentVersion"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                            <TextBlock Text="→"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       FontSize="{DynamicResource ThemeFontSizeSmMd}"/>
+                            <TextBlock Foreground="{DynamicResource ThemeSuccessBrush}"
+                                       FontWeight="SemiBold"
+                                       FontSize="{DynamicResource ThemeFontSizeSmMd}">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="v{0}">
+                                        <Binding Path="UpdateVersion"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- Release notes (if provided) -->
+                        <Border IsVisible="{Binding ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Background="{DynamicResource ThemeBackgroundBrush}"
+                                CornerRadius="6"
+                                Padding="12">
+                            <TextBlock Text="{Binding ReleaseNotes}"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       TextWrapping="Wrap"
+                                       MaxHeight="200"/>
+                        </Border>
+
+                        <!-- Authentication required notice -->
+                        <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                CornerRadius="6" Padding="12"
+                                IsVisible="{Binding NeedsAuthentication}">
+                            <StackPanel Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="!" Foreground="{DynamicResource ThemeWarningBrush}" FontWeight="Bold"/>
+                                    <TextBlock Text="Sign in required"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <TextBlock Text="Please log in via Settings to download updates."
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Download progress -->
+                        <StackPanel IsVisible="{Binding IsDownloading}" Spacing="8">
+                            <ProgressBar Minimum="0" Maximum="100" Value="{Binding DownloadProgress}"
+                                         Height="6"
+                                         Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                         Foreground="{DynamicResource ThemePrimaryBrush}"
+                                         CornerRadius="3"/>
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       HorizontalAlignment="Right"/>
+                        </StackPanel>
+
+                        <!-- Status message (when not downloading) -->
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   FontSize="{DynamicResource ThemeFontSizeSm}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding !IsDownloading}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Footer -->
+                <Border Padding="24,0,24,20">
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                        <!-- Not Now -->
+                        <Button Content="Not Now"
+                                Command="{Binding CloseModalCommand}"
+                                Background="Transparent"
+                                Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                BorderThickness="0"
+                                Padding="16,8"
+                                FontSize="{DynamicResource ThemeFontSizeSm}"
+                                Cursor="Hand"
+                                IsVisible="{Binding !IsDownloading}">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+                                </Style>
+                            </Button.Styles>
+                        </Button>
+
+                        <!-- Download & Install -->
+                        <Button Command="{Binding DownloadAndInstallCommand}"
+                                IsEnabled="{Binding !IsDownloading}"
+                                Background="{DynamicResource ThemePrimaryBrush}"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                Padding="16,8"
+                                CornerRadius="6"
+                                FontSize="{DynamicResource ThemeFontSizeSm}"
+                                FontWeight="SemiBold"
+                                Cursor="Hand"
+                                IsVisible="{Binding !UpdateReady}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Download &amp; Install"
+                                           IsVisible="{Binding !IsDownloading}"/>
+                                <TextBlock Text="Downloading..."
+                                           IsVisible="{Binding IsDownloading}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>
