@@ -225,7 +225,9 @@ pub struct AdvanceCursorRequest {
     pub workspace_id: String,
     pub device_id: String,
     pub entity_id: String,
+    #[serde(rename = "cursor_end")]
     pub cursor_position: i64,
+    #[serde(rename = "s3_key")]
     pub batch_key: String,
     pub size_bytes: u64,
     pub event_count: u32,
