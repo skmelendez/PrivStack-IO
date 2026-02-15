@@ -255,7 +255,7 @@ public partial class SettingsViewModel : ViewModelBase
         ThemeEditor.EditorClosed += OnThemeEditorClosed;
         Connections = new ConnectionsViewModel(connectionService, gitHubDeviceFlowService);
         CloudSync = new CloudSyncSettingsViewModel(cloudSyncService, workspaceService,
-            oauthLoginService, apiClient, settingsService, passwordCache);
+            oauthLoginService, apiClient, settingsService, passwordCache, dialogService);
 
         LoadPluginItems();
         LoadSettings();

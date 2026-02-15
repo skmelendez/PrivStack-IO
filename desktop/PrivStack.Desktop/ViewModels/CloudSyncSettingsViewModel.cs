@@ -7,6 +7,7 @@ using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.EmergencyKit;
 using Serilog;
 
 namespace PrivStack.Desktop.ViewModels;
@@ -26,6 +27,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     private readonly PrivStackApiClient _apiClient;
     private readonly IAppSettingsService _appSettings;
     private readonly IMasterPasswordCache _passwordCache;
+    private readonly IDialogService _dialogService;
     private CancellationTokenSource? _oauthCts;
 
     public CloudSyncSettingsViewModel(
@@ -34,7 +36,8 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         OAuthLoginService oauthService,
         PrivStackApiClient apiClient,
         IAppSettingsService appSettings,
-        IMasterPasswordCache passwordCache)
+        IMasterPasswordCache passwordCache,
+        IDialogService dialogService)
     {
         _cloudSync = cloudSync;
         _workspaceService = workspaceService;
@@ -42,6 +45,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         _apiClient = apiClient;
         _appSettings = appSettings;
         _passwordCache = passwordCache;
+        _dialogService = dialogService;
 
         LoadState();
     }
@@ -125,7 +129,24 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     public ObservableCollection<CloudDeviceInfo> Devices { get; } = [];
 
     // ========================================
-    // Recovery State
+    // Recovery Kit State (shown after first enable)
+    // ========================================
+
+    /// <summary>
+    /// True when the recovery kit is being shown after first-time keypair creation.
+    /// User must save the PDF before syncing starts.
+    /// </summary>
+    [ObservableProperty]
+    private bool _showRecoveryKit;
+
+    [ObservableProperty]
+    private string[] _recoveryWords = [];
+
+    [ObservableProperty]
+    private bool _hasDownloadedRecoveryKit;
+
+    // ========================================
+    // Recovery Form State (manual recovery entry)
     // ========================================
 
     [ObservableProperty]
@@ -270,19 +291,18 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
                     return;
                 }
 
-                await Task.Run(() => _cloudSync.SetupPassphrase(vaultPassword));
-                Log.Information("Cloud encryption keypair created automatically");
+                var mnemonic = await Task.Run(() => _cloudSync.SetupPassphrase(vaultPassword));
+                RecoveryWords = mnemonic.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                ShowRecoveryKit = true;
+                HasDownloadedRecoveryKit = false;
+                Log.Information("Cloud encryption keypair created — showing recovery kit");
+
+                // Don't start sync yet — user must save recovery kit first
+                return;
             }
 
-            // 3. Start syncing
-            await Task.Run(() => _cloudSync.StartSync(workspace.Id));
-
-            IsSyncing = true;
-            OnPropertyChanged(nameof(ShowEnableForWorkspace));
-            OnPropertyChanged(nameof(IsWorkspaceCloudEnabled));
-            await RefreshStatusAsync();
-
-            Log.Information("Cloud sync enabled for workspace {WorkspaceId}", workspace.Id);
+            // 3. Start syncing (keypair already exists from prior setup)
+            await StartSyncForWorkspace(workspace);
         }
         catch (Exception ex)
         {
@@ -292,6 +312,55 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         finally
         {
             IsEnabling = false;
+        }
+    }
+
+    /// <summary>
+    /// Called after user saves the recovery kit PDF. Starts sync for the workspace.
+    /// </summary>
+    [RelayCommand]
+    private async Task AcknowledgeRecoveryKitAsync()
+    {
+        ShowRecoveryKit = false;
+        RecoveryWords = [];
+
+        try
+        {
+            var workspace = _workspaceService.GetActiveWorkspace();
+            if (workspace == null) return;
+
+            await StartSyncForWorkspace(workspace);
+        }
+        catch (Exception ex)
+        {
+            AuthError = $"Failed to start sync: {ex.Message}";
+            Log.Error(ex, "Failed to start sync after recovery kit acknowledgment");
+        }
+    }
+
+    [RelayCommand]
+    private async Task SaveRecoveryKitPdfAsync()
+    {
+        if (RecoveryWords.Length == 0) return;
+
+        try
+        {
+            var path = await _dialogService.ShowSaveFileDialogAsync(
+                "Save Cloud Workspace Recovery Kit",
+                $"PrivStack-Cloud-Recovery-Kit-{DateTime.Now:yyyy-MM-dd}",
+                [("PDF", "pdf")]);
+
+            if (path == null) return;
+
+            var workspaceName = _workspaceService.GetActiveWorkspace()?.Name ?? "PrivStack";
+            CloudRecoveryKitPdfService.Generate(RecoveryWords, workspaceName, path);
+            HasDownloadedRecoveryKit = true;
+            Log.Information("Cloud workspace recovery kit PDF saved");
+        }
+        catch (Exception ex)
+        {
+            AuthError = $"Failed to save PDF: {ex.Message}";
+            Log.Error(ex, "Failed to save cloud recovery kit PDF");
         }
     }
 
@@ -369,7 +438,7 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     }
 
     // ========================================
-    // Recovery Commands
+    // Recovery Commands (manual mnemonic entry)
     // ========================================
 
     [RelayCommand]
@@ -415,6 +484,16 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     // ========================================
     // Helpers
     // ========================================
+
+    private async Task StartSyncForWorkspace(Workspace workspace)
+    {
+        await Task.Run(() => _cloudSync.StartSync(workspace.Id));
+        IsSyncing = true;
+        OnPropertyChanged(nameof(ShowEnableForWorkspace));
+        OnPropertyChanged(nameof(IsWorkspaceCloudEnabled));
+        await RefreshStatusAsync();
+        Log.Information("Cloud sync enabled for workspace {WorkspaceId}", workspace.Id);
+    }
 
     private void LoadState()
     {
