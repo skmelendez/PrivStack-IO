@@ -420,6 +420,91 @@ internal static partial class NativeLibrary
     public static partial nint CloudProviderName(CloudProvider provider);
 
     // ============================================================
+    // Cloud Sync (S3-backed — privstack_cloudsync_* prefix)
+    // ============================================================
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_configure", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncConfigure(string configJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_authenticate", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncAuthenticate(string email, string password, out nint outJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_authenticate_with_tokens", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncAuthenticateWithTokens(string accessToken, string refreshToken, long userId);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_logout")]
+    public static partial PrivStackError CloudSyncLogout();
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_is_authenticated")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static partial bool CloudSyncIsAuthenticated();
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_setup_passphrase", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncSetupPassphrase(string passphrase, out nint outMnemonic);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_enter_passphrase", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncEnterPassphrase(string passphrase);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_recover_from_mnemonic", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncRecoverFromMnemonic(string mnemonic);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_has_keypair")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static partial bool CloudSyncHasKeypair();
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_register_workspace", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncRegisterWorkspace(string workspaceId, string name, out nint outJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_list_workspaces")]
+    public static partial PrivStackError CloudSyncListWorkspaces(out nint outJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_delete_workspace", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncDeleteWorkspace(string workspaceId);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_start_sync", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncStartSync(string workspaceId);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_stop_sync")]
+    public static partial PrivStackError CloudSyncStopSync();
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_is_syncing")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static partial bool CloudSyncIsSyncing();
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_get_status")]
+    public static partial PrivStackError CloudSyncGetStatus(out nint outJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_force_flush")]
+    public static partial PrivStackError CloudSyncForceFlush();
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_get_quota", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncGetQuota(string workspaceId, out nint outJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_share_entity", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncShareEntity(
+        string entityId, string entityType, string? entityName,
+        string workspaceId, string recipientEmail, string permission,
+        out nint outJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_revoke_share", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncRevokeShare(string entityId, string recipientEmail);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_accept_share", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncAcceptShare(string invitationToken);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_list_entity_shares", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncListEntityShares(string entityId, out nint outJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_get_shared_with_me")]
+    public static partial PrivStackError CloudSyncGetSharedWithMe(out nint outJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_register_device", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError CloudSyncRegisterDevice(string name, string platform);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_cloudsync_list_devices")]
+    public static partial PrivStackError CloudSyncListDevices(out nint outJson);
+
+    // ============================================================
     // License Functions
     // ============================================================
 

@@ -31,6 +31,7 @@ public static class ServiceRegistration
         services.AddSingleton<IPairingService>(sp => sp.GetRequiredService<PrivStackService>());
         services.AddSingleton<ICloudStorageService>(sp => sp.GetRequiredService<PrivStackService>());
         services.AddSingleton<ILicensingService>(sp => sp.GetRequiredService<PrivStackService>());
+        services.AddSingleton<ICloudSyncService, CloudSyncService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
         services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<ISensitiveLockService, SensitiveLockService>();
