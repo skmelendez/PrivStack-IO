@@ -24,6 +24,7 @@ public enum SetupStep
     DataDirectory,
     License,
     Password,
+    EmergencyKit,
     Complete
 }
 
@@ -50,6 +51,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsWorkspaceStep))]
     [NotifyPropertyChangedFor(nameof(IsLicenseStep))]
     [NotifyPropertyChangedFor(nameof(IsPasswordStep))]
+    [NotifyPropertyChangedFor(nameof(IsEmergencyKitStep))]
     [NotifyPropertyChangedFor(nameof(IsCompleteStep))]
     [NotifyPropertyChangedFor(nameof(CanGoBack))]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
@@ -64,6 +66,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     public bool IsWorkspaceStep => CurrentStep == SetupStep.Workspace;
     public bool IsLicenseStep => CurrentStep == SetupStep.License;
     public bool IsPasswordStep => CurrentStep == SetupStep.Password;
+    public bool IsEmergencyKitStep => CurrentStep == SetupStep.EmergencyKit;
     public bool IsCompleteStep => CurrentStep == SetupStep.Complete;
 
     // Workspace + Profile step (merged)
@@ -254,7 +257,9 @@ public partial class SetupWizardViewModel : ViewModelBase
     }
 
     // Navigation
-    public bool CanGoBack => CurrentStep != SetupStep.Welcome && CurrentStep != SetupStep.Complete;
+    public bool CanGoBack => CurrentStep != SetupStep.Welcome
+                          && CurrentStep != SetupStep.Complete
+                          && CurrentStep != SetupStep.EmergencyKit;
 
     public bool CanGoNext => CurrentStep switch
     {
@@ -266,13 +271,15 @@ public partial class SetupWizardViewModel : ViewModelBase
         SetupStep.Password => IsExistingData
             ? !string.IsNullOrWhiteSpace(MasterPassword)
             : !string.IsNullOrWhiteSpace(MasterPassword) && MasterPassword.Length >= 8 && PasswordsMatch,
+        SetupStep.EmergencyKit => HasDownloadedKit,
         SetupStep.Complete => true,
         _ => false
     };
 
     public string NextButtonText => CurrentStep switch
     {
-        SetupStep.Password => "Complete Setup",
+        SetupStep.Password => IsExistingData ? "Complete Setup" : "Next",
+        SetupStep.EmergencyKit => "Complete Setup",
         SetupStep.Complete => "Get Started",
         _ => "Next"
     };
@@ -284,11 +291,12 @@ public partial class SetupWizardViewModel : ViewModelBase
         SetupStep.DataDirectory => 3,
         SetupStep.License => 4,
         SetupStep.Password => 5,
-        SetupStep.Complete => 6,
+        SetupStep.EmergencyKit => 6,
+        SetupStep.Complete => 7,
         _ => 0
     };
 
-    public int TotalSteps => 6;
+    public int TotalSteps => 7;
 
     public double ProgressWidth => (StepNumber / (double)TotalSteps) * 160;
 
@@ -370,6 +378,7 @@ public partial class SetupWizardViewModel : ViewModelBase
             SetupStep.DataDirectory => InitializeServiceAndContinue(),
             SetupStep.License => SetupStep.Password,
             SetupStep.Password => CompleteSetup(),
+            SetupStep.EmergencyKit => CompleteEmergencyKitStep(),
             SetupStep.Complete => FinishSetup(),
             _ => CurrentStep
         };
@@ -1008,6 +1017,13 @@ public partial class SetupWizardViewModel : ViewModelBase
             App.Services.GetService<IMasterPasswordCache>()?.Set(MasterPassword);
 
             SavePreferences();
+
+            // For new installs, set up recovery before completing
+            if (!IsExistingData)
+            {
+                SetupRecoveryMnemonic();
+                return SetupStep.EmergencyKit;
+            }
 
             return SetupStep.Complete;
         }

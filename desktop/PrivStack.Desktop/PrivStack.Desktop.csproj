@@ -15,7 +15,7 @@
     <CFBundleDisplayName>PrivStack</CFBundleDisplayName>
     <AssemblyTitle>PrivStack</AssemblyTitle>
     <Product>PrivStack</Product>
-    <Version>1.25.4</Version>
+    <Version>1.26.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -91,6 +91,8 @@
     <PackageReference Include="Microsoft.Msagl.Drawing" Version="1.1.6" />
     <!-- LiveCharts2 for budget reports and visualizations -->
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5.4" />
+    <!-- Emergency Kit PDF generation -->
+    <PackageReference Include="QuestPDF" Version="2024.12.2" />
   </ItemGroup>
 
   <!-- Whisper runtime - use CPU runtime on all platforms for reliability -->

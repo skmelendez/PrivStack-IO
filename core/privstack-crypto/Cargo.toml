@@ -22,5 +22,8 @@ base64 = "0.22"
 crypto_box = "0.9"
 bip39 = { version = "2", default-features = false }
 
+# Timestamps
+chrono = "0.4"
+
 [dev-dependencies]
 proptest.workspace = true

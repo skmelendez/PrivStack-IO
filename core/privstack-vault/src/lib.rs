@@ -19,6 +19,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
 
+mod recovery;
+
 // ============================================================================
 // Error types
 // ============================================================================
@@ -43,6 +45,10 @@ pub enum VaultError {
     Storage(String),
     #[error("crypto error: {0}")]
     Crypto(String),
+    #[error("recovery not configured")]
+    RecoveryNotConfigured,
+    #[error("invalid recovery mnemonic")]
+    InvalidRecoveryMnemonic,
 }
 
 pub type VaultResult<T> = Result<T, VaultError>;
@@ -508,7 +514,7 @@ impl VaultManager {
     }
 
     /// Execute a closure with a vault reference.
-    fn with_vault<F, T>(&self, vault_id: &str, f: F) -> VaultResult<T>
+    pub(crate) fn with_vault<F, T>(&self, vault_id: &str, f: F) -> VaultResult<T>
     where
         F: FnOnce(&Vault) -> VaultResult<T>,
     {

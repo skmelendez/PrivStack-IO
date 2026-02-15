@@ -662,7 +662,65 @@
                 </StackPanel>
 
                 <!-- ============================================================ -->
-                <!-- Step 5: Complete                                             -->
+                <!-- Step 5b: Emergency Kit                                       -->
+                <!-- ============================================================ -->
+                <StackPanel IsVisible="{Binding IsEmergencyKitStep}" Spacing="12">
+                    <TextBlock Text="Emergency Kit" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
+                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                    <TextBlock Text="Your recovery key has been generated. Download your Emergency Kit PDF and store it in a safe place. You will need these words to recover your account if you forget your password."
+                               Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeSm}" TextWrapping="Wrap"/>
+
+                    <!-- Warning -->
+                    <Border Background="{DynamicResource ThemeWarningMutedBrush}" CornerRadius="8" Padding="12">
+                        <TextBlock Text="Anyone with these 12 words can access your encrypted data. Keep this document secure and do not share it."
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                    </Border>
+
+                    <!-- Recovery words grid -->
+                    <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="8" Padding="16" Margin="0,4">
+                        <ItemsControl ItemsSource="{Binding RecoveryWords}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Border Background="{DynamicResource ThemeSurfaceBrush}" CornerRadius="6"
+                                            Padding="12,8" Margin="4">
+                                        <TextBlock Text="{Binding}" FontSize="{DynamicResource ThemeFontSizeMd}"
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
+                    <!-- Download button -->
+                    <Button Command="{Binding DownloadEmergencyKitCommand}"
+                            IsEnabled="{Binding !IsDownloadingKit}"
+                            Background="{DynamicResource ThemePrimaryBrush}"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                            Padding="16,10" CornerRadius="8"
+                            HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="Download Emergency Kit PDF" FontWeight="Medium"
+                                       IsVisible="{Binding !IsDownloadingKit}"/>
+                            <TextBlock Text="Saving..." FontWeight="Medium"
+                                       IsVisible="{Binding IsDownloadingKit}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Downloaded confirmation -->
+                    <TextBlock Text="Emergency Kit saved. You can now continue."
+                               IsVisible="{Binding HasDownloadedKit}"
+                               Foreground="{DynamicResource ThemeSuccessBrush}"
+                               FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                </StackPanel>
+
+                <!-- ============================================================ -->
+                <!-- Step 6: Complete                                              -->
                 <!-- ============================================================ -->
                 <StackPanel IsVisible="{Binding IsCompleteStep}" Spacing="12" HorizontalAlignment="Center">
                     <Border Width="64" Height="64" Background="{DynamicResource ThemeSuccessBrush}" CornerRadius="32" Margin="0,12,0,0">
