@@ -218,6 +218,9 @@ impl SyncOrchestrator {
                 Ok(Err(e)) => {
                     warn!("[SYNC] Failed to pre-load entities from store: {}", e);
                 }
+                Err(e) if e.is_cancelled() => {
+                    debug!("[SYNC] Entity pre-load cancelled (shutdown in progress)");
+                }
                 Err(e) => {
                     warn!("[SYNC] spawn_blocking panicked loading entity IDs: {}", e);
                 }
@@ -311,13 +314,21 @@ impl SyncOrchestrator {
         // entity row is created before the event is emitted, but the sync
         // engine must be self-contained so it works in standalone / test
         // scenarios as well.
-        let peer_id = self.engine.peer_id();
-        let es = self.entity_store.clone();
-        let ev = event.clone();
-        let _ = tokio::task::spawn_blocking(move || {
-            let applicator = crate::applicator::EventApplicator::new(peer_id);
-            applicator.apply_event(&ev, &es, None, None)
-        }).await;
+        //
+        // Skip EntityDeleted: apply_entity_deleted hard-deletes the row from
+        // the entities table, which would cause entities_needing_sync() to miss
+        // the entity entirely — preventing the delete event from syncing to
+        // other peers. The entity row must remain so the sync ledger can track
+        // it. The remote peer's applicator handles the actual deletion.
+        if !matches!(event.payload, privstack_types::EventPayload::EntityDeleted { .. }) {
+            let peer_id = self.engine.peer_id();
+            let es = self.entity_store.clone();
+            let ev = event.clone();
+            let _ = tokio::task::spawn_blocking(move || {
+                let applicator = crate::applicator::EventApplicator::new(peer_id);
+                applicator.apply_event(&ev, &es, None, None)
+            }).await;
+        }
 
         // Invalidate the sync ledger for this entity so every peer re-checks it.
         // This handles the race where periodic_sync already marked the entity as
