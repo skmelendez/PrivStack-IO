@@ -101,7 +101,7 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
     [ObservableProperty]
     private SyncTier _selectedSyncTier = SyncTier.LocalOnly;
 
-    public bool IsCloudSyncAvailable => _cloudSync.IsAuthenticated && _cloudSync.HasKeypair;
+    public bool IsCloudSyncAvailable => _cloudSync.IsAuthenticated;
 
     public string DataDirectoryDisplay => SelectedDirectoryType switch
     {
