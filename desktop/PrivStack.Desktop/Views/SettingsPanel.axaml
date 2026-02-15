@@ -888,6 +888,115 @@
 
                     <Separator Background="{DynamicResource ThemeBorderBrush}" Margin="0,4"/>
 
+                    <!-- Emergency Kit -->
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Emergency Kit" FontWeight="Medium"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                        <TextBlock Text="Your Emergency Kit lets you recover your account if you forget your master password."
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   TextWrapping="Wrap"/>
+
+                        <!-- Status -->
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Width="8" Height="8" CornerRadius="4"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource ThemeSuccessBrush}"
+                                    IsVisible="{Binding HasEmergencyKit}"/>
+                            <Border Width="8" Height="8" CornerRadius="4"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource ThemeWarningBrush}"
+                                    IsVisible="{Binding !HasEmergencyKit}"/>
+                            <TextBlock Text="Configured"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                       IsVisible="{Binding HasEmergencyKit}"/>
+                            <TextBlock Text="Not configured"
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                       IsVisible="{Binding !HasEmergencyKit}"/>
+                        </StackPanel>
+
+                        <!-- Regenerate button -->
+                        <Button Command="{Binding RegenerateEmergencyKitCommand}"
+                                IsEnabled="{Binding !IsRegeneratingKit}"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                Padding="12,8"
+                                CornerRadius="6"
+                                HorizontalAlignment="Left"
+                                IsVisible="{Binding HasEmergencyKit}">
+                            <TextBlock Text="Regenerate Emergency Kit" FontWeight="Medium"/>
+                        </Button>
+                        <Button Command="{Binding RegenerateEmergencyKitCommand}"
+                                IsEnabled="{Binding !IsRegeneratingKit}"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                Padding="12,8"
+                                CornerRadius="6"
+                                HorizontalAlignment="Left"
+                                IsVisible="{Binding !HasEmergencyKit}">
+                            <TextBlock Text="Generate Emergency Kit" FontWeight="Medium"/>
+                        </Button>
+
+                        <!-- Regenerated words display -->
+                        <StackPanel Spacing="8" IsVisible="{Binding ShowRegeneratedWords}">
+                            <Border Background="{DynamicResource ThemeWarningMutedBrush}"
+                                    CornerRadius="6" Padding="12,8">
+                                <TextBlock Text="Write these words down or download the PDF. You will not be able to see them again."
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           TextWrapping="Wrap" FontWeight="Medium"/>
+                            </Border>
+
+                            <ItemsControl ItemsSource="{Binding RegeneratedWords}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                                CornerRadius="4" Padding="8,4" Margin="0,0,6,6">
+                                            <TextBlock Text="{Binding}"
+                                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                       FontFamily="Consolas, Menlo, monospace"
+                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Download PDF button -->
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Command="{Binding DownloadRegeneratedKitCommand}"
+                                        Background="{DynamicResource ThemePrimaryBrush}"
+                                        Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                        Padding="12,8"
+                                        CornerRadius="6"
+                                        HorizontalAlignment="Left">
+                                    <TextBlock Text="Download PDF" FontWeight="Medium"/>
+                                </Button>
+                                <TextBlock Text="Downloaded"
+                                           IsVisible="{Binding HasDownloadedRegeneratedKit}"
+                                           Foreground="{DynamicResource ThemeSuccessBrush}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Error display -->
+                        <TextBlock Text="{Binding EmergencyKitError}"
+                                   IsVisible="{Binding EmergencyKitError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Foreground="{DynamicResource ThemeDangerBrush}"
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <Separator Background="{DynamicResource ThemeBorderBrush}" Margin="0,4"/>
+
                     <!-- Logout / Lock App -->
                     <StackPanel Spacing="6">
                         <Button Command="{Binding LogoutCommand}"

@@ -1305,6 +1305,9 @@ public partial class SettingsViewModel : ViewModelBase
         // Audio input device
         AudioRecorderService.Instance.SelectedDeviceId = settings.AudioInputDevice;
         RefreshAudioDevices();
+
+        // Emergency Kit status
+        LoadEmergencyKitStatus();
     }
 
     partial void OnUserDisplayNameChanged(string value)

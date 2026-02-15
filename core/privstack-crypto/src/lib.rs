@@ -27,6 +27,7 @@ pub mod encryptor;
 pub mod envelope;
 mod error;
 mod key;
+pub mod recovery;
 
 pub use cipher::{
     decrypt, decrypt_string, encrypt, encrypt_string, EncryptedData, NONCE_SIZE, TAG_SIZE,
@@ -43,3 +44,4 @@ pub use envelope::{
 };
 pub use error::{CryptoError, CryptoResult};
 pub use key::{derive_key, generate_random_key, DerivedKey, KdfParams, Salt, KEY_SIZE, SALT_SIZE};
+pub use recovery::{create_recovery_blob, open_recovery_blob, reencrypt_recovery_blob, RecoveryBlob};
