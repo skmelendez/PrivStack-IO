@@ -1190,13 +1190,20 @@ async fn personal_policy_on_event_send() {
     let policy = PersonalSyncPolicy::new();
     let peer = PeerId::new();
     let entity = EntityId::new();
+    let other_entity = EntityId::new();
     let events = vec![Event::new(entity, peer, privstack_types::HybridTimestamp::now(), privstack_types::EventPayload::EntityDeleted { entity_type: "test".into() })];
 
-    // Not shared -> empty
+    // No selective sharing configured -> allows all (map empty = no filtering)
+    let result = policy.on_event_send(&peer, &entity, &events).await.unwrap();
+    assert_eq!(result.len(), 1);
+
+    // Share a different entity to activate selective sharing,
+    // then verify the unshared entity is blocked
+    policy.share(other_entity, peer).await;
     let result = policy.on_event_send(&peer, &entity, &events).await.unwrap();
     assert!(result.is_empty());
 
-    // Shared -> returns events
+    // Now share the target entity -> returns events
     policy.share(entity, peer).await;
     let result = policy.on_event_send(&peer, &entity, &events).await.unwrap();
     assert_eq!(result.len(), 1);
