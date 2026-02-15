@@ -558,10 +558,50 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
                 RestoreSavedSession();
             }
             IsAuthenticated = _cloudSync.IsAuthenticated;
+
+            // Auto-start sync if authenticated and workspace has cloud enabled
+            if (IsAuthenticated)
+            {
+                _ = AutoStartSyncAsync();
+            }
         }
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed to load cloud sync state");
+        }
+    }
+
+    private async Task AutoStartSyncAsync()
+    {
+        try
+        {
+            var workspace = _workspaceService.GetActiveWorkspace();
+            if (workspace?.CloudWorkspaceId == null
+                || workspace.SyncTier != SyncTier.PrivStackCloud)
+                return;
+
+            if (_cloudSync.IsSyncing) return;
+
+            // Unlock keypair with cached password if needed
+            if (!_cloudSync.HasKeypair)
+            {
+                var password = _passwordCache.Get();
+                if (!string.IsNullOrEmpty(password))
+                {
+                    try { _cloudSync.EnterPassphrase(password); }
+                    catch (Exception ex)
+                    {
+                        Log.Debug(ex, "Auto-unlock keypair failed — user will need to enter passphrase");
+                    }
+                }
+            }
+
+            await StartSyncForWorkspace(workspace);
+            Log.Information("Cloud sync auto-started on app launch for workspace {WorkspaceId}", workspace.Id);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to auto-start cloud sync");
         }
     }
 
