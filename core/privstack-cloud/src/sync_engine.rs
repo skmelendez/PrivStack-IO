@@ -11,13 +11,15 @@
 use crate::api_client::CloudApiClient;
 use crate::compaction::batch_s3_key;
 use crate::credential_manager::CredentialManager;
+use crate::dek_registry::DekRegistry;
 use crate::error::{CloudError, CloudResult};
 use crate::outbox::Outbox;
 use crate::s3_transport::S3Transport;
 use crate::types::*;
 
-
+use privstack_crypto::{decrypt, encrypt, EncryptedData};
 use privstack_types::Event;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -28,6 +30,7 @@ pub struct CloudSyncEngine {
     api: Arc<CloudApiClient>,
     transport: Arc<S3Transport>,
     cred_manager: Arc<CredentialManager>,
+    dek_registry: DekRegistry,
     outbox: Outbox,
     command_rx: mpsc::Receiver<CloudCommand>,
     event_tx: mpsc::Sender<Event>,
@@ -35,7 +38,8 @@ pub struct CloudSyncEngine {
     workspace_id: String,
     device_id: String,
     poll_interval: Duration,
-    cursor_position: i64,
+    /// Per-entity cursor positions for this device.
+    cursors: HashMap<String, i64>,
 }
 
 /// Handle for sending commands to the sync engine.
@@ -83,6 +87,7 @@ pub fn create_cloud_sync_engine(
     api: Arc<CloudApiClient>,
     transport: Arc<S3Transport>,
     cred_manager: Arc<CredentialManager>,
+    dek_registry: DekRegistry,
     event_tx: mpsc::Sender<Event>,
     user_id: i64,
     workspace_id: String,
@@ -97,6 +102,7 @@ pub fn create_cloud_sync_engine(
         api,
         transport,
         cred_manager,
+        dek_registry,
         outbox: Outbox::new(),
         command_rx,
         event_tx,
@@ -104,7 +110,7 @@ pub fn create_cloud_sync_engine(
         workspace_id,
         device_id,
         poll_interval,
-        cursor_position: 0,
+        cursors: HashMap::new(),
     };
 
     (handle, engine)
@@ -153,7 +159,6 @@ impl CloudSyncEngine {
                     match cmd {
                         Some(CloudCommand::Stop) => {
                             info!("cloud sync engine stopping");
-                            // Flush remaining events before stopping
                             if !self.outbox.is_empty() {
                                 let _ = self.flush_outbox().await;
                             }
@@ -167,8 +172,6 @@ impl CloudSyncEngine {
                             }
                         }
                         Some(CloudCommand::ShareEntity { .. }) => {
-                            // Sharing is handled by the ShareManager + EnvelopeManager
-                            // The sync engine just acknowledges the command
                             debug!("share entity command received — delegating to share manager");
                         }
                         None => {
@@ -188,51 +191,66 @@ impl CloudSyncEngine {
         self.outbox.push(event);
     }
 
-    /// Flushes pending events as an encrypted batch to S3.
+    /// Flushes pending events as encrypted per-entity batches to S3.
     async fn flush_outbox(&mut self) -> CloudResult<()> {
         let events = self.outbox.take_pending();
         if events.is_empty() {
             return Ok(());
         }
 
-        let event_count = events.len();
-        let serialized = serde_json::to_vec(&events)?;
-        let cursor_end = self.cursor_position + event_count as i64;
-
-        // TODO: encrypt with entity DEK (requires entity DEK management)
-        // For now, serialize as-is. Real implementation will encrypt per-entity.
-        let s3_key = batch_s3_key(
-            self.user_id,
-            &self.workspace_id,
-            "mixed", // TODO: group by entity_id
-            self.cursor_position,
-            cursor_end,
-        );
+        // Group events by entity_id
+        let mut by_entity: HashMap<String, Vec<Event>> = HashMap::new();
+        for event in events {
+            let entity_id = event.entity_id.to_string();
+            by_entity.entry(entity_id).or_default().push(event);
+        }
 
         let creds = self.cred_manager.get_credentials().await?;
-        self.transport
-            .upload(&creds, &s3_key, serialized.clone())
-            .await?;
 
-        // Notify API
-        self.api
-            .advance_cursor(&AdvanceCursorRequest {
-                workspace_id: self.workspace_id.clone(),
-                device_id: self.device_id.clone(),
-                entity_id: "mixed".to_string(), // TODO: per-entity cursors
-                cursor_position: cursor_end,
-                batch_key: s3_key,
-                size_bytes: serialized.len() as u64,
-                event_count: event_count as u32,
-            })
-            .await?;
+        for (entity_id, entity_events) in by_entity {
+            let event_count = entity_events.len();
+            let cursor_start = self.cursors.get(&entity_id).copied().unwrap_or(0);
+            let cursor_end = cursor_start + event_count as i64;
 
-        self.cursor_position = cursor_end;
-        debug!("flushed {event_count} events to S3 (cursor -> {cursor_end})");
+            // Serialize and encrypt with entity DEK
+            let serialized = serde_json::to_vec(&entity_events)?;
+            let dek = self.dek_registry.get(&entity_id).await?;
+            let encrypted = encrypt(&dek, &serialized)
+                .map_err(|e| CloudError::Envelope(format!("batch encryption failed: {e}")))?;
+            let encrypted_bytes = serde_json::to_vec(&encrypted)?;
+
+            let s3_key = batch_s3_key(
+                self.user_id,
+                &self.workspace_id,
+                &entity_id,
+                cursor_start,
+                cursor_end,
+            );
+
+            self.transport
+                .upload(&creds, &s3_key, encrypted_bytes.clone())
+                .await?;
+
+            self.api
+                .advance_cursor(&AdvanceCursorRequest {
+                    workspace_id: self.workspace_id.clone(),
+                    device_id: self.device_id.clone(),
+                    entity_id: entity_id.clone(),
+                    cursor_position: cursor_end,
+                    batch_key: s3_key,
+                    size_bytes: encrypted_bytes.len() as u64,
+                    event_count: event_count as u32,
+                })
+                .await?;
+
+            self.cursors.insert(entity_id.clone(), cursor_end);
+            debug!("flushed {event_count} events for entity {entity_id} (cursor -> {cursor_end})");
+        }
+
         Ok(())
     }
 
-    /// Polls for new data from other devices and applies it.
+    /// Polls for new data from other devices, decrypts, and applies it.
     async fn poll_and_apply(&mut self) -> CloudResult<()> {
         let pending = self
             .api
@@ -244,6 +262,14 @@ impl CloudSyncEngine {
         }
 
         for entity in &pending.entities {
+            let dek = match self.dek_registry.get(&entity.entity_id).await {
+                Ok(dek) => dek,
+                Err(e) => {
+                    warn!("skipping entity {} (no DEK available): {e}", entity.entity_id);
+                    continue;
+                }
+            };
+
             debug!(
                 "entity {} has {} new batches (cursor {} -> {})",
                 entity.entity_id,
@@ -256,8 +282,24 @@ impl CloudSyncEngine {
                 let creds = self.cred_manager.get_credentials().await?;
                 let data = self.transport.download(&creds, &batch.s3_key).await?;
 
-                // TODO: decrypt with entity DEK
-                match serde_json::from_slice::<Vec<Event>>(&data) {
+                // Deserialize encrypted envelope and decrypt with entity DEK
+                let encrypted: EncryptedData = match serde_json::from_slice(&data) {
+                    Ok(enc) => enc,
+                    Err(e) => {
+                        warn!("failed to deserialize encrypted batch {}: {e}", batch.s3_key);
+                        continue;
+                    }
+                };
+
+                let plaintext = match decrypt(&dek, &encrypted) {
+                    Ok(pt) => pt,
+                    Err(e) => {
+                        warn!("failed to decrypt batch {}: {e}", batch.s3_key);
+                        continue;
+                    }
+                };
+
+                match serde_json::from_slice::<Vec<Event>>(&plaintext) {
                     Ok(events) => {
                         for event in events {
                             if let Err(e) = self.event_tx.send(event).await {

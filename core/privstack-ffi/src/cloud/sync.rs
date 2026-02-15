@@ -72,12 +72,19 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
         cred_manager.clone(),
     ));
 
+    let dek_registry = match handle.cloud_dek_registry.as_ref() {
+        Some(r) => r.clone(),
+        None => return PrivStackError::NotInitialized,
+    };
+
+    let active_ws_id = ws_id.clone();
     let (event_tx, _event_rx) = tokio::sync::mpsc::channel(256);
 
     let (sync_handle, mut engine) = sync_engine::create_cloud_sync_engine(
         api,
         transport,
         cred_manager,
+        dek_registry,
         event_tx,
         user_id,
         ws_id,
@@ -92,6 +99,7 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
     handle.cloud_sync_handle = Some(sync_handle);
     handle.cloud_blob_mgr = Some(blob_mgr);
     handle.cloud_user_id = Some(user_id);
+    handle.cloud_active_workspace = Some(active_ws_id);
     PrivStackError::Ok
 }
 
@@ -111,6 +119,7 @@ pub extern "C" fn privstack_cloudsync_stop_sync() -> PrivStackError {
 
     handle.cloud_blob_mgr = None;
     handle.cloud_user_id = None;
+    handle.cloud_active_workspace = None;
 
     match handle.runtime.block_on(sync_handle.stop()) {
         Ok(()) => PrivStackError::Ok,
@@ -157,7 +166,7 @@ pub unsafe extern "C" fn privstack_cloudsync_get_status(
     let status = CloudSyncStatus {
         is_syncing,
         is_authenticated,
-        active_workspace: None, // TODO: track active workspace
+        active_workspace: handle.cloud_active_workspace.clone(),
         pending_upload_count: 0,
         last_sync_at: None,
         connected_devices: 0,

@@ -13,6 +13,7 @@ pub mod blob_sync;
 pub mod compaction;
 pub mod config;
 pub mod credential_manager;
+pub mod dek_registry;
 pub mod envelope;
 pub mod error;
 pub mod outbox;
