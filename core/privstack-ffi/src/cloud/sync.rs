@@ -103,6 +103,7 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
         ws_id,
         handle.peer_id.to_string(),
         Duration::from_secs(config.poll_interval_secs),
+        handle.entity_store.clone(),
     );
 
     handle.runtime.spawn(async move {
