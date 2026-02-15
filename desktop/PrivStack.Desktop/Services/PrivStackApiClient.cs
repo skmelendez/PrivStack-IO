@@ -229,7 +229,7 @@ public sealed class PrivStackApiClient
     {
         try
         {
-            var payload = JsonSerializer.Serialize(new { license_key = licenseKey }, JsonOptions);
+            var payload = JsonSerializer.Serialize(new { key = licenseKey }, JsonOptions);
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/api/license/activate")
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")
