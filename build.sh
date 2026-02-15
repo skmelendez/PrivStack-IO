@@ -36,6 +36,7 @@ CLEAN=false
 REBUILD=false
 WITH_PLUGINS=false
 CLEAN_PLUGINS=false
+PERSIST_TEST_DATA=false
 
 usage() {
     cat <<EOF
@@ -51,7 +52,8 @@ Options:
   --rebuild          Force full rebuild (ignore incremental caches)
   --with-plugins     Incrementally build changed plugins into plugins/ for integrated testing
   --clean-plugins    Remove the plugins/ test directory
-  --test             Run tests after building
+  --test             Run tests after building (starts test containers, tears down after)
+  --persist          Keep test containers and data running after --test for manual audit
   --clean            Wipe all build artifacts before building
   --fresh            Wipe all local databases and settings, start clean
   -h, --help         Show this help
@@ -65,7 +67,8 @@ Examples:
   ./build.sh --skip-core --run     # Rebuild desktop, then launch
   ./build.sh --run --with-plugins  # Incremental build + launch with plugins
   ./build.sh --run --with-plugins --rebuild  # Force full rebuild + launch
-  ./build.sh --test                # Build + run all tests
+  ./build.sh --test                # Build + run all tests (containers auto-teardown)
+  ./build.sh --test --persist      # Build + run tests, keep MinIO/MySQL running for audit
   ./build.sh --clean --run         # Nuke artifacts, rebuild, launch
   ./build.sh --fresh --run         # Nuke DB, rebuild, launch fresh
   ./build.sh --clean-plugins       # Remove plugins/ test directory
@@ -83,6 +86,7 @@ while [ $# -gt 0 ]; do
         --with-plugins)  WITH_PLUGINS=true; shift ;;
         --clean-plugins) CLEAN_PLUGINS=true; shift ;;
         --test)          RUN_TESTS=true; shift ;;
+        --persist)       PERSIST_TEST_DATA=true; shift ;;
         --clean)         CLEAN=true; shift ;;
         --fresh)         FRESH_DB=true; shift ;;
         -h|--help)       usage ;;
@@ -280,11 +284,41 @@ fi
 
 # ── Step 3: Tests ──────────────────────────────────────────────
 if [ "$RUN_TESTS" = true ]; then
+    COMPOSE_FILE="$REPO_ROOT/docker-compose.test.yml"
+    COMPOSE_UP=false
+
+    # Start test containers if compose file exists
+    if [ -f "$COMPOSE_FILE" ]; then
+        echo "==> Starting test containers (MinIO + MySQL)..."
+        docker compose -f "$COMPOSE_FILE" up -d --wait
+        COMPOSE_UP=true
+    fi
+
+    TEST_EXIT=0
+
     echo "==> Running Rust tests..."
-    cargo test --manifest-path "$CORE_DIR/Cargo.toml" $CARGO_PROFILE_FLAG
+    cargo test --manifest-path "$CORE_DIR/Cargo.toml" $CARGO_PROFILE_FLAG || TEST_EXIT=$?
 
     echo "==> Running .NET tests..."
-    dotnet test "$DESKTOP_DIR/PrivStack.sln" -c "$DOTNET_CONFIG" --nologo -v quiet
+    dotnet test "$DESKTOP_DIR/PrivStack.sln" -c "$DOTNET_CONFIG" --nologo -v quiet || TEST_EXIT=$?
+
+    # Teardown unless --persist
+    if [ "$COMPOSE_UP" = true ]; then
+        if [ "$PERSIST_TEST_DATA" = true ]; then
+            echo "==> --persist: leaving test containers running."
+            echo "    MinIO console: http://localhost:9001  (privstack-test / privstack-test-secret)"
+            echo "    MySQL:         localhost:3307          (root / test, db: privstack_test)"
+            echo "    To tear down:  docker compose -f $COMPOSE_FILE down -v"
+        else
+            echo "==> Tearing down test containers..."
+            docker compose -f "$COMPOSE_FILE" down -v
+        fi
+    fi
+
+    if [ "$TEST_EXIT" -ne 0 ]; then
+        echo "==> Tests failed (exit code $TEST_EXIT)."
+        exit "$TEST_EXIT"
+    fi
 fi
 
 # ── Step 4: Run ────────────────────────────────────────────────
