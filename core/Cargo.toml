@@ -14,11 +14,12 @@ members = [
     "privstack-plugin-sdk",
     "privstack-ppk",
     "privstack-datasets",
+    "privstack-cloud",
     "privstack-ffi",
 ]
 
 [workspace.package]
-version = "1.6.8"
+version = "1.7.0"
 edition = "2024"
 license = "Proprietary"
 repository = "https://github.com/PrivStackApp/PrivStack-IO"
