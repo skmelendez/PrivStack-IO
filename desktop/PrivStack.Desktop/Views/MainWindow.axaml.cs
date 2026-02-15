@@ -415,9 +415,9 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (vm.IsUpdatePanelOpen)
+            if (vm.UpdateVM.IsUpdateModalOpen)
             {
-                vm.ToggleUpdatePanelCommand.Execute(null);
+                vm.UpdateVM.CloseModalCommand.Execute(null);
                 e.Handled = true;
                 return;
             }

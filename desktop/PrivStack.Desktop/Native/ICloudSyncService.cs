@@ -38,6 +38,7 @@ public interface ICloudSyncService
     CloudSyncStatus GetStatus();
     void ForceFlush();
     void PushEvent(string entityId, string entityType, string jsonData);
+    uint PushAllEntities();
 
     // ── Sharing ──
     CloudShareInfo ShareEntity(string entityId, string entityType, string? entityName,
