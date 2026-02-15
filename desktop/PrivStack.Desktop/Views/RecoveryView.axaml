@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PrivStack.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="500"
+             x:Class="PrivStack.Desktop.Views.RecoveryView"
+             x:DataType="vm:RecoveryViewModel">
+
+    <Grid Background="{DynamicResource ThemeBorderBrush}">
+        <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                CornerRadius="16"
+                Padding="40,32,40,36"
+                Margin="24"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                MinWidth="420"
+                MaxWidth="520">
+            <StackPanel Spacing="16">
+                <!-- Header -->
+                <StackPanel HorizontalAlignment="Center" Spacing="6">
+                    <TextBlock Text="Account Recovery" FontSize="{DynamicResource ThemeFontSize2Xl}" FontWeight="Bold"
+                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Use your Emergency Kit to reset your password"
+                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                               Foreground="{DynamicResource ThemeTextMutedBrush}" HorizontalAlignment="Center"
+                               IsVisible="{Binding !IsResetting}"/>
+                </StackPanel>
+
+                <!-- Step 1: Enter mnemonic -->
+                <StackPanel Spacing="12" IsVisible="{Binding IsStep1}">
+                    <TextBlock Text="Enter your 12 recovery words" FontSize="{DynamicResource ThemeFontSizeSm}"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                    <TextBox Text="{Binding Mnemonic, Mode=TwoWay}"
+                             Watermark="word1 word2 word3 ... word12"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="80"
+                             Padding="12,8"/>
+
+                    <!-- Mnemonic error -->
+                    <TextBlock Text="{Binding MnemonicError}"
+                               IsVisible="{Binding MnemonicError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               Foreground="{DynamicResource ThemeDangerBrush}"
+                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                               TextWrapping="Wrap"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Command="{Binding ProceedToStep2Command}"
+                                Background="{DynamicResource ThemePrimaryBrush}"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                Padding="16,10" CornerRadius="8"
+                                Content="Next" FontWeight="Medium"/>
+                        <Button Command="{Binding CancelCommand}"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                Padding="16,10" CornerRadius="8"
+                                Content="Cancel"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Step 2: Set new password -->
+                <StackPanel Spacing="12" IsVisible="{Binding IsStep2}">
+                    <TextBlock Text="Set a new master password" FontSize="{DynamicResource ThemeFontSizeSm}"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+
+                    <TextBox Text="{Binding NewPassword, Mode=TwoWay}"
+                             PasswordChar="&#x2022;"
+                             Watermark="New password (min 8 characters)"
+                             IsEnabled="{Binding !IsResetting}"
+                             Padding="12,8"/>
+
+                    <TextBox Text="{Binding ConfirmPassword, Mode=TwoWay}"
+                             PasswordChar="&#x2022;"
+                             Watermark="Confirm new password"
+                             IsEnabled="{Binding !IsResetting}"
+                             Padding="12,8"/>
+
+                    <!-- Reset error -->
+                    <TextBlock Text="{Binding ResetError}"
+                               IsVisible="{Binding ResetError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               Foreground="{DynamicResource ThemeDangerBrush}"
+                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                               TextWrapping="Wrap"/>
+
+                    <!-- Progress during re-encryption -->
+                    <Border IsVisible="{Binding IsResetting}"
+                            Background="{DynamicResource ThemeWarningMutedBrush}"
+                            CornerRadius="6" Padding="12,8">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Re-encrypting all data — do not close the app..."
+                                       FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            <ProgressBar IsIndeterminate="True" Height="4" CornerRadius="2"
+                                         Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                IsVisible="{Binding !IsResetting}">
+                        <Button Command="{Binding ResetPasswordCommand}"
+                                Background="{DynamicResource ThemePrimaryBrush}"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                Padding="16,10" CornerRadius="8"
+                                Content="Reset Password" FontWeight="Medium"/>
+                        <Button Command="{Binding BackToStep1Command}"
+                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                Padding="16,10" CornerRadius="8"
+                                Content="Back"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -109,6 +109,10 @@ pub enum PrivStackError {
     EnvelopeError = 32,
     /// Cloud API authentication error.
     CloudAuthError = 33,
+    /// Recovery not configured for this vault.
+    RecoveryNotConfigured = 34,
+    /// Invalid recovery mnemonic.
+    InvalidRecoveryMnemonic = 35,
     /// Unknown error.
     Unknown = 99,
 }
@@ -960,6 +964,112 @@ pub unsafe extern "C" fn privstack_auth_change_password(
             }
             PrivStackError::Ok
         }
+        Err(_) => PrivStackError::AuthError,
+    }
+}}
+
+// ============================================================================
+// Recovery Functions
+// ============================================================================
+
+/// Sets up recovery for the default vault. Returns a 12-word BIP39 mnemonic
+/// via `out_mnemonic`. The caller must free it with `privstack_free_string`.
+///
+/// # Safety
+/// - `out_mnemonic` must be a valid pointer to a `*mut c_char`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_auth_setup_recovery(
+    out_mnemonic: *mut *mut c_char,
+) -> PrivStackError { unsafe {
+    if out_mnemonic.is_null() {
+        return PrivStackError::NullPointer;
+    }
+
+    let handle = HANDLE.lock().unwrap();
+    let handle = match handle.as_ref() {
+        Some(h) => h,
+        None => return PrivStackError::NotInitialized,
+    };
+
+    match handle.vault_manager.setup_recovery("default") {
+        Ok(mnemonic) => {
+            let c_str = match std::ffi::CString::new(mnemonic) {
+                Ok(s) => s,
+                Err(_) => return PrivStackError::Unknown,
+            };
+            *out_mnemonic = c_str.into_raw();
+            PrivStackError::Ok
+        }
+        Err(privstack_vault::VaultError::Locked) => PrivStackError::VaultLocked,
+        Err(_) => PrivStackError::AuthError,
+    }
+}}
+
+/// Checks whether recovery is configured for the default vault.
+#[unsafe(no_mangle)]
+pub extern "C" fn privstack_auth_has_recovery() -> bool {
+    let handle = HANDLE.lock().unwrap();
+    let handle = match handle.as_ref() {
+        Some(h) => h,
+        None => return false,
+    };
+    handle
+        .vault_manager
+        .has_recovery("default")
+        .unwrap_or(false)
+}
+
+/// Resets the master password using a recovery mnemonic.
+/// Re-encrypts all vault blobs, entity store, and blob store.
+///
+/// # Safety
+/// - `mnemonic` and `new_password` must be valid null-terminated UTF-8 strings.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_auth_reset_with_recovery(
+    mnemonic: *const c_char,
+    new_password: *const c_char,
+) -> PrivStackError { unsafe {
+    if mnemonic.is_null() || new_password.is_null() {
+        return PrivStackError::NullPointer;
+    }
+
+    let mnemonic_str = match CStr::from_ptr(mnemonic).to_str() {
+        Ok(s) => s,
+        Err(_) => return PrivStackError::InvalidUtf8,
+    };
+
+    let new_pwd = match CStr::from_ptr(new_password).to_str() {
+        Ok(s) => s,
+        Err(_) => return PrivStackError::InvalidUtf8,
+    };
+
+    if new_pwd.len() < 8 {
+        return PrivStackError::PasswordTooShort;
+    }
+
+    let handle = HANDLE.lock().unwrap();
+    let handle = match handle.as_ref() {
+        Some(h) => h,
+        None => return PrivStackError::NotInitialized,
+    };
+
+    match handle
+        .vault_manager
+        .reset_password_with_recovery("default", mnemonic_str, new_pwd)
+    {
+        Ok((old_kb, new_kb)) => {
+            // Re-encrypt entity and blob stores with new key
+            let _ = handle.entity_store.re_encrypt_all(&old_kb, &new_kb);
+            let _ = handle.blob_store.re_encrypt_all(&old_kb, &new_kb);
+            PrivStackError::Ok
+        }
+        Err(privstack_vault::VaultError::RecoveryNotConfigured) => {
+            PrivStackError::RecoveryNotConfigured
+        }
+        Err(privstack_vault::VaultError::InvalidRecoveryMnemonic) => {
+            PrivStackError::InvalidRecoveryMnemonic
+        }
+        Err(privstack_vault::VaultError::PasswordTooShort) => PrivStackError::PasswordTooShort,
         Err(_) => PrivStackError::AuthError,
     }
 }}

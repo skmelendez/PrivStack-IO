@@ -39,6 +39,9 @@ public partial class UnlockViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showResetConfirmation;
 
+    [ObservableProperty]
+    private bool _hasRecoveryConfigured;
+
     /// <summary>
     /// Whether there's an error to display (for red border styling).
     /// </summary>
@@ -61,6 +64,11 @@ public partial class UnlockViewModel : ViewModelBase
     /// </summary>
     public event EventHandler? DataResetRequested;
 
+    /// <summary>
+    /// Event raised when the user wants to recover using their Emergency Kit.
+    /// </summary>
+    public event EventHandler? RecoveryRequested;
+
     public UnlockViewModel(
         IAuthService service,
         IPrivStackRuntime runtime,
@@ -71,6 +79,19 @@ public partial class UnlockViewModel : ViewModelBase
         _runtime = runtime;
         _workspaceService = workspaceService;
         _passwordCache = passwordCache;
+        CheckRecoveryStatus();
+    }
+
+    private void CheckRecoveryStatus()
+    {
+        try
+        {
+            HasRecoveryConfigured = _service.HasRecovery();
+        }
+        catch
+        {
+            HasRecoveryConfigured = false;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanUnlock))]
@@ -121,6 +142,12 @@ public partial class UnlockViewModel : ViewModelBase
     partial void OnIsLoadingChanged(bool value)
     {
         UnlockCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand]
+    private void StartRecovery()
+    {
+        RecoveryRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]

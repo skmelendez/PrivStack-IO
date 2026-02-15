@@ -402,6 +402,58 @@ public sealed class PrivStackService : IPrivStackNative
     }
 
     // ============================================================
+    // Recovery
+    // ============================================================
+
+    /// <summary>
+    /// Sets up recovery for the default vault and returns a 12-word mnemonic.
+    /// </summary>
+    public string SetupRecovery()
+    {
+        ThrowIfNotInitialized();
+
+        _log.Information("Setting up recovery for default vault");
+        var result = NativeLibrary.AuthSetupRecovery(out var outMnemonic);
+        if (result != PrivStackError.Ok)
+        {
+            _log.Error("Failed to setup recovery: {Result}", result);
+            throw new PrivStackException($"Failed to setup recovery: {result}", result);
+        }
+
+        var mnemonic = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(outMnemonic) ?? "";
+        NativeLibrary.FreeString(outMnemonic);
+        _log.Information("Recovery setup completed");
+        return mnemonic;
+    }
+
+    /// <summary>
+    /// Checks whether recovery is configured for the default vault.
+    /// </summary>
+    public bool HasRecovery()
+    {
+        ThrowIfNotInitialized();
+        return NativeLibrary.AuthHasRecovery();
+    }
+
+    /// <summary>
+    /// Resets the master password using a recovery mnemonic.
+    /// Re-encrypts all data with the new password.
+    /// </summary>
+    public void ResetWithRecovery(string mnemonic, string newPassword)
+    {
+        ThrowIfNotInitialized();
+
+        _log.Information("Resetting master password with recovery mnemonic");
+        var result = NativeLibrary.AuthResetWithRecovery(mnemonic, newPassword);
+        if (result != PrivStackError.Ok)
+        {
+            _log.Error("Failed to reset with recovery: {Result}", result);
+            throw new PrivStackException($"Failed to reset with recovery: {result}", result);
+        }
+        _log.Information("Master password reset with recovery completed");
+    }
+
+    // ============================================================
     // Standard Vault Initialization
     // ============================================================
 

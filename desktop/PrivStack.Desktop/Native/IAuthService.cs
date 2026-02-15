@@ -12,4 +12,7 @@ public interface IAuthService
     void LockApp();
     void ChangeAppPassword(string oldPassword, string newPassword);
     bool ValidateMasterPassword(string masterPassword);
+    string SetupRecovery();
+    bool HasRecovery();
+    void ResetWithRecovery(string mnemonic, string newPassword);
 }

@@ -113,6 +113,30 @@ internal static partial class NativeLibrary
     public static partial PrivStackError AuthChangePassword(string oldPassword, string newPassword);
 
     // ============================================================
+    // Recovery Functions
+    // ============================================================
+
+    /// <summary>
+    /// Sets up recovery for the default vault. Returns a 12-word BIP39 mnemonic.
+    /// Free the returned string with FreeString.
+    /// </summary>
+    [LibraryImport(LibraryName, EntryPoint = "privstack_auth_setup_recovery")]
+    public static partial PrivStackError AuthSetupRecovery(out nint outMnemonic);
+
+    /// <summary>
+    /// Checks whether recovery is configured for the default vault.
+    /// </summary>
+    [LibraryImport(LibraryName, EntryPoint = "privstack_auth_has_recovery")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static partial bool AuthHasRecovery();
+
+    /// <summary>
+    /// Resets the master password using a recovery mnemonic.
+    /// </summary>
+    [LibraryImport(LibraryName, EntryPoint = "privstack_auth_reset_with_recovery", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError AuthResetWithRecovery(string mnemonic, string newPassword);
+
+    // ============================================================
     // Database Maintenance
     // ============================================================
 

@@ -310,6 +310,12 @@ public partial class App : Application
             unlockWindow.Close();
         };
 
+        unlockVm.RecoveryRequested += (_, _) =>
+        {
+            Log.Information("Recovery requested, showing recovery screen");
+            ShowRecoveryScreen(desktop, unlockWindow);
+        };
+
         unlockVm.DataResetRequested += (_, _) =>
         {
             Log.Information("Data reset requested, returning to setup wizard");
@@ -333,6 +339,36 @@ public partial class App : Application
         var currentWindow = desktop.MainWindow;
         ShowUnlockScreen(desktop);
         currentWindow?.Close();
+    }
+
+    private void ShowRecoveryScreen(IClassicDesktopStyleApplicationLifetime desktop, UnlockWindow unlockWindow)
+    {
+        var recoveryVm = new RecoveryViewModel(
+            Services.GetRequiredService<IAuthService>(),
+            Services.GetRequiredService<IMasterPasswordCache>());
+
+        var recoveryView = new RecoveryView { DataContext = recoveryVm };
+        unlockWindow.Content = recoveryView;
+
+        recoveryVm.RecoveryCompleted += async (_, _) =>
+        {
+            Log.Information("Recovery completed, loading application...");
+
+            await Task.Delay(50);
+
+            var pluginRegistry = Services.GetRequiredService<IPluginRegistry>();
+            await Task.Run(() => pluginRegistry.DiscoverAndInitialize());
+
+            ShowMainWindow(desktop, skipPluginInit: true);
+            unlockWindow.Close();
+        };
+
+        recoveryVm.RecoveryCancelled += (_, _) =>
+        {
+            Log.Information("Recovery cancelled, returning to unlock screen");
+            ShowUnlockScreen(desktop);
+            unlockWindow.Close();
+        };
     }
 
     private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop, bool skipPluginInit = false)

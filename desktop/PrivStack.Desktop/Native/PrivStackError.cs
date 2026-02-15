@@ -108,6 +108,12 @@ public enum PrivStackError
     /// <summary>Cloud API authentication error.</summary>
     CloudAuthError = 33,
 
+    /// <summary>Recovery not configured for this vault.</summary>
+    RecoveryNotConfigured = 34,
+
+    /// <summary>Invalid recovery mnemonic.</summary>
+    InvalidRecoveryMnemonic = 35,
+
     /// <summary>Unknown error.</summary>
     Unknown = 99,
 }

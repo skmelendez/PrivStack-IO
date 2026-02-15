@@ -107,10 +107,22 @@
 
                 <!-- Forgot password (hidden during app loading) -->
                 <StackPanel Spacing="8" IsVisible="{Binding !IsAppLoading}">
+                    <!-- Recovery link (shown when Emergency Kit is configured) -->
+                    <Button Command="{Binding StartRecoveryCommand}"
+                            Background="Transparent" Padding="0" HorizontalAlignment="Center"
+                            Cursor="Hand"
+                            IsVisible="{Binding HasRecoveryConfigured}">
+                        <TextBlock Text="Forgot Password? Recover with Emergency Kit"
+                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                   Foreground="{DynamicResource ThemePrimaryBrush}"
+                                   TextDecorations="Underline"/>
+                    </Button>
+
+                    <!-- Destructive reset (shown when no recovery configured) -->
                     <Button Command="{Binding ShowResetPromptCommand}"
                             Background="Transparent" Padding="0" HorizontalAlignment="Center"
                             Cursor="Hand"
-                            IsVisible="{Binding !ShowResetConfirmation}">
+                            IsVisible="{Binding !HasRecoveryConfigured}">
                         <TextBlock Text="I forgot my password and need to reset"
                                    FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                    Foreground="{DynamicResource ThemeDangerBrush}"
