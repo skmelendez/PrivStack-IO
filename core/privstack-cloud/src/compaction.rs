@@ -47,9 +47,14 @@ pub fn blob_s3_key(user_id: i64, workspace_id: &str, blob_id: &str) -> String {
     format!("{user_id}/{workspace_id}/blobs/{blob_id}.enc")
 }
 
-/// Private key storage key.
+/// Private key storage key (passphrase-encrypted).
 pub fn private_key_s3_key(user_id: i64, workspace_id: &str) -> String {
     format!("{user_id}/{workspace_id}/keys/private_key.enc")
+}
+
+/// Recovery key storage key (mnemonic-encrypted).
+pub fn recovery_key_s3_key(user_id: i64, workspace_id: &str) -> String {
+    format!("{user_id}/{workspace_id}/keys/private_key_recovery.enc")
 }
 
 /// Creates and uploads a snapshot, then notifies the API for compaction.

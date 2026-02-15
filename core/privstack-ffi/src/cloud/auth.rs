@@ -3,8 +3,12 @@
 use super::{cloud_err, parse_cstr, write_json_out};
 use crate::{lock_handle, PrivStackError, HANDLE};
 use privstack_cloud::api_client::CloudApiClient;
+use privstack_cloud::compaction::{private_key_s3_key, recovery_key_s3_key};
 use privstack_cloud::config::CloudConfig;
+use privstack_cloud::credential_manager::CredentialManager;
+use privstack_cloud::dek_registry::DekRegistry;
 use privstack_cloud::envelope::EnvelopeManager;
+use privstack_cloud::s3_transport::S3Transport;
 use privstack_cloud::sharing::ShareManager;
 use privstack_crypto::envelope as crypto_env;
 use std::ffi::{c_char, CString};
@@ -47,6 +51,7 @@ pub unsafe extern "C" fn privstack_cloudsync_configure(
     handle.cloud_envelope_mgr = Some(envelope_mgr);
     handle.cloud_share_mgr = Some(share_mgr);
     handle.cloud_config = Some(config);
+    handle.cloud_dek_registry = Some(DekRegistry::new());
 
     PrivStackError::Ok
 }
@@ -165,7 +170,10 @@ pub extern "C" fn privstack_cloudsync_is_authenticated() -> bool {
 /// Sets up a new cloud keypair with a passphrase.
 ///
 /// Generates X25519 keypair, encrypts private key with passphrase,
-/// uploads public key to API, and returns a 12-word BIP39 recovery mnemonic.
+/// uploads to S3, uploads public key to API, and returns a 12-word
+/// BIP39 recovery mnemonic.
+///
+/// Requires at least one cloud workspace to be registered (for S3 storage).
 ///
 /// # Safety
 /// - `passphrase` must be a valid null-terminated UTF-8 string.
@@ -194,25 +202,88 @@ pub unsafe extern "C" fn privstack_cloudsync_setup_passphrase(
         None => return PrivStackError::NotInitialized,
     };
 
+    let config = match handle.cloud_config.as_ref() {
+        Some(c) => c.clone(),
+        None => return PrivStackError::NotInitialized,
+    };
+
+    // Generate keypair
     let keypair = crypto_env::generate_cloud_keypair();
     let public_bytes = keypair.public_bytes();
 
+    // Upload public key to API
     if let Err(e) = handle.runtime.block_on(api.upload_public_key(&public_bytes)) {
         return cloud_err(&e);
     }
 
-    match crypto_env::encrypt_private_key(&keypair.secret, passphrase_str) {
-        Ok(_encrypted) => {
-            // TODO: Upload encrypted private key to S3 at {user_id}/{workspace_id}/keys/private_key.enc
-        }
+    // Encrypt private key with passphrase
+    let protected = match crypto_env::encrypt_private_key(&keypair.secret, passphrase_str) {
+        Ok(p) => p,
         Err(_) => return PrivStackError::EnvelopeError,
-    }
+    };
 
+    // Generate mnemonic and encrypt recovery copy
     let mnemonic = match crypto_env::generate_recovery_mnemonic() {
         Ok(m) => m,
         Err(_) => return PrivStackError::EnvelopeError,
     };
 
+    let recovery_encrypted =
+        match crypto_env::encrypt_private_key_with_mnemonic(&keypair.secret, &mnemonic) {
+            Ok(e) => e,
+            Err(_) => return PrivStackError::EnvelopeError,
+        };
+
+    // Upload encrypted keys to S3
+    let result = handle.runtime.block_on(async {
+        // Find a workspace to store keys in
+        let workspaces = api.list_workspaces().await?;
+        let ws = workspaces
+            .first()
+            .ok_or(privstack_cloud::CloudError::Config(
+                "no cloud workspace registered — register a workspace first".to_string(),
+            ))?;
+
+        let user_id = api
+            .user_id()
+            .await
+            .ok_or(privstack_cloud::CloudError::AuthRequired)?;
+
+        let transport = S3Transport::new(
+            config.s3_bucket.clone(),
+            config.s3_region.clone(),
+            config.s3_endpoint_override.clone(),
+        );
+
+        let cred_mgr = CredentialManager::new(
+            api.clone(),
+            ws.workspace_id.clone(),
+            config.credential_refresh_margin_secs,
+        );
+        let creds = cred_mgr.get_credentials().await?;
+
+        // Upload passphrase-protected key
+        let protected_bytes = serde_json::to_vec(&protected)
+            .map_err(|e| privstack_cloud::CloudError::S3(e.to_string()))?;
+        let key_path = private_key_s3_key(user_id, &ws.workspace_id);
+        transport.upload(&creds, &key_path, protected_bytes).await?;
+
+        // Upload mnemonic-encrypted recovery key
+        let recovery_bytes = serde_json::to_vec(&recovery_encrypted)
+            .map_err(|e| privstack_cloud::CloudError::S3(e.to_string()))?;
+        let recovery_path = recovery_key_s3_key(user_id, &ws.workspace_id);
+        transport
+            .upload(&creds, &recovery_path, recovery_bytes)
+            .await?;
+
+        Ok::<(), privstack_cloud::CloudError>(())
+    });
+
+    if let Err(e) = result {
+        return cloud_err(&e);
+    }
+
+    // Set keypair in envelope manager
     if let Some(ref env_mgr) = handle.cloud_envelope_mgr {
         handle.runtime.block_on(async {
             env_mgr.lock().await.set_keypair(keypair);
@@ -226,6 +297,9 @@ pub unsafe extern "C" fn privstack_cloudsync_setup_passphrase(
 
 /// Unlocks the cloud keypair using a passphrase.
 ///
+/// Downloads the passphrase-encrypted private key from S3, decrypts it,
+/// and loads the keypair into the envelope manager for sharing operations.
+///
 /// # Safety
 /// - `passphrase` must be a valid null-terminated UTF-8 string.
 #[unsafe(no_mangle)]
@@ -237,19 +311,86 @@ pub unsafe extern "C" fn privstack_cloudsync_enter_passphrase(
         Err(e) => return e,
     };
 
-    let handle = HANDLE.lock().unwrap();
-    let _handle = match handle.as_ref() {
+    let mut handle = HANDLE.lock().unwrap();
+    let handle = match handle.as_mut() {
         Some(h) => h,
         None => return PrivStackError::NotInitialized,
     };
 
-    // TODO: Download encrypted private key from S3 and decrypt
-    let _ = passphrase_str;
+    let api = match handle.cloud_api.as_ref() {
+        Some(a) => a.clone(),
+        None => return PrivStackError::NotInitialized,
+    };
 
-    PrivStackError::Ok
+    let config = match handle.cloud_config.as_ref() {
+        Some(c) => c.clone(),
+        None => return PrivStackError::NotInitialized,
+    };
+
+    let result = handle.runtime.block_on(async {
+        let workspaces = api.list_workspaces().await?;
+        let ws = workspaces
+            .first()
+            .ok_or(privstack_cloud::CloudError::Config(
+                "no cloud workspace registered".to_string(),
+            ))?;
+
+        let user_id = api
+            .user_id()
+            .await
+            .ok_or(privstack_cloud::CloudError::AuthRequired)?;
+
+        let transport = S3Transport::new(
+            config.s3_bucket.clone(),
+            config.s3_region.clone(),
+            config.s3_endpoint_override.clone(),
+        );
+
+        let cred_mgr = CredentialManager::new(
+            api.clone(),
+            ws.workspace_id.clone(),
+            config.credential_refresh_margin_secs,
+        );
+        let creds = cred_mgr.get_credentials().await?;
+
+        // Download passphrase-encrypted key
+        let key_path = private_key_s3_key(user_id, &ws.workspace_id);
+        let data = transport.download(&creds, &key_path).await?;
+
+        let protected: privstack_crypto::PassphraseProtectedKey =
+            serde_json::from_slice(&data).map_err(|e| {
+                privstack_cloud::CloudError::Envelope(format!(
+                    "failed to deserialize protected key: {e}"
+                ))
+            })?;
+
+        // Decrypt with passphrase
+        let secret_key =
+            crypto_env::decrypt_private_key(&protected, passphrase_str).map_err(|e| {
+                privstack_cloud::CloudError::Envelope(format!("passphrase decryption failed: {e}"))
+            })?;
+
+        let keypair = crypto_env::CloudKeyPair::from_secret_bytes(secret_key.to_bytes());
+        Ok::<crypto_env::CloudKeyPair, privstack_cloud::CloudError>(keypair)
+    });
+
+    match result {
+        Ok(keypair) => {
+            if let Some(ref env_mgr) = handle.cloud_envelope_mgr {
+                handle.runtime.block_on(async {
+                    env_mgr.lock().await.set_keypair(keypair);
+                });
+            }
+            PrivStackError::Ok
+        }
+        Err(e) => cloud_err(&e),
+    }
 }
 
 /// Recovers the cloud keypair from a 12-word BIP39 mnemonic.
+///
+/// Downloads the mnemonic-encrypted recovery key from S3, decrypts it,
+/// and loads the keypair into the envelope manager.
 ///
 /// # Safety
 /// - `mnemonic` must be a valid null-terminated UTF-8 string (12 words separated by spaces).
@@ -262,16 +403,80 @@ pub unsafe extern "C" fn privstack_cloudsync_recover_from_mnemonic(
         Err(e) => return e,
     };
 
-    let handle = HANDLE.lock().unwrap();
-    let _handle = match handle.as_ref() {
+    let mut handle = HANDLE.lock().unwrap();
+    let handle = match handle.as_mut() {
         Some(h) => h,
         None => return PrivStackError::NotInitialized,
     };
 
-    // TODO: Download encrypted private key from S3, decrypt with mnemonic-derived key
-    let _ = mnemonic_str;
+    let api = match handle.cloud_api.as_ref() {
+        Some(a) => a.clone(),
+        None => return PrivStackError::NotInitialized,
+    };
 
-    PrivStackError::Ok
+    let config = match handle.cloud_config.as_ref() {
+        Some(c) => c.clone(),
+        None => return PrivStackError::NotInitialized,
+    };
+
+    let result = handle.runtime.block_on(async {
+        let workspaces = api.list_workspaces().await?;
+        let ws = workspaces
+            .first()
+            .ok_or(privstack_cloud::CloudError::Config(
+                "no cloud workspace registered".to_string(),
+            ))?;
+
+        let user_id = api
+            .user_id()
+            .await
+            .ok_or(privstack_cloud::CloudError::AuthRequired)?;
+
+        let transport = S3Transport::new(
+            config.s3_bucket.clone(),
+            config.s3_region.clone(),
+            config.s3_endpoint_override.clone(),
+        );
+
+        let cred_mgr = CredentialManager::new(
+            api.clone(),
+            ws.workspace_id.clone(),
+            config.credential_refresh_margin_secs,
+        );
+        let creds = cred_mgr.get_credentials().await?;
+
+        // Download mnemonic-encrypted recovery key
+        let recovery_path = recovery_key_s3_key(user_id, &ws.workspace_id);
+        let data = transport.download(&creds, &recovery_path).await?;
+
+        let encrypted: privstack_crypto::EncryptedData =
+            serde_json::from_slice(&data).map_err(|e| {
+                privstack_cloud::CloudError::Envelope(format!(
+                    "failed to deserialize recovery key: {e}"
+                ))
+            })?;
+
+        // Decrypt with mnemonic-derived key
+        let secret_key = crypto_env::decrypt_private_key_with_mnemonic(&encrypted, mnemonic_str)
+            .map_err(|e| {
+                privstack_cloud::CloudError::Envelope(format!("mnemonic recovery failed: {e}"))
+            })?;
+
+        let keypair = crypto_env::CloudKeyPair::from_secret_bytes(secret_key.to_bytes());
+        Ok::<crypto_env::CloudKeyPair, privstack_cloud::CloudError>(keypair)
+    });
+
+    match result {
+        Ok(keypair) => {
+            if let Some(ref env_mgr) = handle.cloud_envelope_mgr {
+                handle.runtime.block_on(async {
+                    env_mgr.lock().await.set_keypair(keypair);
+                });
+            }
+            PrivStackError::Ok
+        }
+        Err(e) => cloud_err(&e),
+    }
 }
 
 /// Returns whether a cloud keypair is loaded in memory.

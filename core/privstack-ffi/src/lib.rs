@@ -185,7 +185,9 @@ pub struct PrivStackHandle {
     cloud_share_mgr: Option<Arc<privstack_cloud::sharing::ShareManager>>,
     cloud_config: Option<privstack_cloud::CloudConfig>,
     cloud_blob_mgr: Option<Arc<privstack_cloud::blob_sync::BlobSyncManager>>,
+    cloud_dek_registry: Option<privstack_cloud::dek_registry::DekRegistry>,
     cloud_user_id: Option<i64>,
+    cloud_active_workspace: Option<String>,
 }
 
 /// Discovered peer info for JSON serialization.
@@ -576,7 +578,9 @@ fn init_core(path: &str) -> PrivStackError {
         cloud_share_mgr: None,
         cloud_config: None,
         cloud_blob_mgr: None,
+        cloud_dek_registry: None,
         cloud_user_id: None,
+        cloud_active_workspace: None,
     });
 
     PrivStackError::Ok
@@ -749,7 +753,9 @@ where
         cloud_share_mgr: None,
         cloud_config: None,
         cloud_blob_mgr: None,
+        cloud_dek_registry: None,
         cloud_user_id: None,
+        cloud_active_workspace: None,
     });
 
     PrivStackError::Ok
