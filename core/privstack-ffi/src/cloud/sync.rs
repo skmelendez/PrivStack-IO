@@ -8,6 +8,7 @@ use privstack_cloud::credential_manager::CredentialManager;
 use privstack_cloud::s3_transport::S3Transport;
 use privstack_cloud::sync_engine;
 use privstack_cloud::types::*;
+use privstack_types::{EntityId, Event, EventPayload, HybridTimestamp};
 use std::ffi::c_char;
 use std::sync::Arc;
 use std::time::Duration;
@@ -80,7 +81,7 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
     let active_ws_id = ws_id.clone();
     let (event_tx, _event_rx) = tokio::sync::mpsc::channel(256);
 
-    let (sync_handle, mut engine) = sync_engine::create_cloud_sync_engine(
+    let (sync_handle, inbound_tx, mut engine) = sync_engine::create_cloud_sync_engine(
         api,
         transport,
         cred_manager,
@@ -97,6 +98,7 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
     });
 
     handle.cloud_sync_handle = Some(sync_handle);
+    handle.cloud_event_tx = Some(inbound_tx);
     handle.cloud_blob_mgr = Some(blob_mgr);
     handle.cloud_user_id = Some(user_id);
     handle.cloud_active_workspace = Some(active_ws_id);
@@ -117,6 +119,7 @@ pub extern "C" fn privstack_cloudsync_stop_sync() -> PrivStackError {
         None => return PrivStackError::SyncNotRunning,
     };
 
+    handle.cloud_event_tx = None;
     handle.cloud_blob_mgr = None;
     handle.cloud_user_id = None;
     handle.cloud_active_workspace = None;
@@ -190,6 +193,65 @@ pub extern "C" fn privstack_cloudsync_force_flush() -> PrivStackError {
     };
 
     match handle.runtime.block_on(sync_handle.force_flush()) {
+        Ok(()) => PrivStackError::Ok,
+        Err(_) => PrivStackError::CloudSyncError,
+    }
+}
+
+// ── Event Submission ──
+
+/// Pushes a local entity snapshot event into the cloud sync engine's outbox.
+///
+/// The engine will encrypt and upload it to S3 on the next flush cycle.
+///
+/// # Safety
+/// - `entity_id`, `entity_type`, and `json_data` must be valid null-terminated UTF-8 strings.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_cloudsync_push_event(
+    entity_id: *const c_char,
+    entity_type: *const c_char,
+    json_data: *const c_char,
+) -> PrivStackError {
+    let ent_id = match unsafe { parse_cstr(entity_id) } {
+        Ok(s) => s.to_string(),
+        Err(e) => return e,
+    };
+    let ent_type = match unsafe { parse_cstr(entity_type) } {
+        Ok(s) => s.to_string(),
+        Err(e) => return e,
+    };
+    let data = match unsafe { parse_cstr(json_data) } {
+        Ok(s) => s.to_string(),
+        Err(e) => return e,
+    };
+
+    let handle = HANDLE.lock().unwrap();
+    let handle = match handle.as_ref() {
+        Some(h) => h,
+        None => return PrivStackError::NotInitialized,
+    };
+
+    let tx = match handle.cloud_event_tx.as_ref() {
+        Some(tx) => tx.clone(),
+        None => return PrivStackError::SyncNotRunning,
+    };
+
+    let parsed_entity_id = match EntityId::parse(&ent_id) {
+        Ok(id) => id,
+        Err(_) => return PrivStackError::InvalidArgument,
+    };
+
+    let event = Event::new(
+        parsed_entity_id,
+        handle.peer_id,
+        HybridTimestamp::now(),
+        EventPayload::FullSnapshot {
+            entity_type: ent_type,
+            json_data: data,
+        },
+    );
+
+    match tx.blocking_send(event) {
         Ok(()) => PrivStackError::Ok,
         Err(_) => PrivStackError::CloudSyncError,
     }

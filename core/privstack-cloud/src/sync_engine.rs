@@ -33,6 +33,8 @@ pub struct CloudSyncEngine {
     dek_registry: DekRegistry,
     outbox: Outbox,
     command_rx: mpsc::Receiver<CloudCommand>,
+    /// Receives events submitted from the application layer (via FFI).
+    inbound_rx: mpsc::Receiver<Event>,
     event_tx: mpsc::Sender<Event>,
     user_id: i64,
     workspace_id: String,
@@ -82,7 +84,10 @@ impl CloudSyncHandle {
     }
 }
 
-/// Creates a cloud sync engine and its command handle.
+/// Creates a cloud sync engine, its command handle, and an event sender.
+///
+/// The returned `mpsc::Sender<Event>` is used by the application layer (via FFI)
+/// to push local events into the engine's outbox for upload to S3.
 pub fn create_cloud_sync_engine(
     api: Arc<CloudApiClient>,
     transport: Arc<S3Transport>,
@@ -93,8 +98,9 @@ pub fn create_cloud_sync_engine(
     workspace_id: String,
     device_id: String,
     poll_interval: Duration,
-) -> (CloudSyncHandle, CloudSyncEngine) {
+) -> (CloudSyncHandle, mpsc::Sender<Event>, CloudSyncEngine) {
     let (command_tx, command_rx) = mpsc::channel(64);
+    let (inbound_tx, inbound_rx) = mpsc::channel(512);
 
     let handle = CloudSyncHandle { command_tx };
 
@@ -105,6 +111,7 @@ pub fn create_cloud_sync_engine(
         dek_registry,
         outbox: Outbox::new(),
         command_rx,
+        inbound_rx,
         event_tx,
         user_id,
         workspace_id,
@@ -113,7 +120,7 @@ pub fn create_cloud_sync_engine(
         cursors: HashMap::new(),
     };
 
-    (handle, engine)
+    (handle, inbound_tx, engine)
 }
 
 impl CloudSyncEngine {
@@ -154,6 +161,9 @@ impl CloudSyncEngine {
                             warn!("credential refresh failed: {e}");
                         }
                     }
+                }
+                Some(event) = self.inbound_rx.recv() => {
+                    self.outbox.push(event);
                 }
                 cmd = self.command_rx.recv() => {
                     match cmd {

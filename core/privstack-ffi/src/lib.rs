@@ -185,6 +185,7 @@ pub struct PrivStackHandle {
     // Cloud sync (S3-backed multi-device sync + sharing)
     cloud_api: Option<Arc<privstack_cloud::api_client::CloudApiClient>>,
     cloud_sync_handle: Option<privstack_cloud::sync_engine::CloudSyncHandle>,
+    cloud_event_tx: Option<mpsc::Sender<Event>>,
     cloud_envelope_mgr: Option<Arc<TokioMutex<privstack_cloud::envelope::EnvelopeManager>>>,
     cloud_share_mgr: Option<Arc<privstack_cloud::sharing::ShareManager>>,
     cloud_config: Option<privstack_cloud::CloudConfig>,
@@ -578,6 +579,7 @@ fn init_core(path: &str) -> PrivStackError {
         dataset_store,
         cloud_api: None,
         cloud_sync_handle: None,
+        cloud_event_tx: None,
         cloud_envelope_mgr: None,
         cloud_share_mgr: None,
         cloud_config: None,
@@ -753,6 +755,7 @@ where
         plugin_host,
         cloud_api: None,
         cloud_sync_handle: None,
+        cloud_event_tx: None,
         cloud_envelope_mgr: None,
         cloud_share_mgr: None,
         cloud_config: None,

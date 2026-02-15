@@ -17,13 +17,15 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
     private const int DebounceMs = 2000;
 
     private readonly ISyncService _syncService;
+    private readonly ICloudSyncService _cloudSync;
     private readonly ConcurrentDictionary<string, DebounceEntry> _pending = new();
     private IFileEventSyncService? _fileEventSync;
     private bool _disposed;
 
-    public SyncOutboundService(ISyncService syncService)
+    public SyncOutboundService(ISyncService syncService, ICloudSyncService cloudSync)
     {
         _syncService = syncService;
+        _cloudSync = cloudSync;
     }
 
     /// <summary>
@@ -100,6 +102,19 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
 
             // Also write to file-based event store if active (cloud/NAS sync)
             _fileEventSync?.WriteEventFile(entityId, entry.EntityType, entry.Payload);
+
+            // Push to cloud sync engine if running
+            if (_cloudSync.IsSyncing)
+            {
+                try
+                {
+                    _cloudSync.PushEvent(entityId, entry.EntityType, entry.Payload);
+                }
+                catch (Exception cloudEx)
+                {
+                    _log.Warning(cloudEx, "Failed to push cloud event for {EntityId}", entityId);
+                }
+            }
         }
         catch (Exception ex)
         {

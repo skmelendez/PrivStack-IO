@@ -126,6 +126,11 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
         ThrowIfError(NativeLib.CloudSyncForceFlush());
     }
 
+    public void PushEvent(string entityId, string entityType, string jsonData)
+    {
+        ThrowIfError(NativeLib.CloudSyncPushEvent(entityId, entityType, jsonData));
+    }
+
     // ── Sharing ──
 
     public CloudShareInfo ShareEntity(string entityId, string entityType, string? entityName,
