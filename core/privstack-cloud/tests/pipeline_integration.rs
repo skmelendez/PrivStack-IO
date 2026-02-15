@@ -194,7 +194,7 @@ async fn key_format_listing() {
             .unwrap();
     }
 
-    let entity_prefix = format!("{user_id}/{workspace_id}/entities/{entity_id}/");
+    let entity_prefix = format!("users/{user_id}/workspaces/{workspace_id}/entities/{entity_id}/");
     let keys = transport.list_keys(&creds, &entity_prefix).await.unwrap();
     assert_eq!(keys.len(), 3);
 

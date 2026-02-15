@@ -26,7 +26,7 @@ pub fn snapshot_s3_key(
     entity_id: &str,
     cursor_position: i64,
 ) -> String {
-    format!("{user_id}/{workspace_id}/entities/{entity_id}/snapshot_{cursor_position}.enc")
+    format!("users/{user_id}/workspaces/{workspace_id}/entities/{entity_id}/snapshot_{cursor_position}.enc")
 }
 
 /// Generates a batch key for the S3 storage layout.
@@ -38,23 +38,23 @@ pub fn batch_s3_key(
     cursor_end: i64,
 ) -> String {
     format!(
-        "{user_id}/{workspace_id}/entities/{entity_id}/batch_{cursor_start}_{cursor_end}.enc"
+        "users/{user_id}/workspaces/{workspace_id}/entities/{entity_id}/batch_{cursor_start}_{cursor_end}.enc"
     )
 }
 
 /// Blob key for the S3 storage layout.
 pub fn blob_s3_key(user_id: i64, workspace_id: &str, blob_id: &str) -> String {
-    format!("{user_id}/{workspace_id}/blobs/{blob_id}.enc")
+    format!("users/{user_id}/workspaces/{workspace_id}/blobs/{blob_id}.enc")
 }
 
 /// Private key storage key (passphrase-encrypted).
 pub fn private_key_s3_key(user_id: i64, workspace_id: &str) -> String {
-    format!("{user_id}/{workspace_id}/keys/private_key.enc")
+    format!("users/{user_id}/workspaces/{workspace_id}/keys/private_key.enc")
 }
 
 /// Recovery key storage key (mnemonic-encrypted).
 pub fn recovery_key_s3_key(user_id: i64, workspace_id: &str) -> String {
-    format!("{user_id}/{workspace_id}/keys/private_key_recovery.enc")
+    format!("users/{user_id}/workspaces/{workspace_id}/keys/private_key_recovery.enc")
 }
 
 /// Creates and uploads a snapshot, then notifies the API for compaction.

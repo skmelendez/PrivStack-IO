@@ -67,14 +67,14 @@ async fn entity_prefix_isolation() {
 
     // List by each entity prefix — should only see that entity's batches
     for entity_id in &entities {
-        let prefix = format!("{user_id}/{workspace_id}/entities/{entity_id}/");
+        let prefix = format!("users/{user_id}/workspaces/{workspace_id}/entities/{entity_id}/");
         let keys = transport.list_keys(&creds, &prefix).await.unwrap();
         assert_eq!(keys.len(), 1, "entity {entity_id} should have exactly 1 batch");
         assert!(keys[0].contains(entity_id));
     }
 
     // Full workspace prefix sees all 3
-    let ws_prefix = format!("{user_id}/{workspace_id}/entities/");
+    let ws_prefix = format!("users/{user_id}/workspaces/{workspace_id}/entities/");
     let all_keys = transport.list_keys(&creds, &ws_prefix).await.unwrap();
     assert_eq!(all_keys.len(), 3);
 }
