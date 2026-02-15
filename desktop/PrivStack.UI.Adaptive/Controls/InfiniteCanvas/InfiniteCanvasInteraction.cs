@@ -257,6 +257,15 @@ public sealed partial class InfiniteCanvasControl
         var hitElement = HitTestElement(pos, data);
         if (hitElement != null)
         {
+            // Double-click entity ref navigates
+            if (e.ClickCount == 2 && hitElement.Type == CanvasElementType.EntityReference
+                && !string.IsNullOrEmpty(hitElement.EntityType)
+                && !string.IsNullOrEmpty(hitElement.EntityId))
+            {
+                EntityReferenceClicked?.Invoke(hitElement.EntityType, hitElement.EntityId);
+                return;
+            }
+
             // Double-click page ref navigates
             if (e.ClickCount == 2 && hitElement.Type == CanvasElementType.PageReference
                 && !string.IsNullOrEmpty(hitElement.LinkedPageId))

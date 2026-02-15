@@ -41,6 +41,9 @@ public sealed partial class InfiniteCanvasControl : Control
     public static readonly StyledProperty<bool> IsReadOnlyProperty =
         AvaloniaProperty.Register<InfiniteCanvasControl, bool>(nameof(IsReadOnly));
 
+    public static readonly StyledProperty<IReadOnlyDictionary<string, Models.EntityRefStyle>?> EntityRefStylesProperty =
+        AvaloniaProperty.Register<InfiniteCanvasControl, IReadOnlyDictionary<string, Models.EntityRefStyle>?>(nameof(EntityRefStyles));
+
     public CanvasData? Data
     {
         get => GetValue(DataProperty);
@@ -77,6 +80,12 @@ public sealed partial class InfiniteCanvasControl : Control
         set => SetValue(IsReadOnlyProperty, value);
     }
 
+    public IReadOnlyDictionary<string, Models.EntityRefStyle>? EntityRefStyles
+    {
+        get => GetValue(EntityRefStylesProperty);
+        set => SetValue(EntityRefStylesProperty, value);
+    }
+
     // ================================================================
     // Events
     // ================================================================
@@ -86,6 +95,9 @@ public sealed partial class InfiniteCanvasControl : Control
 
     /// <summary>Fired when a page reference element is double-clicked.</summary>
     public event Action<string>? PageReferenceClicked;
+
+    /// <summary>Fired when an entity reference element is double-clicked.</summary>
+    public event Action<string, string>? EntityReferenceClicked;
 
     /// <summary>Fired when an element is selected.</summary>
     public event Action<CanvasElement>? ElementSelected;
