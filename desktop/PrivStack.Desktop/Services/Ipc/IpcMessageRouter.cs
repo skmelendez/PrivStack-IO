@@ -42,7 +42,15 @@ public sealed class IpcMessageRouter
         if (request == null)
             return ErrorResponse(null, "parse_error", "Null request");
 
-        // Validate auth token
+        // Ping bypasses auth — it's how the extension discovers and auto-pairs.
+        // The named pipe is OS-enforced same-user only, so this is safe.
+        if (request.Action == "ping")
+        {
+            var token = _settings.Settings.BridgeAuthToken;
+            return SuccessResponse(request.Id, new { status = "ok", token });
+        }
+
+        // Validate auth token for all other actions
         var expectedToken = _settings.Settings.BridgeAuthToken;
         if (!string.IsNullOrEmpty(expectedToken) && !ConstantTimeEquals(request.Token, expectedToken))
         {
@@ -54,7 +62,6 @@ public sealed class IpcMessageRouter
         {
             return request.Action switch
             {
-                "ping" => SuccessResponse(request.Id, new { status = "ok" }),
                 "clip.save" => await HandleClipSaveAsync(request, ct),
                 "clip.snapshot" => await HandleClipSnapshotAsync(request, ct),
                 "readlater.save" => await HandleReadLaterSaveAsync(request, ct),
