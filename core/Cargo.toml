@@ -19,7 +19,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.7.0"
+version = "1.7.1"
 edition = "2024"
 license = "Proprietary"
 repository = "https://github.com/PrivStackApp/PrivStack-IO"
@@ -65,6 +65,7 @@ privstack-plugin-host = { path = "privstack-plugin-host" }
 privstack-plugin-sdk = { path = "privstack-plugin-sdk" }
 privstack-ppk = { path = "privstack-ppk" }
 privstack-datasets = { path = "privstack-datasets" }
+privstack-cloud = { path = "privstack-cloud" }
 
 [workspace.dependencies.duckdb]
 version = "1.1"
