@@ -1,4 +1,5 @@
 //! Shared test helpers for integration tests against real MinIO.
+#![allow(dead_code)]
 
 use chrono::{Duration, Utc};
 use privstack_cloud::StsCredentials;
