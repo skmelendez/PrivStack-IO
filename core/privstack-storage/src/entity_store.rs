@@ -773,6 +773,44 @@ impl EntityStore {
         Ok(())
     }
 
+    // ── Cloud Sync Cursor Persistence ──
+
+    /// Saves a cloud sync cursor value (e.g. per-entity cursor position or last_sync_at).
+    pub fn save_cloud_cursor(&self, key: &str, value: i64) -> StorageResult<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .unwrap_or(0);
+        conn.execute(
+            "INSERT OR REPLACE INTO cloud_sync_cursors (cursor_key, cursor_value, updated_at) VALUES (?, ?, ?)",
+            params![key, value, now],
+        )?;
+        Ok(())
+    }
+
+    /// Loads all cloud sync cursors as key-value pairs.
+    pub fn load_cloud_cursors(&self) -> StorageResult<Vec<(String, i64)>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT cursor_key, cursor_value FROM cloud_sync_cursors"
+        )?;
+        let rows: Vec<(String, i64)> = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(rows)
+    }
+
+    /// Clears all cloud sync cursors (e.g. when switching workspaces).
+    pub fn clear_cloud_cursors(&self) -> StorageResult<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM cloud_sync_cursors", [])?;
+        Ok(())
+    }
+
     /// Runs database maintenance: WAL checkpoint, then vacuum to reclaim space.
     pub fn run_maintenance(&self) -> StorageResult<()> {
         let conn = self.conn.lock().unwrap();
@@ -1062,6 +1100,14 @@ fn initialize_entity_schema(conn: &Connection) -> StorageResult<()> {
             entity_id VARCHAR NOT NULL,
             synced_at BIGINT NOT NULL,
             PRIMARY KEY (peer_id, entity_id)
+        );
+
+        -- Cloud sync cursor persistence: stores per-entity cursor positions
+        -- and last_sync_at so the engine resumes where it left off on restart.
+        CREATE TABLE IF NOT EXISTS cloud_sync_cursors (
+            cursor_key VARCHAR PRIMARY KEY,
+            cursor_value BIGINT NOT NULL,
+            updated_at BIGINT NOT NULL
         );
 
         -- Plugin fuel consumption history for metrics tracking

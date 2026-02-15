@@ -19,6 +19,7 @@ use crate::types::*;
 
 use chrono::{DateTime, Utc};
 use privstack_crypto::{decrypt, encrypt, EncryptedData};
+use privstack_storage::EntityStore;
 use privstack_types::Event;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -45,6 +46,8 @@ pub struct CloudSyncEngine {
     cursors: HashMap<String, i64>,
     /// Shared timestamp updated after each successful flush or poll.
     last_sync_at: Arc<RwLock<Option<DateTime<Utc>>>>,
+    /// Persistent storage for cursor positions across restarts.
+    entity_store: Arc<EntityStore>,
 }
 
 /// Handle for sending commands to the sync engine.
@@ -106,11 +109,41 @@ pub fn create_cloud_sync_engine(
     workspace_id: String,
     device_id: String,
     poll_interval: Duration,
+    entity_store: Arc<EntityStore>,
 ) -> (CloudSyncHandle, mpsc::Sender<Event>, CloudSyncEngine) {
     let (command_tx, command_rx) = mpsc::channel(64);
     let (inbound_tx, inbound_rx) = mpsc::channel(512);
 
-    let last_sync_at = Arc::new(RwLock::new(None));
+    // Load persisted cursors from DuckDB so the engine resumes where it left off.
+    let mut cursors = HashMap::new();
+    let mut restored_sync_at: Option<DateTime<Utc>> = None;
+
+    match entity_store.load_cloud_cursors() {
+        Ok(rows) => {
+            for (key, value) in rows {
+                if key == "__last_sync_at__" {
+                    // Reconstruct DateTime from millis timestamp
+                    if let Some(dt) = DateTime::from_timestamp_millis(value) {
+                        restored_sync_at = Some(dt);
+                    }
+                } else {
+                    cursors.insert(key, value);
+                }
+            }
+            if !cursors.is_empty() || restored_sync_at.is_some() {
+                info!(
+                    "restored {} cloud sync cursors, last_sync_at={:?}",
+                    cursors.len(),
+                    restored_sync_at
+                );
+            }
+        }
+        Err(e) => {
+            warn!("failed to load persisted cloud cursors: {e}");
+        }
+    }
+
+    let last_sync_at = Arc::new(RwLock::new(restored_sync_at));
 
     let handle = CloudSyncHandle {
         command_tx,
@@ -130,8 +163,9 @@ pub fn create_cloud_sync_engine(
         workspace_id,
         device_id,
         poll_interval,
-        cursors: HashMap::new(),
+        cursors,
         last_sync_at,
+        entity_store,
     };
 
     (handle, inbound_tx, engine)
@@ -305,12 +339,20 @@ impl CloudSyncEngine {
 
             if cursor_ok {
                 self.cursors.insert(entity_id.clone(), cursor_end);
+                if let Err(e) = self.entity_store.save_cloud_cursor(&entity_id, cursor_end) {
+                    warn!("failed to persist cursor for entity {entity_id}: {e}");
+                }
                 debug!("flushed {event_count} events for entity {entity_id} (cursor -> {cursor_end})");
             }
         }
 
         if last_err.is_none() {
-            *self.last_sync_at.write().await = Some(Utc::now());
+            let now = Utc::now();
+            *self.last_sync_at.write().await = Some(now);
+            let _ = self.entity_store.save_cloud_cursor(
+                "__last_sync_at__",
+                now.timestamp_millis(),
+            );
         }
 
         match last_err {
@@ -327,7 +369,12 @@ impl CloudSyncEngine {
             .await?;
 
         // Even if no pending changes, a successful poll means we're in sync
-        *self.last_sync_at.write().await = Some(Utc::now());
+        let now = Utc::now();
+        *self.last_sync_at.write().await = Some(now);
+        let _ = self.entity_store.save_cloud_cursor(
+            "__last_sync_at__",
+            now.timestamp_millis(),
+        );
 
         if pending.pending.is_empty() {
             return Ok(());
