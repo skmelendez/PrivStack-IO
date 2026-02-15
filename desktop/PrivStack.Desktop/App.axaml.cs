@@ -285,7 +285,8 @@ public partial class App : Application
         var unlockVm = new UnlockViewModel(
             Services.GetRequiredService<IAuthService>(),
             Services.GetRequiredService<IPrivStackRuntime>(),
-            Services.GetRequiredService<IWorkspaceService>());
+            Services.GetRequiredService<IWorkspaceService>(),
+            Services.GetRequiredService<IMasterPasswordCache>());
         var unlockWindow = new UnlockWindow(unlockVm);
 
         unlockVm.AppUnlocked += async (_, _) =>

@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
 namespace PrivStack.Desktop.ViewModels;
@@ -18,6 +17,7 @@ public partial class UnlockViewModel : ViewModelBase
     private readonly IAuthService _service;
     private readonly IPrivStackRuntime _runtime;
     private readonly IWorkspaceService _workspaceService;
+    private readonly IMasterPasswordCache? _passwordCache;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanUnlock))]
@@ -61,11 +61,16 @@ public partial class UnlockViewModel : ViewModelBase
     /// </summary>
     public event EventHandler? DataResetRequested;
 
-    public UnlockViewModel(IAuthService service, IPrivStackRuntime runtime, IWorkspaceService workspaceService)
+    public UnlockViewModel(
+        IAuthService service,
+        IPrivStackRuntime runtime,
+        IWorkspaceService workspaceService,
+        IMasterPasswordCache? passwordCache = null)
     {
         _service = service;
         _runtime = runtime;
         _workspaceService = workspaceService;
+        _passwordCache = passwordCache;
     }
 
     [RelayCommand(CanExecute = nameof(CanUnlock))]
@@ -82,7 +87,7 @@ public partial class UnlockViewModel : ViewModelBase
             await Task.Run(() => _service.UnlockApp(password));
 
             // Cache password for seamless workspace switching before clearing
-            App.Services.GetService<IMasterPasswordCache>()?.Set(password);
+            _passwordCache?.Set(password);
 
             // Clear password from memory
             MasterPassword = string.Empty;
@@ -183,7 +188,7 @@ public partial class UnlockViewModel : ViewModelBase
         try
         {
             _service.LockApp();
-            App.Services.GetService<IMasterPasswordCache>()?.Clear();
+            _passwordCache?.Clear();
             MasterPassword = string.Empty;
             ErrorMessage = string.Empty;
             LockRequested?.Invoke(this, EventArgs.Empty);
