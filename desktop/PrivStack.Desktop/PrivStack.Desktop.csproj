@@ -15,7 +15,7 @@
     <CFBundleDisplayName>PrivStack</CFBundleDisplayName>
     <AssemblyTitle>PrivStack</AssemblyTitle>
     <Product>PrivStack</Product>
-    <Version>1.30.6</Version>
+    <Version>1.30.7</Version>
   </PropertyGroup>
 
   <ItemGroup>

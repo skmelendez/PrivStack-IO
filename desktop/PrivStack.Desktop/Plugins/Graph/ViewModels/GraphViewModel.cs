@@ -74,16 +74,10 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     public string TimelineStartLabel => TimelineStartDate.LocalDateTime.ToString("MMM d, yyyy");
     public string TimelineEndLabel => TimelineEndDate.LocalDateTime.ToString("MMM d, yyyy");
 
-    // Physics sliders (0-100) — matches Obsidian's 4 forces
-    [ObservableProperty] private double _centerSlider = 5;
-    [ObservableProperty] private double _repulsionSlider = 72;
-    [ObservableProperty] private double _linkStrengthSlider = 37.5;
-    [ObservableProperty] private double _linkDistanceSlider = 80;
+    // Repel radius slider (0-100 maps to 50-150px)
+    [ObservableProperty] private double _repelSlider = 70;
 
-    public double CenterStrength => CenterSlider / 100.0 * 0.1;
-    public double RepulsionStrength => -(RepulsionSlider / 100.0 * 12000);
-    public double LinkStrength => 0.05 + (LinkStrengthSlider / 100.0 * 0.25);
-    public double LinkDistance => 100 + (LinkDistanceSlider / 100.0 * 1900);
+    public double RepelRadius => 50 + (RepelSlider / 100.0 * 100);
 
     // Orphan radio helpers
     public bool IsOrphanHide { get => OrphanMode == OrphanFilterMode.Hide; set { if (value) OrphanMode = OrphanFilterMode.Hide; } }
@@ -129,10 +123,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             _hideInactiveNodes = _settings.Get("hide_inactive_nodes", false);
             _localDepth = _settings.Get("local_depth", 1);
             _timelineEnabled = _settings.Get("timeline_enabled", false);
-            _centerSlider = _settings.Get("center", 5.0);
-            _repulsionSlider = _settings.Get("repulsion", 72.0);
-            _linkStrengthSlider = _settings.Get("link_strength", 37.5);
-            _linkDistanceSlider = _settings.Get("link_distance", 80.0);
+            _repelSlider = _settings.Get("repel_radius", 70.0);
             _isGraphSidebarCollapsed = _settings.Get("sidebar_collapsed", false);
         }
 
@@ -313,10 +304,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     partial void OnTimelineMaxDateChanged(DateTimeOffset value) { OnPropertyChanged(nameof(TimelineEndDate)); OnPropertyChanged(nameof(TimelineEndLabel)); }
     partial void OnLocalDepthChanged(int value) { Save("local_depth", value); if (!_isInitializing && IsLocalView) _ = LoadGraphAsync(); }
     partial void OnIsGraphSidebarCollapsedChanged(bool value) { Save("sidebar_collapsed", value); }
-    partial void OnCenterSliderChanged(double value) { Save("center", value); NotifyPhysics(nameof(CenterStrength)); }
-    partial void OnRepulsionSliderChanged(double value) { Save("repulsion", value); NotifyPhysics(nameof(RepulsionStrength)); }
-    partial void OnLinkStrengthSliderChanged(double value) { Save("link_strength", value); NotifyPhysics(nameof(LinkStrength)); }
-    partial void OnLinkDistanceSliderChanged(double value) { Save("link_distance", value); NotifyPhysics(nameof(LinkDistance)); }
+    partial void OnRepelSliderChanged(double value) { Save("repel_radius", value); NotifyPhysics(nameof(RepelRadius)); }
     private void NotifyPhysics(string prop) { OnPropertyChanged(prop); if (!_isInitializing) PhysicsParametersChanged?.Invoke(this, EventArgs.Empty); }
     partial void OnSolarSystemScaleSliderChanged(double value) => NotifySolar(nameof(SolarSystemScale));
     partial void OnStarSpacingSliderChanged(double value) => NotifySolar(nameof(StarSpacingMultiplier));
