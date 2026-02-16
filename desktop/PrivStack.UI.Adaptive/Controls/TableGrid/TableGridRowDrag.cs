@@ -52,10 +52,11 @@ internal sealed class TableGridRowDrag
             Background = Brushes.Transparent,
             Cursor = new Cursor(StandardCursorType.Hand),
             Tag = rowIndex,
-            Child = new TextBlock
+            Child = new PathIcon
             {
-                Text = "\u2630",
-                FontSize = 10,
+                Data = StreamGeometry.Parse("M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"),
+                Width = 10,
+                Height = 10,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Foreground = TableGridCellFactory.GetBrush(themeSource, "ThemeTextMutedBrush")

@@ -1733,11 +1733,26 @@ public sealed class AdaptiveViewRenderer : UserControl
 
             var addBtn = new Button
             {
-                Content = new TextBlock
+                Content = new StackPanel
                 {
-                    Text = "\uD83D\uDDBC Add cover image",
-                    FontSize = FontSize("ThemeFontSizeSm", 12),
-                    Foreground = TextMuted,
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 6,
+                    Children =
+                    {
+                        new PathIcon
+                        {
+                            Data = StreamGeometry.Parse("M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"),
+                            Width = 12,
+                            Height = 12,
+                            Foreground = TextMuted,
+                        },
+                        new TextBlock
+                        {
+                            Text = "Add cover image",
+                            FontSize = FontSize("ThemeFontSizeSm", 12),
+                            Foreground = TextMuted,
+                        },
+                    },
                 },
                 Background = Avalonia.Media.Brushes.Transparent,
                 HorizontalAlignment = HorizontalAlignment.Left,
@@ -4744,7 +4759,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             Margin = new Thickness(0, 0, 0, 4),
         };
 
-        Border MakeIconButton(string icon, string tooltip, Action onClick)
+        Border MakeIconButton(string svgPath, string tooltip, Action onClick)
         {
             var btn = new Border
             {
@@ -4753,13 +4768,12 @@ public sealed class AdaptiveViewRenderer : UserControl
                 CornerRadius = new CornerRadius(15),
                 Background = Avalonia.Media.Brushes.Transparent,
                 Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
-                Child = new TextBlock
+                Child = new PathIcon
                 {
-                    Text = icon,
-                    FontSize = FontSize("ThemeFontSizeSm", 12),
+                    Data = StreamGeometry.Parse(svgPath),
+                    Width = 12,
+                    Height = 12,
                     Foreground = TextMuted,
-                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                 },
             };
             ToolTip.SetTip(btn, tooltip);
@@ -4780,17 +4794,17 @@ public sealed class AdaptiveViewRenderer : UserControl
             return btn;
         }
 
-        actionRow.Children.Add(MakeIconButton("\u270E", "Edit", () =>
+        actionRow.Children.Add(MakeIconButton("M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z", "Edit", () =>
         {
             CloseActiveEventPopup();
             SendCommand("open_edit_event_dialog", JsonSerializer.Serialize(new { id = eventId }));
         }));
-        actionRow.Children.Add(MakeIconButton("\uD83D\uDDD1", "Delete", () =>
+        actionRow.Children.Add(MakeIconButton("M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z", "Delete", () =>
         {
             CloseActiveEventPopup();
             SendCommand("delete_event", JsonSerializer.Serialize(new { id = eventId }));
         }));
-        actionRow.Children.Add(MakeIconButton("\u2715", "Close", () =>
+        actionRow.Children.Add(MakeIconButton("M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z", "Close", () =>
         {
             CloseActiveEventPopup();
         }));
@@ -4820,10 +4834,11 @@ public sealed class AdaptiveViewRenderer : UserControl
                 Spacing = 8,
                 Margin = new Thickness(0, 0, 0, 4),
             };
-            dtRow.Children.Add(new TextBlock
+            dtRow.Children.Add(new PathIcon
             {
-                Text = "\uD83D\uDD50",
-                FontSize = FontSize("ThemeFontSizeSm", 12),
+                Data = StreamGeometry.Parse("M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"),
+                Width = 12,
+                Height = 12,
                 Foreground = TextMuted,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             });
@@ -4847,10 +4862,11 @@ public sealed class AdaptiveViewRenderer : UserControl
                 Spacing = 8,
                 Margin = new Thickness(0, 0, 0, 4),
             };
-            locRow.Children.Add(new TextBlock
+            locRow.Children.Add(new PathIcon
             {
-                Text = "\uD83D\uDCCD",
-                FontSize = FontSize("ThemeFontSizeSm", 12),
+                Data = StreamGeometry.Parse("M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"),
+                Width = 12,
+                Height = 12,
                 Foreground = TextMuted,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             });
@@ -7598,10 +7614,11 @@ public sealed class AdaptiveViewRenderer : UserControl
 
             if (isLocked && !isArchived && !isTrashed)
             {
-                badgePanel.Children.Add(new TextBlock
+                badgePanel.Children.Add(new PathIcon
                 {
-                    Text = "\uD83D\uDD12",
-                    FontSize = FontSize("ThemeFontSizeXs", 10),
+                    Data = StreamGeometry.Parse("M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"),
+                    Width = 10,
+                    Height = 10,
                     VerticalAlignment = VerticalAlignment.Center,
                 });
             }
@@ -7746,19 +7763,25 @@ public sealed class AdaptiveViewRenderer : UserControl
             var isActive = false;
             if (command == "toggle_lock")
             {
-                icon = _currentPageIsLocked ? "\uD83D\uDD12" : "\uD83D\uDD13"; // 🔒 / 🔓
+                icon = _currentPageIsLocked
+                    ? "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"
+                    : "M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z";
                 label = _currentPageIsLocked ? "Locked" : "Lock";
                 isActive = _currentPageIsLocked;
             }
             else if (command == "toggle_archive")
             {
-                icon = _currentPageIsArchived ? "\uD83D\uDCE6" : "\uD83D\uDCC2"; // 📦 / 📂
+                icon = _currentPageIsArchived
+                    ? "M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"
+                    : "M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z";
                 label = _currentPageIsArchived ? "Archived" : "Archive";
                 isActive = _currentPageIsArchived;
             }
             else if (command == "toggle_trash")
             {
-                icon = _currentPageIsTrashed ? "\u267B\uFE0F" : "\uD83D\uDDD1"; // ♻️ / 🗑
+                icon = _currentPageIsTrashed
+                    ? "M12 8V5l-5 5 5 5v-3c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+                    : "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z";
                 label = _currentPageIsTrashed ? "Restore" : "Trash";
                 variant = _currentPageIsTrashed ? "default" : variant;
             }
@@ -7778,13 +7801,29 @@ public sealed class AdaptiveViewRenderer : UserControl
             };
             if (!string.IsNullOrEmpty(icon))
             {
-                contentPanel.Children.Add(new TextBlock
+                // SVG path data (from toggle overrides) renders as PathIcon; legacy emoji text stays as TextBlock
+                if (icon.Length > 20 && icon.StartsWith('M'))
                 {
-                    Text = icon,
-                    FontSize = FontSize("ThemeFontSizeMd", 14),
-                    MinWidth = 18,
-                    VerticalAlignment = VerticalAlignment.Center,
-                });
+                    contentPanel.Children.Add(new PathIcon
+                    {
+                        Data = StreamGeometry.Parse(icon),
+                        Width = 14,
+                        Height = 14,
+                        Foreground = isSaveDisabled ? TextMuted
+                            : variant == "danger" ? DangerBrush : TextPrimary,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    });
+                }
+                else
+                {
+                    contentPanel.Children.Add(new TextBlock
+                    {
+                        Text = icon,
+                        FontSize = FontSize("ThemeFontSizeMd", 14),
+                        MinWidth = 18,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    });
+                }
             }
             contentPanel.Children.Add(new TextBlock
             {
@@ -8064,7 +8103,12 @@ public sealed class AdaptiveViewRenderer : UserControl
 
         // -- Segmented view mode selector (Rich Editor | Markdown) --
         var r = Radius("ThemeRadiusSm").TopLeft;
-        var modeLabels = new[] { "\u270F\uFE0F Rich Editor", "\uD83D\uDCDD Markdown" };
+        var modeLabels = new[] { "Rich Editor", "Markdown" };
+        var modeIconPaths = new[]
+        {
+            "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+            "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z",
+        };
         var modeButtons = new Button[2];
         var modeGrid = new Grid
         {
@@ -8118,7 +8162,23 @@ public sealed class AdaptiveViewRenderer : UserControl
 
             modeButtons[i] = new Button
             {
-                Content = modeLabels[i],
+                Content = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 4,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
+                    {
+                        new PathIcon
+                        {
+                            Data = StreamGeometry.Parse(modeIconPaths[i]),
+                            Width = 12,
+                            Height = 12,
+                            Foreground = i == 0 ? Brushes.White : TextMuted,
+                        },
+                        new TextBlock { Text = modeLabels[i], VerticalAlignment = VerticalAlignment.Center },
+                    },
+                },
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Center,
                 Padding = Thick("ThemeButtonPaddingSm"),
@@ -9909,7 +9969,8 @@ public sealed class AdaptiveViewRenderer : UserControl
         AddColorDropdown(toolbarInner, editor, "A", "Font Color", isForeground: true);
 
         // Background color dropdown (highlighter icon)
-        AddColorDropdown(toolbarInner, editor, "\uD83D\uDD8C", "Highlight Color", isForeground: false);
+        AddColorDropdown(toolbarInner, editor, "Highlight", "Highlight Color", isForeground: false,
+            svgPath: "M17.75 7L14 3.25l-10 10V17h3.75l10-10zm2.96-2.96a1 1 0 000-1.41L18.37.29a1 1 0 00-1.41 0L15.13 2.12l3.75 3.75 1.83-1.83zM2 20h20v2H2z");
 
         // Pipe separator before link button
         toolbarInner.Children.Add(new Border
@@ -9921,12 +9982,12 @@ public sealed class AdaptiveViewRenderer : UserControl
         {
             var linkBtn = new Border
             {
-                Child = new TextBlock
+                Child = new PathIcon
                 {
-                    Text = "\uD83D\uDD17", // 🔗
-                    FontSize = FontSize("ThemeFontSizeSm", 12),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
+                    Data = StreamGeometry.Parse("M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"),
+                    Width = 14,
+                    Height = 14,
+                    Foreground = TextPrimary,
                 },
                 Background = inactiveBg,
                 CornerRadius = new CornerRadius(4),
@@ -10539,7 +10600,8 @@ public sealed class AdaptiveViewRenderer : UserControl
 
     private void AddColorDropdown(StackPanel toolbar,
         Controls.RichTextEditor.RichTextEditor editor,
-        string label, string tooltip, bool isForeground)
+        string label, string tooltip, bool isForeground,
+        string? svgPath = null)
     {
         var palette = isForeground ? ColorPalette : BgColorPalette;
 
@@ -10602,13 +10664,26 @@ public sealed class AdaptiveViewRenderer : UserControl
             Orientation = Orientation.Vertical,
             HorizontalAlignment = HorizontalAlignment.Center,
         };
-        btnContent.Children.Add(new TextBlock
+        if (svgPath != null)
         {
-            Text = label,
-            FontSize = FontSize("ThemeFontSizeSm", 12),
-            Foreground = TextPrimary,
-            HorizontalAlignment = HorizontalAlignment.Center,
-        });
+            btnContent.Children.Add(new PathIcon
+            {
+                Data = StreamGeometry.Parse(svgPath),
+                Width = 12,
+                Height = 12,
+                Foreground = TextPrimary,
+            });
+        }
+        else
+        {
+            btnContent.Children.Add(new TextBlock
+            {
+                Text = label,
+                FontSize = FontSize("ThemeFontSizeSm", 12),
+                Foreground = TextPrimary,
+                HorizontalAlignment = HorizontalAlignment.Center,
+            });
+        }
         btnContent.Children.Add(new Border
         {
             Height = 2,
@@ -11965,12 +12040,27 @@ public sealed class AdaptiveViewRenderer : UserControl
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Children =
                 {
-                    new TextBlock
+                    new StackPanel
                     {
-                        Text = "\uD83D\uDDBC Add an image",
-                        Foreground = TextMuted,
-                        FontSize = FontSize("ThemeFontSizeMd", 14),
+                        Orientation = Orientation.Horizontal,
+                        Spacing = 6,
                         HorizontalAlignment = HorizontalAlignment.Center,
+                        Children =
+                        {
+                            new PathIcon
+                            {
+                                Data = StreamGeometry.Parse("M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"),
+                                Width = 14,
+                                Height = 14,
+                                Foreground = TextMuted,
+                            },
+                            new TextBlock
+                            {
+                                Text = "Add an image",
+                                Foreground = TextMuted,
+                                FontSize = FontSize("ThemeFontSizeMd", 14),
+                            },
+                        },
                     },
                     buttonPanel,
                     urlBox,
@@ -13129,10 +13219,11 @@ public sealed class AdaptiveViewRenderer : UserControl
 
             var gearBtn = new Button
             {
-                Content = new TextBlock
+                Content = new PathIcon
                 {
-                    Text = "\u2699",
-                    FontSize = FontSize("ThemeFontSizeLg", 18),
+                    Data = StreamGeometry.Parse("M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"),
+                    Width = 18,
+                    Height = 18,
                     Foreground = TextPrimary,
                 },
                 Background = SurfaceElevated,
@@ -13386,23 +13477,60 @@ public sealed class AdaptiveViewRenderer : UserControl
                 var item = items[i];
                 var idx = i;
 
-                // Map icon name to emoji for simple display
-                var iconEmoji = item.Icon switch
+                // Map icon name to SVG path for badge display
+                var iconPath = item.Icon switch
                 {
-                    "FileText" => "\U0001F4DD",    // Notes
-                    "CheckSquare" => "\u2611",     // Tasks
-                    "Calendar" => "\U0001F4C5",    // Calendar
-                    "Book" => "\U0001F4D6",        // Journal
-                    "Users" => "\U0001F465",       // Contacts
-                    "Lock" => "\U0001F512",        // Passwords
-                    "Rss" => "\U0001F4E1",         // RSS
-                    "Code" => "\U0001F4BB",        // Snippets
-                    "Folder" => "\U0001F4C1",      // Files
-                    "GitBranch" => "\U0001F517",   // Graph
-                    "DollarSign" => "\U0001F4B0", // Ledger
-                    "Target" => "\U0001F3AF",      // Deals
-                    _ => null
+                    "FileText" => "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z",
+                    "CheckSquare" => "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+                    "Calendar" => "M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z",
+                    "Book" => "M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z",
+                    "Users" => "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z",
+                    "Lock" => "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
+                    "Rss" => "M6.18 15.64a2.18 2.18 0 010 4.36 2.18 2.18 0 010-4.36zM4 4.44A15.56 15.56 0 0119.56 20h-2.83A12.73 12.73 0 004 7.27V4.44zm0 5.66a9.9 9.9 0 019.9 9.9h-2.83A7.07 7.07 0 004 12.93v-2.83z",
+                    "Code" => "M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z",
+                    "Folder" => "M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z",
+                    "GitBranch" => "M15 4c-1.66 0-3 1.34-3 3 0 1.3.84 2.4 2 2.82V12c0 1.1-.9 2-2 2H8c-.73 0-1.41.21-2 .55V7.82C7.16 7.4 8 6.3 8 5c0-1.66-1.34-3-3-3S2 3.34 2 5c0 1.3.84 2.4 2 2.82v8.37C2.84 16.6 2 17.7 2 19c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V14c0-1.1.9-2 2-2h4c2.21 0 4-1.79 4-4V9.82c1.16-.42 2-1.52 2-2.82 0-1.66-1.34-3-3-3z",
+                    "DollarSign" => "M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z",
+                    "Target" => "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z",
+                    _ => (string?)null
                 };
+
+                Control badgeContent;
+                if (iconPath != null)
+                {
+                    badgeContent = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Spacing = 4,
+                        Children =
+                        {
+                            new PathIcon
+                            {
+                                Data = StreamGeometry.Parse(iconPath),
+                                Width = 10,
+                                Height = 10,
+                                Foreground = TextMuted,
+                                VerticalAlignment = VerticalAlignment.Center,
+                            },
+                            new TextBlock
+                            {
+                                Text = item.LinkTypeDisplayName,
+                                FontSize = FontSize("ThemeFontSizeXsSm", 11),
+                                Foreground = TextMuted,
+                                VerticalAlignment = VerticalAlignment.Center,
+                            },
+                        },
+                    };
+                }
+                else
+                {
+                    badgeContent = new TextBlock
+                    {
+                        Text = item.LinkTypeDisplayName,
+                        FontSize = FontSize("ThemeFontSizeXsSm", 11),
+                        Foreground = TextMuted,
+                    };
+                }
 
                 var badge = new Border
                 {
@@ -13411,12 +13539,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                     Padding = new Thickness(6, 2),
                     Margin = new Thickness(0, 0, 8, 0),
                     VerticalAlignment = VerticalAlignment.Center,
-                    Child = new TextBlock
-                    {
-                        Text = iconEmoji != null ? $"{iconEmoji} {item.LinkTypeDisplayName}" : item.LinkTypeDisplayName,
-                        FontSize = FontSize("ThemeFontSizeXsSm", 11),
-                        Foreground = TextMuted,
-                    },
+                    Child = badgeContent,
                 };
 
                 var titleBlock = new TextBlock
