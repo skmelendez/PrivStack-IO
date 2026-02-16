@@ -233,15 +233,15 @@
                             <StackPanel Spacing="8" Margin="8,4">
                                 <StackPanel Spacing="2">
                                     <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Node Spacing" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding NodeSpacingDistance, StringFormat='{}{0:F0}px'}"
+                                        <TextBlock Text="Center force" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding CenterStrength, StringFormat='{}{0:F3}'}"
                                                    FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
                                     </Grid>
-                                    <Slider Value="{Binding NodeSpacingSlider}" Minimum="0" Maximum="100"/>
+                                    <Slider Value="{Binding CenterSlider}" Minimum="0" Maximum="100"/>
                                 </StackPanel>
                                 <StackPanel Spacing="2">
                                     <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Repulsion" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Text="Repel force" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
                                         <TextBlock Grid.Column="1" Text="{Binding RepulsionStrength, StringFormat='{}{0:F0}'}"
                                                    FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
                                     </Grid>
@@ -249,15 +249,7 @@
                                 </StackPanel>
                                 <StackPanel Spacing="2">
                                     <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Link Distance" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding LinkDistance, StringFormat='{}{0:F0}'}"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                    </Grid>
-                                    <Slider Value="{Binding LinkDistanceSlider}" Minimum="0" Maximum="100"/>
-                                </StackPanel>
-                                <StackPanel Spacing="2">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Link Strength" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Text="Link force" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
                                         <TextBlock Grid.Column="1" Text="{Binding LinkStrength, StringFormat='{}{0:F2}'}"
                                                    FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
                                     </Grid>
@@ -265,19 +257,11 @@
                                 </StackPanel>
                                 <StackPanel Spacing="2">
                                     <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Collision" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding CollisionStrength, StringFormat='{}{0:F2}'}"
+                                        <TextBlock Text="Link distance" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding LinkDistance, StringFormat='{}{0:F0}'}"
                                                    FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
                                     </Grid>
-                                    <Slider Value="{Binding CollisionSlider}" Minimum="0" Maximum="100"/>
-                                </StackPanel>
-                                <StackPanel Spacing="2">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Center Gravity" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding CenterStrength, StringFormat='{}{0:F3}'}"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                    </Grid>
-                                    <Slider Value="{Binding CenterSlider}" Minimum="0" Maximum="100"/>
+                                    <Slider Value="{Binding LinkDistanceSlider}" Minimum="0" Maximum="100"/>
                                 </StackPanel>
                             </StackPanel>
                         </Expander>
