@@ -23,6 +23,12 @@ public static class CanvasElementType
     public const string GroupFrame = "group_frame";
     public const string Image = "image";
     public const string EntityReference = "entity_ref";
+    public const string Diamond = "diamond";
+    public const string Parallelogram = "parallelogram";
+    public const string Cylinder = "cylinder";
+    public const string Hexagon = "hexagon";
+    public const string RoundedRect = "rounded_rect";
+    public const string Triangle = "triangle";
 }
 
 /// <summary>
@@ -33,6 +39,17 @@ public enum ConnectorStyle
     Straight,
     Curved,
     Elbow,
+}
+
+/// <summary>
+/// Arrow direction mode for connectors.
+/// </summary>
+public enum ArrowMode
+{
+    Forward,
+    None,
+    Backward,
+    Both,
 }
 
 /// <summary>
@@ -129,6 +146,12 @@ public sealed class CanvasConnector
 
     [JsonPropertyName("style")]
     public ConnectorStyle Style { get; set; } = ConnectorStyle.Straight;
+
+    [JsonPropertyName("arrow_mode")]
+    public ArrowMode ArrowMode { get; set; } = ArrowMode.Forward;
+
+    [JsonPropertyName("color")]
+    public string? Color { get; set; }
 }
 
 /// <summary>

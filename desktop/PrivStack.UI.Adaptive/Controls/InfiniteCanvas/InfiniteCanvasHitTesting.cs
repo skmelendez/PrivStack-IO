@@ -54,8 +54,8 @@ public sealed partial class InfiniteCanvasControl
     }
 
     /// <summary>
-    /// Hit-test a connector line segment. Returns the first connector
-    /// within ConnectorHitDistance pixels of the screen point.
+    /// Hit-test a connector using style-aware distance calculation.
+    /// Returns the first connector within ConnectorHitDistance pixels.
     /// </summary>
     internal CanvasConnector? HitTestConnector(Point screenPos, CanvasData data)
     {
@@ -65,10 +65,18 @@ public sealed partial class InfiniteCanvasControl
             var target = data.FindElement(conn.TargetId);
             if (source == null || target == null) continue;
 
-            var srcCenter = GetAnchorScreenPoint(source, AnchorPoint.Right);
-            var tgtCenter = GetAnchorScreenPoint(target, AnchorPoint.Left);
+            var srcAnchor = GetClosestAnchor(source, GetAnchorScreenPoint(target, AnchorPoint.Left));
+            var tgtAnchor = GetClosestAnchor(target, GetAnchorScreenPoint(source, AnchorPoint.Right));
+            var start = GetAnchorScreenPoint(source, srcAnchor);
+            var end = GetAnchorScreenPoint(target, tgtAnchor);
 
-            var dist = DistanceToLineSegment(screenPos, srcCenter, tgtCenter);
+            var dist = conn.Style switch
+            {
+                ConnectorStyle.Elbow => DistanceToElbowPath(screenPos, start, end, srcAnchor, tgtAnchor),
+                ConnectorStyle.Curved => DistanceToCubicBezier(screenPos, start, end, srcAnchor, tgtAnchor),
+                _ => DistanceToLineSegment(screenPos, start, end),
+            };
+
             if (dist <= ConnectorHitDistance)
                 return conn;
         }
@@ -202,4 +210,53 @@ public sealed partial class InfiniteCanvasControl
 
         return Math.Sqrt((p.X - projX) * (p.X - projX) + (p.Y - projY) * (p.Y - projY));
     }
+
+    private double DistanceToElbowPath(Point p, Point start, Point end,
+        AnchorPoint srcAnchor, AnchorPoint tgtAnchor)
+    {
+        var margin = 20 * Zoom;
+        var segments = ComputeElbowSegments(start, end, srcAnchor, tgtAnchor, margin);
+
+        var minDist = double.MaxValue;
+        for (var i = 0; i < segments.Count - 1; i++)
+        {
+            var dist = DistanceToLineSegment(p, segments[i], segments[i + 1]);
+            minDist = Math.Min(minDist, dist);
+        }
+
+        return minDist;
+    }
+
+    private double DistanceToCubicBezier(Point p, Point start, Point end,
+        AnchorPoint srcAnchor, AnchorPoint tgtAnchor)
+    {
+        var distance = Math.Sqrt(
+            (end.X - start.X) * (end.X - start.X) +
+            (end.Y - start.Y) * (end.Y - start.Y));
+        var offset = Math.Max(50, distance * 0.4) * Zoom;
+
+        var cp1 = GetControlPoint(start, srcAnchor, offset);
+        var cp2 = GetControlPoint(end, tgtAnchor, offset);
+
+        // Sample 20 points along the cubic bezier and find minimum distance
+        var minDist = double.MaxValue;
+        const int samples = 20;
+        var prevPt = start;
+
+        for (var i = 1; i <= samples; i++)
+        {
+            var t = (double)i / samples;
+            var u = 1 - t;
+            var curPt = new Point(
+                u * u * u * start.X + 3 * u * u * t * cp1.X + 3 * u * t * t * cp2.X + t * t * t * end.X,
+                u * u * u * start.Y + 3 * u * u * t * cp1.Y + 3 * u * t * t * cp2.Y + t * t * t * end.Y);
+
+            var dist = DistanceToLineSegment(p, prevPt, curPt);
+            minDist = Math.Min(minDist, dist);
+            prevPt = curPt;
+        }
+
+        return minDist;
+    }
+
 }

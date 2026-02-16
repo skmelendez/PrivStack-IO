@@ -20,9 +20,18 @@ public sealed partial class InfiniteCanvasControl
     private static readonly Color DefaultPageRefColor = Color.FromRgb(220, 235, 255);
     private static readonly Color DefaultEntityRefColor = Color.FromRgb(240, 240, 245);
 
+    private static void DrawDropShadow(DrawingContext ctx, Rect rect, double cornerRadius = 4)
+    {
+        var shadowOffset = 2.0;
+        var shadowRect = new Rect(rect.X + shadowOffset, rect.Y + shadowOffset, rect.Width, rect.Height);
+        var shadowBrush = new SolidColorBrush(Colors.Black, 0.15);
+        ctx.DrawRectangle(shadowBrush, null, shadowRect, cornerRadius, cornerRadius);
+    }
+
     private void DrawNoteCard(DrawingContext ctx, CanvasElement element)
     {
         var rect = ElementToScreenRect(element);
+        DrawDropShadow(ctx, rect, 8);
         var color = ParseColor(element.Color, DefaultNoteColor);
         var brush = new SolidColorBrush(color, 0.9);
         var borderPen = new Pen(new SolidColorBrush(Colors.Black, 0.15), 1);
@@ -65,6 +74,7 @@ public sealed partial class InfiniteCanvasControl
     private void DrawRectElement(DrawingContext ctx, CanvasElement element)
     {
         var rect = ElementToScreenRect(element);
+        DrawDropShadow(ctx, rect);
         var color = ParseColor(element.Color, DefaultRectColor);
         var brush = new SolidColorBrush(color, 0.6);
         var strokeColor = ParseColor(element.StrokeColor, color);
@@ -77,6 +87,7 @@ public sealed partial class InfiniteCanvasControl
     private void DrawEllipseElement(DrawingContext ctx, CanvasElement element)
     {
         var rect = ElementToScreenRect(element);
+        DrawDropShadow(ctx, rect);
         var color = ParseColor(element.Color, DefaultEllipseColor);
         var brush = new SolidColorBrush(color, 0.6);
         var strokeColor = ParseColor(element.StrokeColor, color);
