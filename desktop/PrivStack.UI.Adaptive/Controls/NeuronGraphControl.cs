@@ -54,6 +54,13 @@ public sealed class NeuronGraphControl : Control
     private int _highlightDepth = 2;
     private Dictionary<string, int>? _highlightDistances;
 
+    // Hover highlight: BFS distances from currently hovered node
+    private Dictionary<string, int>? _hoverDistances;
+
+    // Animated opacity per node — lerps toward target each tick
+    private readonly Dictionary<string, double> _nodeOpacities = new();
+    private bool _opacityAnimating;
+
     // Focus mode: smoothly pan to center on a clicked node
     private string? _focusedNodeId;
 
@@ -467,14 +474,17 @@ public sealed class NeuronGraphControl : Control
     private void OnTick(object? sender, EventArgs e)
     {
         var engineRunning = _engine?.IsRunning == true;
-        if (!engineRunning && _focusedNodeId == null)
+        if (engineRunning) _engine!.Tick();
+
+        UpdateOpacities();
+
+        if (!engineRunning && _focusedNodeId == null && !_opacityAnimating)
         {
             _timer?.Stop();
             InvalidateVisual();
             return;
         }
 
-        if (engineRunning) _engine!.Tick();
         InvalidateVisual();
     }
 
@@ -639,140 +649,83 @@ public sealed class NeuronGraphControl : Control
         // Draw depth ring indicators (subtle concentric circles)
         RenderDepthRings(ctx, centerX, centerY, bounds);
 
-        // Draw edges — color is a blend of the two endpoint node type colors
-        var greyColor = Color.FromArgb(64, 128, 128, 128); // 25% opacity grey
-
+        // Draw edges — opacity driven by animated node opacities
         foreach (var edge in _graphData.Edges)
         {
             if (!_graphData.Nodes.TryGetValue(edge.SourceId, out var src) ||
                 !_graphData.Nodes.TryGetValue(edge.TargetId, out var tgt))
                 continue;
 
+            var srcOpacity = _nodeOpacities.GetValueOrDefault(edge.SourceId, 0.8);
+            var tgtOpacity = _nodeOpacities.GetValueOrDefault(edge.TargetId, 0.8);
+            var edgeOpacity = Math.Min(srcOpacity, tgtOpacity);
+
+            if (EnableHighlightMode && _hideInactiveNodes && edgeOpacity < 0.5) continue;
+
             var p1 = ToBase(src.X, src.Y);
             var p2 = ToBase(tgt.X, tgt.Y);
-            var blendedColor = BlendColors(GetNodeColor(src.NodeType), GetNodeColor(tgt.NodeType));
 
             IBrush edgeBrush;
             double thickness;
 
-            if (EnableHighlightMode && _highlightedNodeId != null && _highlightDistances != null)
+            if (EnableHighlightMode)
             {
-                // Highlight mode with an active highlight
-                var srcInRange = _highlightDistances.TryGetValue(edge.SourceId, out var srcDist) && srcDist <= HighlightDepth;
-                var tgtInRange = _highlightDistances.TryGetValue(edge.TargetId, out var tgtDist) && tgtDist <= HighlightDepth;
-
-                if (srcInRange && tgtInRange)
-                {
-                    // 75% opacity so edges don't obscure nodes
-                    edgeBrush = new SolidColorBrush(Color.FromArgb(
-                        (byte)(blendedColor.A * 0.75), blendedColor.R, blendedColor.G, blendedColor.B));
-                    thickness = 1.5;
-                }
-                else
-                {
-                    if (_hideInactiveNodes) continue;
-                    edgeBrush = new SolidColorBrush(greyColor);
-                    thickness = 0.7;
-                }
-            }
-            else if (EnableHighlightMode)
-            {
-                // Highlight mode but no node highlighted yet — 75% opacity
+                var blendedColor = BlendColors(GetNodeColor(src.NodeType), GetNodeColor(tgt.NodeType));
                 edgeBrush = new SolidColorBrush(Color.FromArgb(
-                    (byte)(blendedColor.A * 0.75), blendedColor.R, blendedColor.G, blendedColor.B));
-                thickness = 1.0;
+                    (byte)(blendedColor.A * edgeOpacity * 0.75), blendedColor.R, blendedColor.G, blendedColor.B));
+                thickness = edgeOpacity > 0.7 ? 1.2 : 0.7;
             }
             else
             {
-                // Non-highlight mode (neuron info panel) — keep depth logic with blended colors
+                // Non-highlight mode (neuron info panel)
+                var blendedColor = BlendColors(GetNodeColor(src.NodeType), GetNodeColor(tgt.NodeType));
                 var isConnectedToCenter = edge.SourceId == _centerId || edge.TargetId == _centerId;
                 var maxDepth = Math.Max(src.Depth, tgt.Depth);
+                var depthOpacity = isConnectedToCenter ? 0.75 : maxDepth >= 2 ? 0.5 : 0.75;
 
-                if (isConnectedToCenter)
-                {
-                    edgeBrush = new SolidColorBrush(Color.FromArgb(
-                        (byte)(blendedColor.A * 0.75), blendedColor.R, blendedColor.G, blendedColor.B));
-                    thickness = 1.5;
-                }
-                else if (maxDepth >= 2)
-                {
-                    edgeBrush = new SolidColorBrush(Color.FromArgb(
-                        (byte)(blendedColor.A * 0.5), blendedColor.R, blendedColor.G, blendedColor.B));
-                    thickness = 0.7;
-                }
-                else
-                {
-                    edgeBrush = new SolidColorBrush(Color.FromArgb(
-                        (byte)(blendedColor.A * 0.75), blendedColor.R, blendedColor.G, blendedColor.B));
-                    thickness = 1.0;
-                }
+                edgeBrush = new SolidColorBrush(Color.FromArgb(
+                    (byte)(blendedColor.A * depthOpacity), blendedColor.R, blendedColor.G, blendedColor.B));
+                thickness = isConnectedToCenter ? 1.5 : maxDepth >= 2 ? 0.7 : 1.0;
             }
 
             var pen = new Pen(edgeBrush, thickness) { LineCap = PenLineCap.Round };
             ctx.DrawLine(pen, p1, p2);
         }
 
-        // Draw nodes
+        // Draw nodes — opacity from animated _nodeOpacities
         var typeface = new Typeface(GetFontFamily("ThemeFontSans"), FontStyle.Normal, FontWeight.Normal);
-        var greyBrush = new SolidColorBrush(greyColor);
-
-        var dimLabelBrush = new SolidColorBrush(Color.FromArgb(64, 180, 180, 180)); // 25% label for out-of-range
 
         foreach (var node in _graphData.Nodes.Values)
         {
+            var nodeOpacity = _nodeOpacities.GetValueOrDefault(node.Id, 0.8);
+
+            if (EnableHighlightMode && _hideInactiveNodes && nodeOpacity < 0.5) continue;
+
             var pos = ToBase(node.X, node.Y);
             var radius = node.Radius;
 
             IBrush fill;
-            bool drawHighlightRing = false;
-            bool isDimmed = false;
+            var drawHighlightRing = false;
 
-            if (EnableHighlightMode && _highlightedNodeId != null && _highlightDistances != null)
+            if (EnableHighlightMode)
             {
-                // Highlight mode with an active highlight
-                var inRange = _highlightDistances.TryGetValue(node.Id, out var dist) && dist <= HighlightDepth;
+                var baseColor = GetNodeColor(node.NodeType);
+                fill = new SolidColorBrush(Color.FromArgb(
+                    (byte)(baseColor.A * nodeOpacity), baseColor.R, baseColor.G, baseColor.B));
 
-                if (node.Id == _hoveredNodeId)
-                {
-                    fill = GetBrush("ThemePrimaryHoverBrush", Brushes.CadetBlue);
-                }
-                else if (node.Id == _highlightedNodeId)
-                {
-                    fill = GetNodeBrush(node.NodeType);
+                // White ring on click-locked node
+                if (node.Id == _highlightedNodeId)
                     drawHighlightRing = true;
-                }
-                else if (inRange)
-                {
-                    fill = GetNodeBrush(node.NodeType);
-                }
-                else
-                {
-                    if (_hideInactiveNodes) continue;
-                    fill = greyBrush;
-                    isDimmed = true;
-                }
-            }
-            else if (EnableHighlightMode)
-            {
-                // Highlight mode but no node highlighted — all nodes type-colored
-                fill = node.Id == _hoveredNodeId
-                    ? GetBrush("ThemePrimaryHoverBrush", Brushes.CadetBlue)
-                    : GetNodeBrush(node.NodeType);
             }
             else
             {
-                // Non-highlight mode (neuron info panel) — existing behavior
-                var opacity = Math.Max(0.4, 1.0 - node.Depth * 0.15);
-
-                if (node.Id == _hoveredNodeId)
-                    fill = GetBrush("ThemePrimaryHoverBrush", Brushes.CadetBlue);
-                else
-                    fill = GetNodeBrush(node.NodeType);
+                // Non-highlight mode (neuron info panel)
+                var depthOpacity = Math.Max(0.4, 1.0 - node.Depth * 0.15);
+                fill = GetNodeBrush(node.NodeType);
 
                 if (node.Depth >= 2 && fill is ISolidColorBrush solid)
-                    fill = new SolidColorBrush(solid.Color, opacity);
+                    fill = new SolidColorBrush(solid.Color, depthOpacity);
 
-                // Center node gets a highlight ring in neuron mode
                 if (node.Id == _centerId)
                 {
                     var ringPen = new Pen(Brushes.White, 2.0);
@@ -780,7 +733,6 @@ public sealed class NeuronGraphControl : Control
                 }
             }
 
-            // Highlighted node ring (highlight mode only)
             if (drawHighlightRing)
             {
                 var ringPen = new Pen(Brushes.White, 2.5);
@@ -789,14 +741,15 @@ public sealed class NeuronGraphControl : Control
 
             ctx.DrawEllipse(fill, null, pos, radius, radius);
 
-            // Label
+            // Label — opacity matches node
             if (!string.IsNullOrEmpty(node.Title))
             {
                 var fontSize = (EnableHighlightMode && node.Id == _highlightedNodeId) || node.Id == _centerId
-                    ? GetDouble("ThemeFontSizeXsSm", 11) : node.Depth <= 1 ? GetDouble("ThemeFontSize2Xs", 9) : GetDouble("ThemeFontSize2Xs", 9) * 0.9;
-                var labelBrush = isDimmed
-                    ? dimLabelBrush
-                    : GetBrush("ThemeTextSecondaryBrush", Brushes.LightGray);
+                    ? GetDouble("ThemeFontSizeXsSm", 11) : GetDouble("ThemeFontSize2Xs", 9);
+                var labelColor = GetBrush("ThemeTextSecondaryBrush", Brushes.LightGray) is ISolidColorBrush lb
+                    ? lb.Color : Colors.LightGray;
+                var labelBrush = new SolidColorBrush(Color.FromArgb(
+                    (byte)(labelColor.A * nodeOpacity), labelColor.R, labelColor.G, labelColor.B));
 #pragma warning disable CS0618
                 var formattedText = new FormattedText(
                     node.Title.Length > 24 ? node.Title[..21] + "..." : node.Title,
@@ -933,6 +886,10 @@ public sealed class NeuronGraphControl : Control
 
             _hoveredNodeId = hit;
             Cursor = hit != null ? new Cursor(StandardCursorType.Hand) : Cursor.Default;
+
+            // Compute BFS distances from hovered node for highlight
+            ComputeHoverDistances();
+            EnsureTimerRunning();
 
             // Fire hover for new node
             if (hit != null)
@@ -1111,20 +1068,73 @@ public sealed class NeuronGraphControl : Control
     // Highlight helpers
     // ----------------------------------------------------------------
 
-    private void ComputeHighlightDistances()
+    /// <summary>
+    /// Compute BFS distances from the hovered node for hover highlight.
+    /// </summary>
+    private void ComputeHoverDistances()
     {
-        // BFS always runs against full (unfiltered) data so depth is correct
-        // even when nodes have been despawned from _graphData
         var sourceData = _fullGraphData ?? _graphData;
-        if (_highlightedNodeId is null || sourceData is null)
+        if (_hoveredNodeId is null || sourceData is null)
         {
-            _highlightDistances = null;
+            _hoverDistances = null;
             return;
         }
 
-        // Build adjacency list from edges
+        _hoverDistances = ComputeBfsDistances(_hoveredNodeId, sourceData);
+    }
+
+    /// <summary>
+    /// Lerp each node's animated opacity toward its target each tick.
+    /// Target: 1.0 if in BFS range of hover/highlight, 0.3 if dimmed, 0.8 baseline.
+    /// </summary>
+    private void UpdateOpacities()
+    {
+        if (_graphData is null) return;
+
+        // Determine active highlight source: hover takes priority over click-lock
+        var activeId = _hoveredNodeId ?? _highlightedNodeId;
+        var activeDistances = _hoveredNodeId != null ? _hoverDistances
+            : _highlightedNodeId != null ? _highlightDistances
+            : null;
+
+        _opacityAnimating = false;
+        const double lerpRate = 0.18;
+
+        foreach (var node in _graphData.Nodes.Values)
+        {
+            double target;
+            if (activeId == null)
+            {
+                target = 0.8;
+            }
+            else if (activeDistances != null &&
+                     activeDistances.TryGetValue(node.Id, out var dist) && dist <= _highlightDepth)
+            {
+                target = 1.0;
+            }
+            else
+            {
+                target = 0.25;
+            }
+
+            if (!_nodeOpacities.TryGetValue(node.Id, out var current))
+                current = 0.8;
+
+            var next = current + (target - current) * lerpRate;
+            if (Math.Abs(next - target) < 0.005) next = target;
+
+            _nodeOpacities[node.Id] = next;
+            if (Math.Abs(next - target) > 0.001) _opacityAnimating = true;
+        }
+    }
+
+    /// <summary>
+    /// BFS distance map from a root node in the given graph data.
+    /// </summary>
+    private static Dictionary<string, int> ComputeBfsDistances(string rootId, GraphData data)
+    {
         var adj = new Dictionary<string, List<string>>();
-        foreach (var edge in sourceData.Edges)
+        foreach (var edge in data.Edges)
         {
             if (!adj.TryGetValue(edge.SourceId, out var srcList))
             {
@@ -1141,26 +1151,53 @@ public sealed class NeuronGraphControl : Control
             tgtList.Add(edge.SourceId);
         }
 
-        // BFS from highlighted node
-        _highlightDistances = new Dictionary<string, int>();
-        if (!sourceData.Nodes.ContainsKey(_highlightedNodeId)) return;
+        var distances = new Dictionary<string, int>();
+        if (!data.Nodes.ContainsKey(rootId)) return distances;
 
         var queue = new Queue<string>();
-        queue.Enqueue(_highlightedNodeId);
-        _highlightDistances[_highlightedNodeId] = 0;
+        queue.Enqueue(rootId);
+        distances[rootId] = 0;
 
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-            var dist = _highlightDistances[current];
+            var d = distances[current];
             if (!adj.TryGetValue(current, out var neighbors)) continue;
             foreach (var neighbor in neighbors)
             {
-                if (_highlightDistances.ContainsKey(neighbor)) continue;
-                _highlightDistances[neighbor] = dist + 1;
+                if (distances.ContainsKey(neighbor)) continue;
+                distances[neighbor] = d + 1;
                 queue.Enqueue(neighbor);
             }
         }
+
+        return distances;
+    }
+
+    /// <summary>
+    /// Ensure the render timer is running (needed for opacity animation).
+    /// </summary>
+    private void EnsureTimerRunning()
+    {
+        if (_timer == null)
+        {
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+            _timer.Tick += OnTick;
+        }
+        if (!_timer.IsEnabled)
+            _timer.Start();
+    }
+
+    private void ComputeHighlightDistances()
+    {
+        var sourceData = _fullGraphData ?? _graphData;
+        if (_highlightedNodeId is null || sourceData is null)
+        {
+            _highlightDistances = null;
+            return;
+        }
+
+        _highlightDistances = ComputeBfsDistances(_highlightedNodeId, sourceData);
     }
 
     /// <summary>
