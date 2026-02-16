@@ -77,6 +77,24 @@ public sealed partial class InfiniteCanvasControl
                 case CanvasElementType.EntityReference:
                     DrawEntityReference(ctx, element);
                     break;
+                case CanvasElementType.Diamond:
+                    DrawDiamondElement(ctx, element);
+                    break;
+                case CanvasElementType.Parallelogram:
+                    DrawParallelogramElement(ctx, element);
+                    break;
+                case CanvasElementType.Cylinder:
+                    DrawCylinderElement(ctx, element);
+                    break;
+                case CanvasElementType.Hexagon:
+                    DrawHexagonElement(ctx, element);
+                    break;
+                case CanvasElementType.RoundedRect:
+                    DrawRoundedRectElement(ctx, element);
+                    break;
+                case CanvasElementType.Triangle:
+                    DrawTriangleElement(ctx, element);
+                    break;
             }
         }
 
