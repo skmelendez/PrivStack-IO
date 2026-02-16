@@ -12,7 +12,7 @@ namespace PrivStack.Desktop.Services;
 /// </summary>
 public static class NativeMessagingRegistrar
 {
-    private static readonly ILogger _log = Log.ForContext(typeof(NativeMessagingRegistrar));
+    private static readonly ILogger _log = Log.Logger.ForContext(typeof(NativeMessagingRegistrar));
     private const string HostName = "io.privstack.bridge";
 
     /// <summary>
@@ -102,6 +102,7 @@ public static class NativeMessagingRegistrar
         }
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     private static void RegisterWindowsHost(string browserKey, string manifestPath, bool isFirefox = false)
     {
         try
