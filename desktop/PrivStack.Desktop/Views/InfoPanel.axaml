@@ -868,14 +868,21 @@
                 </Panel>
 
                 <!-- ═══ Bottom panel: graph (independent, not scrollable) ═══ -->
-                <Panel Grid.Row="1" IsVisible="{Binding ShowGraphTab}"
-                       MinHeight="250" Height="280">
-                    <!-- Separator -->
-                    <Border VerticalAlignment="Top" Height="1"
-                            Background="{DynamicResource ThemeBorderSubtleBrush}"/>
+                <Grid Grid.Row="1" RowDefinitions="Auto,*"
+                      IsVisible="{Binding ShowGraphTab}"
+                      Height="{Binding GraphPanelHeight}">
+                    <!-- Drag handle / resize grip -->
+                    <Border x:Name="GraphResizeHandle" Grid.Row="0"
+                            Height="6" Cursor="SizeNorthSouth"
+                            Background="Transparent">
+                        <Border Height="1" VerticalAlignment="Center"
+                                Background="{DynamicResource ThemeBorderSubtleBrush}"/>
+                    </Border>
 
-                    <!-- Graph canvas -->
-                    <Border x:Name="GraphPanel" Margin="0,1,0,0" ClipToBounds="True"/>
+                    <!-- Graph area -->
+                    <Panel Grid.Row="1">
+                        <!-- Graph canvas -->
+                        <Border x:Name="GraphPanel" ClipToBounds="True"/>
 
                     <!-- Settings cog button (bottom-left) -->
                     <Button HorizontalAlignment="Left" VerticalAlignment="Bottom"
@@ -1025,7 +1032,8 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                </Panel>
+                    </Panel>
+                </Grid>
             </Grid>
         </Grid>
     </Border>
