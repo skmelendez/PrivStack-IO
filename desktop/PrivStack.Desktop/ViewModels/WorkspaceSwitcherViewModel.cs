@@ -345,7 +345,7 @@ public partial class WorkspaceSwitcherViewModel : ViewModelBase
         var workspace = _workspaceService.GetActiveWorkspace();
         if (workspace?.SyncTier == SyncTier.PrivStackCloud && workspace.CloudWorkspaceId != null)
         {
-            _ = Task.Run(async () =>
+            _ = Task.Run(() =>
             {
                 try
                 {
