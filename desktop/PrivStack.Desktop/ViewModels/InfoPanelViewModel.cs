@@ -210,6 +210,29 @@ public partial class InfoPanelViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isGraphSettingsOpen;
 
+    // --- Graph physics sliders (same ranges as brain graph) ---
+    // Repel radius slider (0-100 maps to 300-400)
+    [ObservableProperty] private double _neuronRepelSlider = 50;
+    public double NeuronRepelRadius => 300 + (NeuronRepelSlider / 100.0 * 100);
+    public double NeuronRepelDisplay => NeuronRepelSlider;
+
+    // Center force slider (0-100 maps to 0.0-0.005)
+    [ObservableProperty] private double _neuronCenterForceSlider = 50;
+    public double NeuronCenterForce => NeuronCenterForceSlider / 100.0 * 0.005;
+    public double NeuronCenterForceDisplay => NeuronCenterForceSlider;
+
+    // Link distance slider (0-100 maps to 1000-2000)
+    [ObservableProperty] private double _neuronLinkDistanceSlider;
+    public double NeuronLinkDistance => 1000 + (NeuronLinkDistanceSlider / 100.0 * 1000);
+    public double NeuronLinkDistanceDisplay => NeuronLinkDistanceSlider;
+
+    // Link force slider (0-100 maps to 0.0-0.01)
+    [ObservableProperty] private double _neuronLinkForceSlider = 50;
+    public double NeuronLinkForce => NeuronLinkForceSlider / 100.0 * 0.01;
+    public double NeuronLinkForceDisplay => NeuronLinkForceSlider;
+
+    public event EventHandler? PhysicsParametersChanged;
+
     private ObservableCollection<GraphLinkTypeFilter> _graphLinkTypeFilters = [];
     public ObservableCollection<GraphLinkTypeFilter> GraphLinkTypeFilters
     {
@@ -262,6 +285,12 @@ public partial class InfoPanelViewModel : ViewModelBase
         PanelWidth = _appSettings.Settings.InfoPanelWidth;
         GraphDepth = Math.Clamp(_appSettings.Settings.InfoPanelGraphDepth, 1, 5);
 
+        // Restore physics sliders
+        NeuronRepelSlider = _appSettings.Settings.InfoPanelRepelSlider;
+        NeuronCenterForceSlider = _appSettings.Settings.InfoPanelCenterForceSlider;
+        NeuronLinkDistanceSlider = _appSettings.Settings.InfoPanelLinkDistanceSlider;
+        NeuronLinkForceSlider = _appSettings.Settings.InfoPanelLinkForceSlider;
+
         // Subscribe to active item changes
         _infoPanelService.ActiveItemChanged += OnActiveItemChanged;
         _infoPanelService.ContentChanged += OnContentChanged;
@@ -301,6 +330,44 @@ public partial class InfoPanelViewModel : ViewModelBase
         _appSettings.Settings.InfoPanelGraphDepth = value;
         _appSettings.SaveDebounced();
         ReloadGraphIfActive();
+    }
+
+    partial void OnNeuronRepelSliderChanged(double value)
+    {
+        _appSettings.Settings.InfoPanelRepelSlider = value;
+        _appSettings.SaveDebounced();
+        OnPropertyChanged(nameof(NeuronRepelDisplay));
+        NotifyNeuronPhysics(nameof(NeuronRepelRadius));
+    }
+
+    partial void OnNeuronCenterForceSliderChanged(double value)
+    {
+        _appSettings.Settings.InfoPanelCenterForceSlider = value;
+        _appSettings.SaveDebounced();
+        OnPropertyChanged(nameof(NeuronCenterForceDisplay));
+        NotifyNeuronPhysics(nameof(NeuronCenterForce));
+    }
+
+    partial void OnNeuronLinkDistanceSliderChanged(double value)
+    {
+        _appSettings.Settings.InfoPanelLinkDistanceSlider = value;
+        _appSettings.SaveDebounced();
+        OnPropertyChanged(nameof(NeuronLinkDistanceDisplay));
+        NotifyNeuronPhysics(nameof(NeuronLinkDistance));
+    }
+
+    partial void OnNeuronLinkForceSliderChanged(double value)
+    {
+        _appSettings.Settings.InfoPanelLinkForceSlider = value;
+        _appSettings.SaveDebounced();
+        OnPropertyChanged(nameof(NeuronLinkForceDisplay));
+        NotifyNeuronPhysics(nameof(NeuronLinkForce));
+    }
+
+    private void NotifyNeuronPhysics(string prop)
+    {
+        OnPropertyChanged(prop);
+        PhysicsParametersChanged?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnTagInputChanged(string value)

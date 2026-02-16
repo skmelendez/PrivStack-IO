@@ -951,6 +951,78 @@
                                 </Grid>
                             </StackPanel>
 
+                            <!-- Physics: Repel distance -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Repel distance" FontWeight="SemiBold"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="0" Maximum="100"
+                                            Value="{Binding NeuronRepelSlider}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding NeuronRepelDisplay, StringFormat='{}{0:F0}%'}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               MinWidth="36"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Physics: Center force -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Center force" FontWeight="SemiBold"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="0" Maximum="100"
+                                            Value="{Binding NeuronCenterForceSlider}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding NeuronCenterForceDisplay, StringFormat='{}{0:F0}%'}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               MinWidth="36"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Physics: Link distance -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Link distance" FontWeight="SemiBold"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="0" Maximum="100"
+                                            Value="{Binding NeuronLinkDistanceSlider}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding NeuronLinkDistanceDisplay, StringFormat='{}{0:F0}%'}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               MinWidth="36"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Physics: Link force -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Link force" FontWeight="SemiBold"
+                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="0" Maximum="100"
+                                            Value="{Binding NeuronLinkForceSlider}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding NeuronLinkForceDisplay, StringFormat='{}{0:F0}%'}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               MinWidth="36"/>
+                                </Grid>
+                            </StackPanel>
+
                             <!-- Link type filters -->
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Show types" FontWeight="SemiBold"
