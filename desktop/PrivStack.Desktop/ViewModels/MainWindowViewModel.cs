@@ -500,6 +500,19 @@ public partial class MainWindowViewModel : ViewModelBase
                 catch { /* ignore parse errors */ }
             });
 
+            // Rank results by title relevance: exact > starts-with > contains > other
+            if (!string.IsNullOrEmpty(searchQuery) && results.Count > 1)
+            {
+                int ScoreTitle(string title)
+                {
+                    if (title.Equals(searchQuery, StringComparison.OrdinalIgnoreCase)) return 0;
+                    if (title.StartsWith(searchQuery, StringComparison.OrdinalIgnoreCase)) return 1;
+                    if (title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) return 2;
+                    return 3;
+                }
+                results.Sort((a, b) => ScoreTitle(a.Title).CompareTo(ScoreTitle(b.Title)));
+            }
+
             return results;
         };
 
