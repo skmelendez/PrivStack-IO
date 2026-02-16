@@ -57,8 +57,8 @@ public sealed class ForceLayoutEngine
 
         var ordered = ComputeBfsOrder(data);
 
-        // Spiral spacing based on repel radius — guarantees no initial overlaps
-        var spacing = _params.RepelRadius * 2.0;
+        // Fixed compact spiral — repel force expands from here
+        const double spacing = 150.0;
 
         for (var i = 0; i < ordered.Count; i++)
         {
