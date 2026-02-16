@@ -234,7 +234,7 @@
                                 <StackPanel Spacing="2">
                                     <Grid ColumnDefinitions="*,Auto">
                                         <TextBlock Text="Repel distance" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding RepelRadius, StringFormat='{}{0:F0}px'}"
+                                        <TextBlock Grid.Column="1" Text="{Binding RepelDisplay, StringFormat='{}{0:F0}%'}"
                                                    FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
                                     </Grid>
                                     <Slider Value="{Binding RepelSlider}" Minimum="0" Maximum="100"/>
@@ -242,7 +242,7 @@
                                 <StackPanel Spacing="2">
                                     <Grid ColumnDefinitions="*,Auto">
                                         <TextBlock Text="Center force" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding CenterForce, StringFormat='{}{0:P0}'}"
+                                        <TextBlock Grid.Column="1" Text="{Binding CenterForceDisplay, StringFormat='{}{0:F0}%'}"
                                                    FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
                                     </Grid>
                                     <Slider Value="{Binding CenterForceSlider}" Minimum="0" Maximum="100"/>
@@ -250,7 +250,7 @@
                                 <StackPanel Spacing="2">
                                     <Grid ColumnDefinitions="*,Auto">
                                         <TextBlock Text="Link distance" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding LinkDistance, StringFormat='{}{0:F0}px'}"
+                                        <TextBlock Grid.Column="1" Text="{Binding LinkDistanceDisplay, StringFormat='{}{0:F0}%'}"
                                                    FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
                                     </Grid>
                                     <Slider Value="{Binding LinkDistanceSlider}" Minimum="0" Maximum="100"/>
