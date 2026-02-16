@@ -1,7 +1,5 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Media;
 using PrivStack.Desktop.Controls;
 using PrivStack.Desktop.ViewModels;
 using PrivStack.UI.Adaptive.Controls;
@@ -27,8 +25,7 @@ public partial class InfoPanel : UserControl
         {
             vm.PropertyChanged += OnViewModelPropertyChanged;
             vm.PhysicsParametersChanged += OnPhysicsParametersChanged;
-            UpdateTabVisuals(vm.ActiveTab);
-            UpdateTabPanelVisibility(vm.ActiveTab, vm.HasActiveItem);
+            UpdateScrollPanelVisibility(vm.HasActiveItem);
             WireAutoCompleteBox();
             WireNewPropertyBox();
         }
@@ -39,7 +36,6 @@ public partial class InfoPanel : UserControl
         var autoComplete = this.FindControl<AutoCompleteBox>("TagAutoCompleteBox");
         if (autoComplete == null) return;
 
-        // When user selects a suggestion or presses Enter
         autoComplete.SelectionChanged += OnAutoCompleteSelectionChanged;
         autoComplete.KeyDown += OnAutoCompleteKeyDown;
     }
@@ -60,7 +56,6 @@ public partial class InfoPanel : UserControl
         if (sender is not AutoCompleteBox acb) return;
         if (DataContext is not InfoPanelViewModel vm) return;
 
-        // If there's text but no dropdown selection, add it as a new tag
         var text = acb.Text?.Trim();
         if (!string.IsNullOrEmpty(text))
         {
@@ -98,12 +93,8 @@ public partial class InfoPanel : UserControl
 
         switch (e.PropertyName)
         {
-            case nameof(InfoPanelViewModel.ActiveTab):
-                UpdateTabVisuals(vm.ActiveTab);
-                UpdateTabPanelVisibility(vm.ActiveTab, vm.HasActiveItem);
-                break;
             case nameof(InfoPanelViewModel.HasActiveItem):
-                UpdateTabPanelVisibility(vm.ActiveTab, vm.HasActiveItem);
+                UpdateScrollPanelVisibility(vm.HasActiveItem);
                 UpdateNoBacklinksVisibility(vm);
                 break;
             case nameof(InfoPanelViewModel.HasBacklinks):
@@ -119,10 +110,6 @@ public partial class InfoPanel : UserControl
             case nameof(InfoPanelViewModel.IsPropertiesExpanded):
                 UpdateChevronIcon("PropertiesChevron", vm.IsPropertiesExpanded);
                 break;
-            case nameof(InfoPanelViewModel.ShowGraphTab):
-                UpdateTabVisuals(vm.ActiveTab);
-                UpdateTabPanelVisibility(vm.ActiveTab, vm.HasActiveItem);
-                break;
             case nameof(InfoPanelViewModel.GraphNodes):
             case nameof(InfoPanelViewModel.GraphEdges):
                 UpdateGraphControl(vm);
@@ -130,40 +117,11 @@ public partial class InfoPanel : UserControl
         }
     }
 
-    private void UpdateTabVisuals(string activeTab)
-    {
-        var infoBtn = this.FindControl<Button>("InfoTabButton");
-        var graphBtn = this.FindControl<Button>("GraphTabButton");
-        if (infoBtn == null || graphBtn == null) return;
-
-        var activeBg = Application.Current?.FindResource("ThemeNavSelectedBrush") as IBrush ?? Brushes.Transparent;
-        var activeFg = Application.Current?.FindResource("ThemeNavTextHoverBrush") as IBrush ?? Brushes.White;
-        var inactiveFg = Application.Current?.FindResource("ThemeNavTextBrush") as IBrush ?? Brushes.Gray;
-
-        if (activeTab == "Info")
-        {
-            infoBtn.Background = activeBg;
-            infoBtn.Foreground = activeFg;
-            graphBtn.Background = Brushes.Transparent;
-            graphBtn.Foreground = inactiveFg;
-        }
-        else
-        {
-            graphBtn.Background = activeBg;
-            graphBtn.Foreground = activeFg;
-            infoBtn.Background = Brushes.Transparent;
-            infoBtn.Foreground = inactiveFg;
-        }
-    }
-
-    private void UpdateTabPanelVisibility(string activeTab, bool hasActiveItem)
+    private void UpdateScrollPanelVisibility(bool hasActiveItem)
     {
         var infoPanel = this.FindControl<ScrollViewer>("InfoScrollPanel");
-        var graphPanelHost = this.FindControl<Panel>("GraphPanelHost");
-        if (infoPanel == null || graphPanelHost == null) return;
-
-        infoPanel.IsVisible = activeTab == "Info" && hasActiveItem;
-        graphPanelHost.IsVisible = activeTab == "Graph" && hasActiveItem;
+        if (infoPanel != null)
+            infoPanel.IsVisible = hasActiveItem;
     }
 
     private void UpdateNoBacklinksVisibility(InfoPanelViewModel vm)
@@ -171,8 +129,7 @@ public partial class InfoPanel : UserControl
         var noBacklinks = this.FindControl<Border>("NoBacklinksMessage");
         if (noBacklinks == null) return;
         noBacklinks.IsVisible = vm.HasActiveItem && !vm.HasBacklinks
-                                && vm.ActiveTab == "Info" && !vm.IsLoading
-                                && vm.IsBacklinksExpanded;
+                                && !vm.IsLoading && vm.IsBacklinksExpanded;
     }
 
     private void UpdateChevronIcon(string controlName, bool isExpanded)
