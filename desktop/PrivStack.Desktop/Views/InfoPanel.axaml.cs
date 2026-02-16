@@ -26,6 +26,7 @@ public partial class InfoPanel : UserControl
         if (DataContext is InfoPanelViewModel vm)
         {
             vm.PropertyChanged += OnViewModelPropertyChanged;
+            vm.PhysicsParametersChanged += OnPhysicsParametersChanged;
             UpdateTabVisuals(vm.ActiveTab);
             UpdateTabPanelVisibility(vm.ActiveTab, vm.HasActiveItem);
             WireAutoCompleteBox();
@@ -200,12 +201,10 @@ public partial class InfoPanel : UserControl
             {
                 Physics = new PhysicsParameters
                 {
-                    RepulsionStrength = -800,
-                    LinkDistance = 80,
-                    LinkStrength = 0.3,
-                    CollisionStrength = 0.8,
-                    CenterStrength = 0.05,
-                    VelocityDecay = 0.4,
+                    RepelRadius = vm.NeuronRepelRadius,
+                    CenterStrength = vm.NeuronCenterForce,
+                    LinkDistance = vm.NeuronLinkDistance,
+                    LinkStrength = vm.NeuronLinkForce,
                 },
             };
             _graphControl.NodeClicked += OnGraphNodeClicked;
@@ -216,6 +215,19 @@ public partial class InfoPanel : UserControl
         _graphControl.Nodes = vm.GraphNodes;
         _graphControl.Edges = vm.GraphEdges;
         _graphControl.Start();
+    }
+
+    private void OnPhysicsParametersChanged(object? sender, EventArgs e)
+    {
+        if (_graphControl == null || DataContext is not InfoPanelViewModel vm) return;
+        _graphControl.Physics = new PhysicsParameters
+        {
+            RepelRadius = vm.NeuronRepelRadius,
+            CenterStrength = vm.NeuronCenterForce,
+            LinkDistance = vm.NeuronLinkDistance,
+            LinkStrength = vm.NeuronLinkForce,
+        };
+        _graphControl.ApplyPhysicsChanges();
     }
 
     private void OnGraphNodeClicked(string nodeId)

@@ -220,6 +220,19 @@ public class AppSettings
     [JsonPropertyName("info_panel_graph_hidden_types")]
     public List<string> InfoPanelGraphHiddenTypes { get; set; } = [];
 
+    // Info panel graph physics (slider values 0-100)
+    [JsonPropertyName("info_panel_repel_slider")]
+    public double InfoPanelRepelSlider { get; set; } = 50;
+
+    [JsonPropertyName("info_panel_center_force_slider")]
+    public double InfoPanelCenterForceSlider { get; set; } = 50;
+
+    [JsonPropertyName("info_panel_link_distance_slider")]
+    public double InfoPanelLinkDistanceSlider { get; set; }
+
+    [JsonPropertyName("info_panel_link_force_slider")]
+    public double InfoPanelLinkForceSlider { get; set; } = 50;
+
     // Update settings
     [JsonPropertyName("auto_check_for_updates")]
     public bool AutoCheckForUpdates { get; set; } = true;
