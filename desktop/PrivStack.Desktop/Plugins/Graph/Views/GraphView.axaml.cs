@@ -85,7 +85,7 @@ public partial class GraphView : UserControl
         _graphControl.Physics = new PhysicsParameters
         {
             RepelRadius = _vm.RepelRadius,
-            SpringStrength = _vm.SpringStrength,
+            CenterStrength = _vm.CenterForce,
             LinkDistance = _vm.LinkDistance,
         };
         _graphControl.StartWithData(adaptiveData);
@@ -135,7 +135,7 @@ public partial class GraphView : UserControl
         _graphControl.Physics = new PhysicsParameters
         {
             RepelRadius = _vm.RepelRadius,
-            SpringStrength = _vm.SpringStrength,
+            CenterStrength = _vm.CenterForce,
             LinkDistance = _vm.LinkDistance,
         };
         _graphControl.ApplyPhysicsChanges();
