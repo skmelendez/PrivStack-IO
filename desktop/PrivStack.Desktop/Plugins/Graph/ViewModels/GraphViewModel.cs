@@ -79,10 +79,10 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
 
     public double RepelRadius => 200 + (RepelSlider / 100.0 * 300);
 
-    // Center force slider (0-100 maps to 0.0-0.15)
-    [ObservableProperty] private double _centerForceSlider = 20;
+    // Center force slider (0-100 maps to 0.0-0.005)
+    [ObservableProperty] private double _centerForceSlider = 50;
 
-    public double CenterForce => CenterForceSlider / 100.0 * 0.15;
+    public double CenterForce => CenterForceSlider / 100.0 * 0.005;
 
     // Link distance slider (0-100 maps to 200-2000)
     [ObservableProperty] private double _linkDistanceSlider = 0;
