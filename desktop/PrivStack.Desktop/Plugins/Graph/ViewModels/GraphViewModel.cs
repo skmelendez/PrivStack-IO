@@ -84,6 +84,11 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
 
     public double SpringStrength => SpringSlider / 100.0 * 0.3;
 
+    // Link distance slider (0-100 maps to 50-500)
+    [ObservableProperty] private double _linkDistanceSlider = 33;
+
+    public double LinkDistance => 50 + (LinkDistanceSlider / 100.0 * 450);
+
     // Orphan radio helpers
     public bool IsOrphanHide { get => OrphanMode == OrphanFilterMode.Hide; set { if (value) OrphanMode = OrphanFilterMode.Hide; } }
     public bool IsOrphanShow { get => OrphanMode == OrphanFilterMode.Show; set { if (value) OrphanMode = OrphanFilterMode.Show; } }
@@ -130,6 +135,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             _timelineEnabled = _settings.Get("timeline_enabled", false);
             _repelSlider = _settings.Get("repel_radius", 70.0);
             _springSlider = _settings.Get("spring_strength", 27.0);
+            _linkDistanceSlider = _settings.Get("link_distance", 33.0);
             _isGraphSidebarCollapsed = _settings.Get("sidebar_collapsed", false);
         }
 
@@ -312,6 +318,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     partial void OnIsGraphSidebarCollapsedChanged(bool value) { Save("sidebar_collapsed", value); }
     partial void OnRepelSliderChanged(double value) { Save("repel_radius", value); NotifyPhysics(nameof(RepelRadius)); }
     partial void OnSpringSliderChanged(double value) { Save("spring_strength", value); NotifyPhysics(nameof(SpringStrength)); }
+    partial void OnLinkDistanceSliderChanged(double value) { Save("link_distance", value); NotifyPhysics(nameof(LinkDistance)); }
     private void NotifyPhysics(string prop) { OnPropertyChanged(prop); if (!_isInitializing) PhysicsParametersChanged?.Invoke(this, EventArgs.Empty); }
     partial void OnSolarSystemScaleSliderChanged(double value) => NotifySolar(nameof(SolarSystemScale));
     partial void OnStarSpacingSliderChanged(double value) => NotifySolar(nameof(StarSpacingMultiplier));
