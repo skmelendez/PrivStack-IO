@@ -1,8 +1,8 @@
 // ============================================================================
 // File: ForceLayoutEngine.cs
-// Description: Spiral placement + radius-based repel + anchor springs.
-//              Nodes repel within RepelRadius. Each node remembers its initial
-//              spiral position and springs back toward it when displaced.
+// Description: Spiral placement + repel + link min-distance + center force.
+//              Nodes repel within RepelRadius. Connected nodes enforce min
+//              LinkDistance. Center force pulls everything toward origin.
 // ============================================================================
 
 using PrivStack.UI.Adaptive.Models;
@@ -14,17 +14,17 @@ public sealed class PhysicsParameters
     /// <summary>Repel radius — nodes within this distance push apart.</summary>
     public double RepelRadius { get; set; } = 120.0;
 
-    /// <summary>Spring strength pulling nodes back to their anchor (0-1).</summary>
-    public double SpringStrength { get; set; } = 0.08;
-
     /// <summary>Min distance between connected nodes — pushed apart if closer.</summary>
     public double LinkDistance { get; set; } = 200.0;
 
+    /// <summary>Strength of the center-pulling force (0-1).</summary>
+    public double CenterStrength { get; set; } = 0.03;
+
     // Kept for interface compat (unused by engine)
     public double RepulsionStrength { get; set; } = -8000;
+    public double SpringStrength { get; set; } = 0.08;
     public double LinkStrength { get; set; } = 0.15;
     public double CollisionStrength { get; set; } = 0.7;
-    public double CenterStrength { get; set; } = 0.03;
     public double VelocityDecay { get; set; } = 0.6;
     public double MinSeparation { get; set; } = 90.0;
     public double Alpha { get; set; } = 1.0;
@@ -38,7 +38,6 @@ public sealed class ForceLayoutEngine
 
     private readonly PhysicsParameters _params;
     private GraphData? _graphData;
-    private Dictionary<string, (double X, double Y)> _anchors = new();
 
     public ForceLayoutEngine(PhysicsParameters? parameters = null)
     {
@@ -48,7 +47,7 @@ public sealed class ForceLayoutEngine
     public void UpdateParameters(PhysicsParameters source)
     {
         _params.RepelRadius = source.RepelRadius;
-        _params.SpringStrength = source.SpringStrength;
+        _params.CenterStrength = source.CenterStrength;
         _params.LinkDistance = source.LinkDistance;
     }
 
@@ -87,10 +86,6 @@ public sealed class ForceLayoutEngine
             ordered[i].Vy = 0;
         }
 
-        // Store initial positions as anchor points (resting positions)
-        _anchors.Clear();
-        foreach (var node in ordered)
-            _anchors[node.Id] = (node.X, node.Y);
     }
 
     public void Reheat() => _params.Alpha = 1.0;
@@ -106,7 +101,7 @@ public sealed class ForceLayoutEngine
 
         ApplyRepel(nodes);
         ApplyLinkMinDistance();
-        ApplySpringToAnchor(nodes);
+        ApplyCenterForce(nodes);
 
         _params.Alpha += (_params.AlphaMin - _params.Alpha) * _params.AlphaDecay;
     }
@@ -195,23 +190,20 @@ public sealed class ForceLayoutEngine
     }
 
     /// <summary>
-    /// Pull each node back toward its initial spiral position (anchor).
-    /// Strength is proportional to displacement — classic spring force.
+    /// Pull every node toward the graph center (0,0).
+    /// Displacement is proportional to distance from origin.
     /// </summary>
-    private void ApplySpringToAnchor(List<GraphNode> nodes)
+    private void ApplyCenterForce(List<GraphNode> nodes)
     {
-        var strength = _params.SpringStrength;
+        var strength = _params.CenterStrength;
+        if (strength <= 0) return;
 
         foreach (var node in nodes)
         {
             if (node.IsDragging || node.IsPinned) continue;
-            if (!_anchors.TryGetValue(node.Id, out var anchor)) continue;
 
-            var dx = anchor.X - node.X;
-            var dy = anchor.Y - node.Y;
-
-            node.X += dx * strength;
-            node.Y += dy * strength;
+            node.X -= node.X * strength;
+            node.Y -= node.Y * strength;
         }
     }
 
