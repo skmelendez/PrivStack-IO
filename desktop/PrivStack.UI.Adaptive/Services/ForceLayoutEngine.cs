@@ -46,6 +46,7 @@ public sealed class ForceLayoutEngine
     public void UpdateParameters(PhysicsParameters source)
     {
         _params.RepelRadius = source.RepelRadius;
+        _params.SpringStrength = source.SpringStrength;
     }
 
     public bool IsRunning => _params.Alpha > _params.AlphaMin;
