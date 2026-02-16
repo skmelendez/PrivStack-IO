@@ -84,10 +84,7 @@ public partial class GraphView : UserControl
         _graphControl.HideInactiveNodes = _vm.HideInactiveNodes;
         _graphControl.Physics = new PhysicsParameters
         {
-            CenterStrength = _vm.CenterStrength,
-            RepulsionStrength = _vm.RepulsionStrength,
-            LinkStrength = _vm.LinkStrength,
-            LinkDistance = _vm.LinkDistance,
+            RepelRadius = _vm.RepelRadius,
         };
         _graphControl.StartWithData(adaptiveData);
     }
@@ -135,10 +132,7 @@ public partial class GraphView : UserControl
         if (_graphControl == null || _vm == null) return;
         _graphControl.Physics = new PhysicsParameters
         {
-            CenterStrength = _vm.CenterStrength,
-            RepulsionStrength = _vm.RepulsionStrength,
-            LinkStrength = _vm.LinkStrength,
-            LinkDistance = _vm.LinkDistance,
+            RepelRadius = _vm.RepelRadius,
         };
         _graphControl.ApplyPhysicsChanges();
     }
