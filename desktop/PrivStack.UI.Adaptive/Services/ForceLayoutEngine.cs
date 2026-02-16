@@ -20,10 +20,12 @@ public sealed class PhysicsParameters
     /// <summary>Strength of the center-pulling force (0-1).</summary>
     public double CenterStrength { get; set; } = 0.03;
 
+    /// <summary>Spring attraction between connected nodes (0-1).</summary>
+    public double LinkStrength { get; set; } = 0.005;
+
     // Kept for interface compat (unused by engine)
     public double RepulsionStrength { get; set; } = -8000;
     public double SpringStrength { get; set; } = 0.08;
-    public double LinkStrength { get; set; } = 0.15;
     public double CollisionStrength { get; set; } = 0.7;
     public double VelocityDecay { get; set; } = 0.6;
     public double MinSeparation { get; set; } = 90.0;
@@ -49,6 +51,7 @@ public sealed class ForceLayoutEngine
         _params.RepelRadius = source.RepelRadius;
         _params.CenterStrength = source.CenterStrength;
         _params.LinkDistance = source.LinkDistance;
+        _params.LinkStrength = source.LinkStrength;
     }
 
     public bool IsRunning => _params.Alpha > _params.AlphaMin;
@@ -101,6 +104,7 @@ public sealed class ForceLayoutEngine
 
         ApplyRepel(nodes);
         ApplyLinkMinDistance();
+        ApplyLinkAttraction();
         ApplyCenterForce(nodes);
 
         _params.Alpha += (_params.AlphaMin - _params.Alpha) * _params.AlphaDecay;
@@ -186,6 +190,29 @@ public sealed class ForceLayoutEngine
 
             if (!a.IsDragging && !a.IsPinned) { a.X -= mx; a.Y -= my; }
             if (!b.IsDragging && !b.IsPinned) { b.X += mx; b.Y += my; }
+        }
+    }
+
+    /// <summary>
+    /// Spring attraction: pull connected nodes toward each other.
+    /// Strength scales with distance — further apart = stronger pull.
+    /// </summary>
+    private void ApplyLinkAttraction()
+    {
+        if (_graphData is null) return;
+        var strength = _params.LinkStrength;
+        if (strength <= 0) return;
+
+        foreach (var edge in _graphData.Edges)
+        {
+            if (!_graphData.Nodes.TryGetValue(edge.SourceId, out var a)) continue;
+            if (!_graphData.Nodes.TryGetValue(edge.TargetId, out var b)) continue;
+
+            var dx = b.X - a.X;
+            var dy = b.Y - a.Y;
+
+            if (!a.IsDragging && !a.IsPinned) { a.X += dx * strength; a.Y += dy * strength; }
+            if (!b.IsDragging && !b.IsPinned) { b.X -= dx * strength; b.Y -= dy * strength; }
         }
     }
 
