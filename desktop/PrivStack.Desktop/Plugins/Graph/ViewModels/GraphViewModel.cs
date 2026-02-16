@@ -74,20 +74,23 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     public string TimelineStartLabel => TimelineStartDate.LocalDateTime.ToString("MMM d, yyyy");
     public string TimelineEndLabel => TimelineEndDate.LocalDateTime.ToString("MMM d, yyyy");
 
-    // Repel radius slider (0-100 maps to 200-500)
+    // Repel radius slider (0-100 maps to 300-400)
     [ObservableProperty] private double _repelSlider = 50;
 
-    public double RepelRadius => 200 + (RepelSlider / 100.0 * 300);
+    public double RepelRadius => 300 + (RepelSlider / 100.0 * 100);
+    public double RepelDisplay => RepelSlider;
 
     // Center force slider (0-100 maps to 0.0-0.005)
     [ObservableProperty] private double _centerForceSlider = 50;
 
     public double CenterForce => CenterForceSlider / 100.0 * 0.005;
+    public double CenterForceDisplay => CenterForceSlider;
 
-    // Link distance slider (0-100 maps to 200-2000)
+    // Link distance slider (0-100 maps to 1000-2000)
     [ObservableProperty] private double _linkDistanceSlider = 0;
 
-    public double LinkDistance => 200 + (LinkDistanceSlider / 100.0 * 1800);
+    public double LinkDistance => 1000 + (LinkDistanceSlider / 100.0 * 1000);
+    public double LinkDistanceDisplay => LinkDistanceSlider;
 
     // Orphan radio helpers
     public bool IsOrphanHide { get => OrphanMode == OrphanFilterMode.Hide; set { if (value) OrphanMode = OrphanFilterMode.Hide; } }
@@ -316,9 +319,9 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     partial void OnTimelineMaxDateChanged(DateTimeOffset value) { OnPropertyChanged(nameof(TimelineEndDate)); OnPropertyChanged(nameof(TimelineEndLabel)); }
     partial void OnLocalDepthChanged(int value) { Save("local_depth", value); if (!_isInitializing && IsLocalView) _ = LoadGraphAsync(); }
     partial void OnIsGraphSidebarCollapsedChanged(bool value) { Save("sidebar_collapsed", value); }
-    partial void OnRepelSliderChanged(double value) { Save("repel_radius", value); NotifyPhysics(nameof(RepelRadius)); }
-    partial void OnCenterForceSliderChanged(double value) { Save("center_force", value); NotifyPhysics(nameof(CenterForce)); }
-    partial void OnLinkDistanceSliderChanged(double value) { Save("link_distance", value); NotifyPhysics(nameof(LinkDistance)); }
+    partial void OnRepelSliderChanged(double value) { Save("repel_radius", value); OnPropertyChanged(nameof(RepelDisplay)); NotifyPhysics(nameof(RepelRadius)); }
+    partial void OnCenterForceSliderChanged(double value) { Save("center_force", value); OnPropertyChanged(nameof(CenterForceDisplay)); NotifyPhysics(nameof(CenterForce)); }
+    partial void OnLinkDistanceSliderChanged(double value) { Save("link_distance", value); OnPropertyChanged(nameof(LinkDistanceDisplay)); NotifyPhysics(nameof(LinkDistance)); }
     private void NotifyPhysics(string prop) { OnPropertyChanged(prop); if (!_isInitializing) PhysicsParametersChanged?.Invoke(this, EventArgs.Empty); }
     partial void OnSolarSystemScaleSliderChanged(double value) => NotifySolar(nameof(SolarSystemScale));
     partial void OnStarSpacingSliderChanged(double value) => NotifySolar(nameof(StarSpacingMultiplier));
