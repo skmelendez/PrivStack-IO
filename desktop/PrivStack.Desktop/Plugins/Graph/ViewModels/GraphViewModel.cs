@@ -84,7 +84,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
 
     public double RepulsionStrength => -(RepulsionSlider / 100.0 * 12000);
     public double LinkDistance => 100 + (LinkDistanceSlider / 100.0 * 1900);
-    public double LinkStrength => 0.1 + (LinkStrengthSlider / 100.0 * 0.4);
+    public double LinkStrength => 0.05 + (LinkStrengthSlider / 100.0 * 0.25);
     public double CollisionStrength => CollisionSlider / 100.0;
     public double CenterStrength => CenterSlider / 100.0 * 0.1;
     public double NodeSpacingDistance => 20 + (NodeSpacingSlider / 100.0 * 200);
