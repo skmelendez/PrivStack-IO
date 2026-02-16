@@ -12,14 +12,14 @@ public sealed class PhysicsParameters
 {
     public double RepulsionStrength { get; set; } = -8000;
     public double LinkDistance { get; set; } = 900;
-    public double LinkStrength { get; set; } = 0.25;
+    public double LinkStrength { get; set; } = 0.15;
     public double CollisionStrength { get; set; } = 0.7;
     public double CenterStrength { get; set; } = 0.03;
     public double VelocityDecay { get; set; } = 0.6;
     public double MinSeparation { get; set; } = 90.0;
     public double Alpha { get; set; } = 1.0;
     public double AlphaMin { get; set; } = 0.001;
-    public double AlphaDecay { get; set; } = 0.04;
+    public double AlphaDecay { get; set; } = 0.02;
 }
 
 public sealed class ForceLayoutEngine
@@ -145,8 +145,9 @@ public sealed class ForceLayoutEngine
 
     /// <summary>
     /// N-body repulsion via direct position displacement.
-    /// Connected pairs get reduced repulsion (springs handle them);
-    /// unconnected pairs get amplified repulsion to separate clusters.
+    /// Connected pairs use inverse-square falloff (springs handle their spacing).
+    /// Unconnected pairs use inverse-linear falloff so repulsion stays meaningful
+    /// at typical graph distances, preventing dense cluster collapse.
     /// </summary>
     private void ApplyManyBodyForce(List<GraphNode> nodes)
     {
@@ -160,13 +161,17 @@ public sealed class ForceLayoutEngine
                 if (distSq < 1) distSq = 1;
                 var dist = Math.Sqrt(distSq);
 
-                // Connectivity-aware: reduce for connected (spring handles), amplify for unconnected
                 var pairKey = string.CompareOrdinal(nodes[i].Id, nodes[j].Id) < 0
                     ? (nodes[i].Id, nodes[j].Id)
                     : (nodes[j].Id, nodes[i].Id);
-                var multiplier = _connectedPairs.Contains(pairKey) ? 0.65 : 2.2;
+                var isConnected = _connectedPairs.Contains(pairKey);
 
-                var force = _params.RepulsionStrength * _params.Alpha * multiplier / distSq;
+                // Connected: inverse-square (weak, spring handles spacing)
+                // Unconnected: inverse-linear (strong, prevents cluster collapse)
+                var multiplier = isConnected ? 0.65 : 0.5;
+                var denom = isConnected ? distSq : dist;
+                var force = _params.RepulsionStrength * _params.Alpha * multiplier / denom;
+
                 var fx = dx / dist * force;
                 var fy = dy / dist * force;
 
