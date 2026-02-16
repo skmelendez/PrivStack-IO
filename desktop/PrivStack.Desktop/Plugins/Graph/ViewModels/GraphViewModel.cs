@@ -74,10 +74,10 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     public string TimelineStartLabel => TimelineStartDate.LocalDateTime.ToString("MMM d, yyyy");
     public string TimelineEndLabel => TimelineEndDate.LocalDateTime.ToString("MMM d, yyyy");
 
-    // Repel radius slider (0-100 maps to 50-150px)
-    [ObservableProperty] private double _repelSlider = 70;
+    // Repel radius slider (0-100 maps to 300-1500)
+    [ObservableProperty] private double _repelSlider = 50;
 
-    public double RepelRadius => 50 + (RepelSlider / 100.0 * 100);
+    public double RepelRadius => 300 + (RepelSlider / 100.0 * 1200);
 
     // Orphan radio helpers
     public bool IsOrphanHide { get => OrphanMode == OrphanFilterMode.Hide; set { if (value) OrphanMode = OrphanFilterMode.Hide; } }
