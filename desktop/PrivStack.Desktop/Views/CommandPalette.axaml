@@ -29,15 +29,36 @@
                            Foreground="{DynamicResource ThemeTextMutedBrush}"
                            Margin="16,12,16,0"/>
 
-                <!-- Search Input -->
+                <!-- Search Input with optional plugin filter pill -->
                 <Border Grid.Row="1" Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="8" Margin="12,12,12,0" Padding="4">
-                    <TextBox Text="{Binding SearchQuery}"
-                             Watermark="{Binding PalettePlaceholder}"
-                             Background="Transparent" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                             BorderThickness="0" Padding="12,10"
-                             FontSize="{DynamicResource ThemeFontSizeMd}"
-                             CaretBrush="{DynamicResource ThemeTextPrimaryBrush}"
-                             Name="SearchBox"/>
+                    <DockPanel>
+                        <!-- Plugin filter pill (visible when a scope filter is active) -->
+                        <Border DockPanel.Dock="Left"
+                                IsVisible="{Binding HasPluginFilter}"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}"
+                                CornerRadius="6" Padding="8,4" Margin="4,0,4,0"
+                                VerticalAlignment="Center"
+                                Cursor="Hand"
+                                PointerPressed="OnFilterPillPressed">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="{Binding FilterPluginDisplayName}"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"
+                                           Foreground="{DynamicResource ThemePrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="✕" FontSize="{DynamicResource ThemeFontSizeXs}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <!-- Search TextBox -->
+                        <TextBox Text="{Binding SearchQuery}"
+                                 Watermark="{Binding PalettePlaceholder}"
+                                 Background="Transparent" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                 BorderThickness="0" Padding="12,10"
+                                 FontSize="{DynamicResource ThemeFontSizeMd}"
+                                 CaretBrush="{DynamicResource ThemeTextPrimaryBrush}"
+                                 Name="SearchBox"/>
+                    </DockPanel>
                 </Border>
 
                 <!-- Hint -->
@@ -71,12 +92,12 @@
                         <DataTemplate>
                             <Border Padding="12,10" CornerRadius="6" Background="Transparent">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <!-- Plugin icon for linkable items -->
+                                    <!-- Plugin icon for linkable items and scope filters -->
                                     <controls:IconControl Grid.Column="0"
                                                           Icon="{Binding Icon}"
                                                           Size="18" StrokeThickness="1.5"
                                                           Stroke="{DynamicResource ThemeTextMutedBrush}"
-                                                          IsVisible="{Binding IsLinkableItem}"
+                                                          IsVisible="{Binding ShowIcon}"
                                                           VerticalAlignment="Center"
                                                           Margin="0,0,10,0"/>
                                     <StackPanel Grid.Column="1">

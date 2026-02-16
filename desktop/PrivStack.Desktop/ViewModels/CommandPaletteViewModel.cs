@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Models;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Plugin;
@@ -60,6 +61,18 @@ public partial class CommandPaletteViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? _paletteTitle;
+
+    /// <summary>Plugin scope filter: display name shown in the pill.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPluginFilter))]
+    private string? _filterPluginDisplayName;
+
+    /// <summary>Plugin scope filter: link type key passed to the search delegate.</summary>
+    [ObservableProperty]
+    private string? _filterLinkType;
+
+    /// <summary>Whether a plugin scope filter is active.</summary>
+    public bool HasPluginFilter => FilterPluginDisplayName is not null;
 
     /// <summary>
     /// Currently active plugin palette's plugin ID (when in PluginPalette mode).
@@ -153,6 +166,24 @@ public partial class CommandPaletteViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Clears the active plugin scope filter and re-runs the current search.
+    /// </summary>
+    public void ClearPluginFilter()
+    {
+        FilterPluginDisplayName = null;
+        FilterLinkType = null;
+        PalettePlaceholder = "Search or type a command...";
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var query = SearchQuery.Trim();
+        if (query.Length < 2 || LinkableItemSearcher is null)
+            FilterCommands();
+        else
+            _ = FilterCommandsAsync(query, _searchCts.Token);
+    }
+
+    /// <summary>
     /// Opens a specific plugin palette by plugin ID and palette ID.
     /// </summary>
     public void OpenPluginPalette(string pluginId, string paletteId)
@@ -191,6 +222,14 @@ public partial class CommandPaletteViewModel : ViewModelBase
         var ct = _searchCts.Token;
 
         var query = value.Trim();
+
+        // When a plugin filter is active, always use async path (prepends filter prefix)
+        if (HasPluginFilter && LinkableItemSearcher is not null)
+        {
+            _ = FilterCommandsAsync(query, ct);
+            return;
+        }
+
         if (query.Length < 2 || LinkableItemSearcher is null)
         {
             FilterCommands();
@@ -219,7 +258,9 @@ public partial class CommandPaletteViewModel : ViewModelBase
         }
         else
         {
-            // Reset mode on close
+            // Reset mode and plugin filter on close
+            FilterPluginDisplayName = null;
+            FilterLinkType = null;
             Mode = PaletteMode.Commands;
             PaletteTitle = null;
             ActivePluginId = null;
@@ -307,17 +348,25 @@ public partial class CommandPaletteViewModel : ViewModelBase
 
         var query = SearchQuery.Trim();
 
-        var filtered = string.IsNullOrEmpty(query)
-            ? _cachedCommands
-            : _cachedCommands.Where(c =>
-                c.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                c.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                c.Keywords.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                c.Category.Contains(query, StringComparison.OrdinalIgnoreCase));
+        // Plugin scope items appear at top when query matches a plugin name (and no filter active)
+        if (!string.IsNullOrEmpty(query) && !HasPluginFilter)
+            AddPluginScopeItems(query);
 
-        foreach (var cmd in filtered.Take(12))
+        // When filter is active, skip commands (linkable results come from async path)
+        if (!HasPluginFilter)
         {
-            FilteredCommands.Add(cmd);
+            var filtered = string.IsNullOrEmpty(query)
+                ? _cachedCommands
+                : _cachedCommands.Where(c =>
+                    c.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    c.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    c.Keywords.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    c.Category.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+            foreach (var cmd in filtered.Take(12))
+            {
+                FilteredCommands.Add(cmd);
+            }
         }
 
         SelectedCommand = FilteredCommands.FirstOrDefault();
@@ -353,6 +402,31 @@ public partial class CommandPaletteViewModel : ViewModelBase
         SelectedCommand = FilteredCommands.FirstOrDefault();
     }
 
+    private void AddPluginScopeItems(string query)
+    {
+        var cache = App.Services.GetService<LinkProviderCacheService>();
+        if (cache is null) return;
+
+        foreach (var provider in cache.GetAll())
+        {
+            if (provider.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                FilteredCommands.Add(new CommandItem(
+                    provider.DisplayName,
+                    $"Search within {provider.DisplayName}",
+                    provider.LinkType,
+                    "Filter",
+                    null)
+                {
+                    IsPluginScope = true,
+                    LinkType = provider.LinkType,
+                    PluginId = provider.PluginId,
+                    Icon = provider.Icon,
+                });
+            }
+        }
+    }
+
     private async Task FilterCommandsAsync(string query, CancellationToken ct)
     {
         try
@@ -366,24 +440,32 @@ public partial class CommandPaletteViewModel : ViewModelBase
 
         if (ct.IsCancellationRequested) return;
 
-        // Show matching commands (max 4)
-        _cachedCommands ??= BuildCommandCache();
-        var matchingCommands = _cachedCommands
-            .Where(c =>
-                c.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                c.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                c.Keywords.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                c.Category.Contains(query, StringComparison.OrdinalIgnoreCase))
-            .Take(4)
-            .ToList();
+        // When filter is active, skip commands and increase max results
+        List<CommandItem>? matchingCommands = null;
+        if (!HasPluginFilter)
+        {
+            _cachedCommands ??= BuildCommandCache();
+            matchingCommands = _cachedCommands
+                .Where(c =>
+                    c.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    c.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    c.Keywords.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    c.Category.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Take(4)
+                .ToList();
+        }
 
-        // Search linkable items (max 8)
+        // Search linkable items — prepend filter prefix when plugin scope is active
+        var maxResults = HasPluginFilter ? 12 : 8;
         List<SearchResultItem>? linkableResults = null;
         if (LinkableItemSearcher is not null)
         {
             try
             {
-                linkableResults = await LinkableItemSearcher(query, 8);
+                var effectiveQuery = FilterLinkType != null
+                    ? $"{FilterLinkType}:{query}"
+                    : query;
+                linkableResults = await LinkableItemSearcher(effectiveQuery, maxResults);
             }
             catch
             {
@@ -395,9 +477,16 @@ public partial class CommandPaletteViewModel : ViewModelBase
 
         FilteredCommands.Clear();
 
-        foreach (var cmd in matchingCommands)
+        // Plugin scope items first (only when no filter active)
+        if (!HasPluginFilter && !string.IsNullOrEmpty(query))
+            AddPluginScopeItems(query);
+
+        if (matchingCommands is not null)
         {
-            FilteredCommands.Add(cmd);
+            foreach (var cmd in matchingCommands)
+            {
+                FilteredCommands.Add(cmd);
+            }
         }
 
         if (linkableResults is not null)
@@ -448,34 +537,46 @@ public partial class CommandPaletteViewModel : ViewModelBase
     private void ExecuteSelected()
     {
         if (SelectedCommand is null) return;
-        ExecuteCommandItem(SelectedCommand);
-        Close();
+        if (ExecuteCommandItem(SelectedCommand))
+            Close();
     }
 
     [RelayCommand]
     private void ExecuteCommand(CommandItem? command)
     {
         if (command is null) return;
-        ExecuteCommandItem(command);
-        Close();
+        if (ExecuteCommandItem(command))
+            Close();
     }
 
-    private void ExecuteCommandItem(CommandItem command)
+    /// <returns>true if the palette should close after execution.</returns>
+    private bool ExecuteCommandItem(CommandItem command)
     {
         if (Mode == PaletteMode.PluginPalette)
         {
             ExecutePluginPaletteItem(command);
-            return;
+            return true;
+        }
+
+        // Plugin scope filter — set filter and stay open
+        if (command.IsPluginScope)
+        {
+            FilterPluginDisplayName = command.Name;
+            FilterLinkType = command.LinkType;
+            PalettePlaceholder = $"Search {command.Name}...";
+            SearchQuery = "";
+            return false;
         }
 
         // Linkable item result — navigate via delegate
         if (command.PluginId is not null && command.ItemId is not null && LinkableItemNavigator is not null)
         {
             _ = LinkableItemNavigator(command.PluginId, command.ItemId);
-            return;
+            return true;
         }
 
         command.Action?.Invoke();
+        return true;
     }
 
     private void ExecutePluginPaletteItem(CommandItem command)
@@ -535,8 +636,14 @@ public class CommandItem
     /// <summary>Icon identifier for linkable item results.</summary>
     public string? Icon { get; init; }
 
-    /// <summary>Whether this item is a linkable search result (vs a command).</summary>
-    public bool IsLinkableItem => PluginId is not null;
+    /// <summary>Whether selecting this item sets a plugin scope filter instead of navigating.</summary>
+    public bool IsPluginScope { get; init; }
+
+    /// <summary>Whether this item is a linkable search result (vs a command or scope filter).</summary>
+    public bool IsLinkableItem => PluginId is not null && !IsPluginScope;
+
+    /// <summary>Whether to show the icon (linkable items and plugin scope items).</summary>
+    public bool ShowIcon => Icon is not null;
 
     public CommandItem(string name, string description, string keywords, string category, Action? action)
     {

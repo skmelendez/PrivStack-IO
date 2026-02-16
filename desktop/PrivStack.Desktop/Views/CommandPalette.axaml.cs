@@ -63,6 +63,15 @@ public partial class CommandPalette : UserControl
                 vm.SelectPreviousCommand.Execute(null);
                 e.Handled = true;
                 break;
+
+            case Key.Back:
+                // Backspace on empty search box clears the plugin scope filter
+                if (vm.HasPluginFilter && string.IsNullOrEmpty(vm.SearchQuery))
+                {
+                    vm.ClearPluginFilter();
+                    e.Handled = true;
+                }
+                break;
         }
     }
 
@@ -101,5 +110,11 @@ public partial class CommandPalette : UserControl
         {
             vm.ExecuteSelectedCommand.Execute(null);
         }
+    }
+
+    private void OnFilterPillPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is CommandPaletteViewModel vm)
+            vm.ClearPluginFilter();
     }
 }
