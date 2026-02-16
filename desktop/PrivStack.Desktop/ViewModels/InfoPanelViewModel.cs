@@ -210,6 +210,9 @@ public partial class InfoPanelViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isGraphSettingsOpen;
 
+    [ObservableProperty]
+    private double _graphPanelHeight = 280;
+
     // --- Graph physics sliders (tuned for info panel ~320px) ---
     // Repel radius slider (0-100 maps to 100-250)
     [ObservableProperty] private double _neuronRepelSlider = 50;
@@ -285,6 +288,9 @@ public partial class InfoPanelViewModel : ViewModelBase
         PanelWidth = _appSettings.Settings.InfoPanelWidth;
         GraphDepth = Math.Clamp(_appSettings.Settings.InfoPanelGraphDepth, 1, 5);
 
+        // Restore graph panel height
+        GraphPanelHeight = Math.Clamp(_appSettings.Settings.InfoPanelGraphHeight, 100, 800);
+
         // Restore physics sliders
         NeuronRepelSlider = _appSettings.Settings.InfoPanelRepelSlider;
         NeuronCenterForceSlider = _appSettings.Settings.InfoPanelCenterForceSlider;
@@ -330,6 +336,12 @@ public partial class InfoPanelViewModel : ViewModelBase
         _appSettings.Settings.InfoPanelGraphDepth = value;
         _appSettings.SaveDebounced();
         ReloadGraphIfActive();
+    }
+
+    partial void OnGraphPanelHeightChanged(double value)
+    {
+        _appSettings.Settings.InfoPanelGraphHeight = value;
+        _appSettings.SaveDebounced();
     }
 
     partial void OnNeuronRepelSliderChanged(double value)

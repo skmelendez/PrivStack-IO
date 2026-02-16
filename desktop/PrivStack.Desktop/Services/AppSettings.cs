@@ -233,6 +233,9 @@ public class AppSettings
     [JsonPropertyName("info_panel_link_force_slider")]
     public double InfoPanelLinkForceSlider { get; set; } = 50;
 
+    [JsonPropertyName("info_panel_graph_height")]
+    public double InfoPanelGraphHeight { get; set; } = 280;
+
     // Update settings
     [JsonPropertyName("auto_check_for_updates")]
     public bool AutoCheckForUpdates { get; set; } = true;

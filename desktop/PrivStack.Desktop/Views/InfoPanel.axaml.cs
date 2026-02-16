@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using PrivStack.Desktop.Controls;
@@ -11,6 +12,11 @@ namespace PrivStack.Desktop.Views;
 public partial class InfoPanel : UserControl
 {
     private NeuronGraphControl? _graphControl;
+
+    // Resize drag state
+    private bool _isResizing;
+    private Point _resizeStartPoint;
+    private double _resizeStartHeight;
 
     public InfoPanel()
     {
@@ -28,7 +34,57 @@ public partial class InfoPanel : UserControl
             UpdateScrollPanelVisibility(vm.HasActiveItem);
             WireAutoCompleteBox();
             WireNewPropertyBox();
+            WireResizeHandle();
         }
+    }
+
+    private void WireResizeHandle()
+    {
+        var handle = this.FindControl<Border>("GraphResizeHandle");
+        if (handle == null) return;
+
+        handle.PointerPressed += OnResizePointerPressed;
+        handle.PointerMoved += OnResizePointerMoved;
+        handle.PointerReleased += OnResizePointerReleased;
+        handle.PointerCaptureLost += OnResizePointerCaptureLost;
+    }
+
+    private void OnResizePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Border handle) return;
+        if (!e.GetCurrentPoint(handle).Properties.IsLeftButtonPressed) return;
+        if (DataContext is not InfoPanelViewModel vm) return;
+
+        _isResizing = true;
+        _resizeStartPoint = e.GetPosition(this);
+        _resizeStartHeight = vm.GraphPanelHeight;
+        e.Pointer.Capture(handle);
+        e.Handled = true;
+    }
+
+    private void OnResizePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isResizing) return;
+        if (DataContext is not InfoPanelViewModel vm) return;
+
+        var current = e.GetPosition(this);
+        var delta = _resizeStartPoint.Y - current.Y; // dragging up = larger
+        var newHeight = Math.Clamp(_resizeStartHeight + delta, 100, 800);
+        vm.GraphPanelHeight = newHeight;
+        e.Handled = true;
+    }
+
+    private void OnResizePointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_isResizing) return;
+        _isResizing = false;
+        e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
+    private void OnResizePointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _isResizing = false;
     }
 
     private void WireAutoCompleteBox()
@@ -151,7 +207,6 @@ public partial class InfoPanel : UserControl
             return;
         }
 
-        // Create or reuse the graph control
         if (_graphControl == null)
         {
             _graphControl = new NeuronGraphControl
