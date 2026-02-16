@@ -87,6 +87,7 @@ public partial class GraphView : UserControl
             RepelRadius = _vm.RepelRadius,
             CenterStrength = _vm.CenterForce,
             LinkDistance = _vm.LinkDistance,
+            LinkStrength = _vm.LinkForce,
         };
         _graphControl.StartWithData(adaptiveData);
     }
@@ -137,6 +138,7 @@ public partial class GraphView : UserControl
             RepelRadius = _vm.RepelRadius,
             CenterStrength = _vm.CenterForce,
             LinkDistance = _vm.LinkDistance,
+            LinkStrength = _vm.LinkForce,
         };
         _graphControl.ApplyPhysicsChanges();
     }

@@ -92,6 +92,12 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     public double LinkDistance => 1000 + (LinkDistanceSlider / 100.0 * 1000);
     public double LinkDistanceDisplay => LinkDistanceSlider;
 
+    // Link force slider (0-100 maps to 0.0-0.01)
+    [ObservableProperty] private double _linkForceSlider = 50;
+
+    public double LinkForce => LinkForceSlider / 100.0 * 0.01;
+    public double LinkForceDisplay => LinkForceSlider;
+
     // Orphan radio helpers
     public bool IsOrphanHide { get => OrphanMode == OrphanFilterMode.Hide; set { if (value) OrphanMode = OrphanFilterMode.Hide; } }
     public bool IsOrphanShow { get => OrphanMode == OrphanFilterMode.Show; set { if (value) OrphanMode = OrphanFilterMode.Show; } }
@@ -139,6 +145,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             _repelSlider = _settings.Get("repel_radius", 70.0);
             _centerForceSlider = _settings.Get("center_force", 20.0);
             _linkDistanceSlider = _settings.Get("link_distance", 0.0);
+            _linkForceSlider = _settings.Get("link_force", 50.0);
             _isGraphSidebarCollapsed = _settings.Get("sidebar_collapsed", false);
         }
 
@@ -322,6 +329,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     partial void OnRepelSliderChanged(double value) { Save("repel_radius", value); OnPropertyChanged(nameof(RepelDisplay)); NotifyPhysics(nameof(RepelRadius)); }
     partial void OnCenterForceSliderChanged(double value) { Save("center_force", value); OnPropertyChanged(nameof(CenterForceDisplay)); NotifyPhysics(nameof(CenterForce)); }
     partial void OnLinkDistanceSliderChanged(double value) { Save("link_distance", value); OnPropertyChanged(nameof(LinkDistanceDisplay)); NotifyPhysics(nameof(LinkDistance)); }
+    partial void OnLinkForceSliderChanged(double value) { Save("link_force", value); OnPropertyChanged(nameof(LinkForceDisplay)); NotifyPhysics(nameof(LinkForce)); }
     private void NotifyPhysics(string prop) { OnPropertyChanged(prop); if (!_isInitializing) PhysicsParametersChanged?.Invoke(this, EventArgs.Empty); }
     partial void OnSolarSystemScaleSliderChanged(double value) => NotifySolar(nameof(SolarSystemScale));
     partial void OnStarSpacingSliderChanged(double value) => NotifySolar(nameof(StarSpacingMultiplier));
