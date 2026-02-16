@@ -83,6 +83,13 @@ public sealed partial class InfiniteCanvasControl
         // Draw active freehand stroke
         DrawActiveStroke(ctx);
 
+        // Draw anchor points when connector tool is active
+        if (ToolMode == CanvasToolMode.Connector || _isConnecting)
+            DrawAnchorPoints(ctx, data, viewport);
+
+        // Draw connector selection highlight
+        DrawConnectorSelectionHighlight(ctx, data);
+
         // Draw selection overlays
         DrawSelectionOverlays(ctx, data);
 

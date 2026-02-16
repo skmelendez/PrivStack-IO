@@ -14,6 +14,7 @@ namespace PrivStack.UI.Adaptive.Controls.InfiniteCanvas;
 public sealed partial class InfiniteCanvasControl
 {
     private readonly HashSet<string> _selectedElementIds = [];
+    private string? _selectedConnectorId;
     private Rect? _selectionMarquee;
     private Point _marqueeStart;
     private bool _isMarqueeActive;
@@ -43,8 +44,24 @@ public sealed partial class InfiniteCanvasControl
 
     internal void ClearSelection()
     {
-        if (_selectedElementIds.Count == 0) return;
+        var hadSelection = _selectedElementIds.Count > 0 || _selectedConnectorId != null;
         _selectedElementIds.Clear();
+        _selectedConnectorId = null;
+        if (hadSelection)
+            InvalidateVisual();
+    }
+
+    internal void SelectConnector(string connectorId)
+    {
+        _selectedElementIds.Clear();
+        _selectedConnectorId = connectorId;
+        InvalidateVisual();
+    }
+
+    internal void ClearConnectorSelection()
+    {
+        if (_selectedConnectorId == null) return;
+        _selectedConnectorId = null;
         InvalidateVisual();
     }
 
@@ -156,4 +173,59 @@ public sealed partial class InfiniteCanvasControl
         var pen = new Pen(Brushes.CornflowerBlue, 1) { DashStyle = DashStyle.Dash };
         ctx.DrawRectangle(brush, pen, _selectionMarquee.Value);
     }
+
+    internal void DrawConnectorSelectionHighlight(DrawingContext ctx, CanvasData data)
+    {
+        if (_selectedConnectorId == null) return;
+
+        var connector = data.FindConnector(_selectedConnectorId);
+        if (connector == null) return;
+
+        var source = data.FindElement(connector.SourceId);
+        var target = data.FindElement(connector.TargetId);
+        if (source == null || target == null) return;
+
+        var srcAnchor = GetClosestAnchor(source, GetAnchorScreenPoint(target, AnchorPoint.Left));
+        var tgtAnchor = GetClosestAnchor(target, GetAnchorScreenPoint(source, AnchorPoint.Right));
+        var start = GetAnchorScreenPoint(source, srcAnchor);
+        var end = GetAnchorScreenPoint(target, tgtAnchor);
+
+        var highlightPen = new Pen(Brushes.CornflowerBlue, 4 * Zoom) { DashStyle = DashStyle.Dash };
+
+        switch (connector.Style)
+        {
+            case ConnectorStyle.Curved:
+            {
+                var distance = Math.Sqrt(
+                    (end.X - start.X) * (end.X - start.X) +
+                    (end.Y - start.Y) * (end.Y - start.Y));
+                var offset = Math.Max(50, distance * 0.4) * Zoom;
+                var cp1 = GetControlPoint(start, srcAnchor, offset);
+                var cp2 = GetControlPoint(end, tgtAnchor, offset);
+
+                var geometry = new StreamGeometry();
+                using (var gc = geometry.Open())
+                {
+                    gc.BeginFigure(start, false);
+                    gc.CubicBezierTo(cp1, cp2, end);
+                    gc.EndFigure(false);
+                }
+
+                ctx.DrawGeometry(null, highlightPen, geometry);
+                break;
+            }
+            case ConnectorStyle.Elbow:
+            {
+                var margin = 20 * Zoom;
+                var segments = ComputeElbowSegments(start, end, srcAnchor, tgtAnchor, margin);
+                for (var i = 0; i < segments.Count - 1; i++)
+                    ctx.DrawLine(highlightPen, segments[i], segments[i + 1]);
+                break;
+            }
+            default:
+                ctx.DrawLine(highlightPen, start, end);
+                break;
+        }
+    }
+
 }

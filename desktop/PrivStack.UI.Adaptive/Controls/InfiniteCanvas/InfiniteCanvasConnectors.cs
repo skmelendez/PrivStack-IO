@@ -1,8 +1,8 @@
 // ============================================================================
 // File: InfiniteCanvasConnectors.cs
 // Description: Connector rendering and creation for the canvas. Supports
-//              straight, curved (quadratic bezier), and elbow (orthogonal)
-//              connector styles with arrow heads.
+//              straight, anchor-aware cubic bezier curves, and orthogonal
+//              elbow routing with configurable arrow modes and colors.
 // ============================================================================
 
 using Avalonia;
@@ -35,81 +35,230 @@ public sealed partial class InfiniteCanvasControl
         var start = GetAnchorScreenPoint(source, srcAnchor);
         var end = GetAnchorScreenPoint(target, tgtAnchor);
 
-        var pen = new Pen(GetBrush("ThemeTextMutedBrush", Brushes.Gray), 2 * Zoom);
+        var connectorBrush = ResolveConnectorBrush(connector);
+        var pen = new Pen(connectorBrush, 2 * Zoom);
 
         switch (connector.Style)
         {
             case ConnectorStyle.Curved:
-                DrawCurvedConnector(ctx, start, end, pen);
+                DrawCurvedConnector(ctx, start, end, srcAnchor, tgtAnchor, pen);
                 break;
             case ConnectorStyle.Elbow:
-                DrawElbowConnector(ctx, start, end, pen);
+                DrawElbowConnector(ctx, start, end, srcAnchor, tgtAnchor, pen);
                 break;
             default:
                 ctx.DrawLine(pen, start, end);
                 break;
         }
 
-        // Arrow head at target
-        DrawArrowHead(ctx, start, end, pen.Brush);
+        // Arrow heads based on ArrowMode
+        DrawArrowsForMode(ctx, connector, start, end, srcAnchor, tgtAnchor, connectorBrush);
 
         // Label
         if (!string.IsNullOrEmpty(connector.Label))
             DrawConnectorLabel(ctx, connector.Label, start, end);
     }
 
-    private void DrawCurvedConnector(DrawingContext ctx, Point start, Point end, Pen pen)
+    private IBrush ResolveConnectorBrush(CanvasConnector connector)
     {
-        var midX = (start.X + end.X) / 2;
-        var controlOffset = Math.Abs(end.X - start.X) * 0.3;
+        if (!string.IsNullOrEmpty(connector.Color))
+        {
+            var color = ParseColor(connector.Color, Colors.Gray);
+            return new SolidColorBrush(color);
+        }
+
+        return GetBrush("ThemeTextMutedBrush", Brushes.Gray);
+    }
+
+    // ================================================================
+    // Curved Connector — Anchor-aware Cubic Bezier
+    // ================================================================
+
+    private void DrawCurvedConnector(DrawingContext ctx, Point start, Point end,
+        AnchorPoint srcAnchor, AnchorPoint tgtAnchor, Pen pen)
+    {
+        var distance = Math.Sqrt(
+            (end.X - start.X) * (end.X - start.X) +
+            (end.Y - start.Y) * (end.Y - start.Y));
+        var offset = Math.Max(50, distance * 0.4) * Zoom;
+
+        var cp1 = GetControlPoint(start, srcAnchor, offset);
+        var cp2 = GetControlPoint(end, tgtAnchor, offset);
 
         var geometry = new StreamGeometry();
         using (var gc = geometry.Open())
         {
             gc.BeginFigure(start, false);
-            gc.QuadraticBezierTo(
-                new Point(midX, start.Y - controlOffset),
-                end);
+            gc.CubicBezierTo(cp1, cp2, end);
             gc.EndFigure(false);
         }
 
         ctx.DrawGeometry(null, pen, geometry);
     }
 
-    private static void DrawElbowConnector(DrawingContext ctx, Point start, Point end, Pen pen)
-    {
-        var midX = (start.X + end.X) / 2;
+    private static Point GetControlPoint(Point anchor, AnchorPoint direction, double offset) =>
+        direction switch
+        {
+            AnchorPoint.Top => new Point(anchor.X, anchor.Y - offset),
+            AnchorPoint.Bottom => new Point(anchor.X, anchor.Y + offset),
+            AnchorPoint.Left => new Point(anchor.X - offset, anchor.Y),
+            AnchorPoint.Right => new Point(anchor.X + offset, anchor.Y),
+            _ => new Point(anchor.X + offset, anchor.Y),
+        };
 
-        // Three-segment orthogonal path
-        ctx.DrawLine(pen, start, new Point(midX, start.Y));
-        ctx.DrawLine(pen, new Point(midX, start.Y), new Point(midX, end.Y));
-        ctx.DrawLine(pen, new Point(midX, end.Y), end);
+    // ================================================================
+    // Elbow Connector — Anchor-aware Orthogonal Routing
+    // ================================================================
+
+    private void DrawElbowConnector(DrawingContext ctx, Point start, Point end,
+        AnchorPoint srcAnchor, AnchorPoint tgtAnchor, Pen pen)
+    {
+        var margin = 20 * Zoom;
+        var segments = ComputeElbowSegments(start, end, srcAnchor, tgtAnchor, margin);
+
+        for (var i = 0; i < segments.Count - 1; i++)
+            ctx.DrawLine(pen, segments[i], segments[i + 1]);
     }
 
-    private void DrawArrowHead(DrawingContext ctx, Point from, Point to, IBrush? brush)
+    internal static List<Point> ComputeElbowSegments(Point start, Point end,
+        AnchorPoint srcAnchor, AnchorPoint tgtAnchor, double margin)
     {
-        var dx = to.X - from.X;
-        var dy = to.Y - from.Y;
-        var len = Math.Sqrt(dx * dx + dy * dy);
-        if (len < 1) return;
+        var exitPt = ExtendFromAnchor(start, srcAnchor, margin);
+        var entryPt = ExtendFromAnchor(end, tgtAnchor, margin);
 
-        var nx = dx / len;
-        var ny = dy / len;
+        var segments = new List<Point> { start, exitPt };
+
+        var srcVertical = srcAnchor is AnchorPoint.Top or AnchorPoint.Bottom;
+        var tgtVertical = tgtAnchor is AnchorPoint.Top or AnchorPoint.Bottom;
+
+        if (srcVertical == tgtVertical)
+        {
+            // Same axis: add two midpoints for a Z-shape
+            if (srcVertical)
+            {
+                var midY = (exitPt.Y + entryPt.Y) / 2;
+                segments.Add(new Point(exitPt.X, midY));
+                segments.Add(new Point(entryPt.X, midY));
+            }
+            else
+            {
+                var midX = (exitPt.X + entryPt.X) / 2;
+                segments.Add(new Point(midX, exitPt.Y));
+                segments.Add(new Point(midX, entryPt.Y));
+            }
+        }
+        else
+        {
+            // Perpendicular axes: single corner point
+            if (srcVertical)
+                segments.Add(new Point(exitPt.X, entryPt.Y));
+            else
+                segments.Add(new Point(entryPt.X, exitPt.Y));
+        }
+
+        segments.Add(entryPt);
+        segments.Add(end);
+        return segments;
+    }
+
+    private static Point ExtendFromAnchor(Point pt, AnchorPoint anchor, double margin) =>
+        anchor switch
+        {
+            AnchorPoint.Top => new Point(pt.X, pt.Y - margin),
+            AnchorPoint.Bottom => new Point(pt.X, pt.Y + margin),
+            AnchorPoint.Left => new Point(pt.X - margin, pt.Y),
+            AnchorPoint.Right => new Point(pt.X + margin, pt.Y),
+            _ => new Point(pt.X + margin, pt.Y),
+        };
+
+    // ================================================================
+    // Arrow Head Drawing
+    // ================================================================
+
+    private void DrawArrowsForMode(DrawingContext ctx, CanvasConnector connector,
+        Point start, Point end, AnchorPoint srcAnchor, AnchorPoint tgtAnchor, IBrush brush)
+    {
+        var mode = connector.ArrowMode;
+
+        if (mode is ArrowMode.Forward or ArrowMode.Both)
+        {
+            var dir = GetEndDirection(connector.Style, start, end, srcAnchor, tgtAnchor, atStart: false);
+            DrawArrowHeadAtPoint(ctx, end, dir, brush);
+        }
+
+        if (mode is ArrowMode.Backward or ArrowMode.Both)
+        {
+            var dir = GetEndDirection(connector.Style, start, end, srcAnchor, tgtAnchor, atStart: true);
+            DrawArrowHeadAtPoint(ctx, start, dir, brush);
+        }
+    }
+
+    private Point GetEndDirection(ConnectorStyle style, Point start, Point end,
+        AnchorPoint srcAnchor, AnchorPoint tgtAnchor, bool atStart)
+    {
+        if (style == ConnectorStyle.Elbow)
+        {
+            var margin = 20 * Zoom;
+            var segments = ComputeElbowSegments(start, end, srcAnchor, tgtAnchor, margin);
+            if (atStart)
+            {
+                // Direction pointing INTO start (from second point toward first)
+                return new Point(segments[0].X - segments[1].X, segments[0].Y - segments[1].Y);
+            }
+
+            var last = segments.Count - 1;
+            return new Point(segments[last].X - segments[last - 1].X, segments[last].Y - segments[last - 1].Y);
+        }
+
+        if (style == ConnectorStyle.Curved)
+        {
+            // Tangent at endpoints of cubic bezier approximated by control point direction
+            var distance = Math.Sqrt(
+                (end.X - start.X) * (end.X - start.X) +
+                (end.Y - start.Y) * (end.Y - start.Y));
+            var offset = Math.Max(50, distance * 0.4) * Zoom;
+
+            if (atStart)
+            {
+                var cp1 = GetControlPoint(start, srcAnchor, offset);
+                return new Point(start.X - cp1.X, start.Y - cp1.Y);
+            }
+
+            var cp2 = GetControlPoint(end, tgtAnchor, offset);
+            return new Point(end.X - cp2.X, end.Y - cp2.Y);
+        }
+
+        // Straight
+        return atStart
+            ? new Point(start.X - end.X, start.Y - end.Y)
+            : new Point(end.X - start.X, end.Y - start.Y);
+    }
+
+    private void DrawArrowHeadAtPoint(DrawingContext ctx, Point tip, Point direction, IBrush brush)
+    {
+        var len = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y);
+        if (len < 0.001) return;
+
+        var nx = direction.X / len;
+        var ny = direction.Y / len;
 
         var arrowSize = 10 * Zoom;
         var arrowAngle = Math.PI / 6;
 
+        var cosA = Math.Cos(arrowAngle);
+        var sinA = Math.Sin(arrowAngle);
+
         var p1 = new Point(
-            to.X - arrowSize * (nx * Math.Cos(arrowAngle) - ny * Math.Sin(arrowAngle)),
-            to.Y - arrowSize * (ny * Math.Cos(arrowAngle) + nx * Math.Sin(arrowAngle)));
+            tip.X - arrowSize * (nx * cosA - ny * sinA),
+            tip.Y - arrowSize * (ny * cosA + nx * sinA));
         var p2 = new Point(
-            to.X - arrowSize * (nx * Math.Cos(arrowAngle) + ny * Math.Sin(arrowAngle)),
-            to.Y - arrowSize * (ny * Math.Cos(arrowAngle) - nx * Math.Sin(arrowAngle)));
+            tip.X - arrowSize * (nx * cosA + ny * sinA),
+            tip.Y - arrowSize * (ny * cosA - nx * sinA));
 
         var geometry = new StreamGeometry();
         using (var gc = geometry.Open())
         {
-            gc.BeginFigure(to, true);
+            gc.BeginFigure(tip, true);
             gc.LineTo(p1);
             gc.LineTo(p2);
             gc.EndFigure(true);
@@ -117,6 +266,10 @@ public sealed partial class InfiniteCanvasControl
 
         ctx.DrawGeometry(brush, null, geometry);
     }
+
+    // ================================================================
+    // Connector Label
+    // ================================================================
 
     private void DrawConnectorLabel(DrawingContext ctx, string label, Point start, Point end)
     {
@@ -129,7 +282,6 @@ public sealed partial class InfiniteCanvasControl
             GetSansTypeface(FontWeight.Normal),
             fontSize, textBrush);
 
-        // Background for readability
         var bgRect = new Rect(
             midPoint.X - ft.Width / 2 - 4,
             midPoint.Y - ft.Height / 2 - 2,
@@ -159,7 +311,9 @@ public sealed partial class InfiniteCanvasControl
         };
 
         ctx.DrawLine(pen, start, _pendingConnectorEnd);
-        DrawArrowHead(ctx, start, _pendingConnectorEnd, Brushes.CornflowerBlue);
+        DrawArrowHeadAtPoint(ctx, _pendingConnectorEnd,
+            new Point(_pendingConnectorEnd.X - start.X, _pendingConnectorEnd.Y - start.Y),
+            Brushes.CornflowerBlue);
     }
 
     // ================================================================
@@ -171,7 +325,6 @@ public sealed partial class InfiniteCanvasControl
         var anchorHit = HitTestConnectorAnchor(pos, data);
         if (anchorHit == null)
         {
-            // Try hitting element center
             var el = HitTestElement(pos, data);
             if (el == null) return;
             _connectorSourceId = el.Id;
@@ -214,7 +367,9 @@ public sealed partial class InfiniteCanvasControl
             Id = Guid.NewGuid().ToString(),
             SourceId = _connectorSourceId,
             TargetId = targetHit.Id,
-            Style = ConnectorStyle.Straight,
+            Style = DefaultConnectorStyle,
+            ArrowMode = DefaultArrowMode,
+            Color = DefaultConnectorColor,
         };
 
         data.Connectors.Add(connector);

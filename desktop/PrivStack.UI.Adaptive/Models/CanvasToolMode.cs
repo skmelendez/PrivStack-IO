@@ -40,4 +40,22 @@ public enum CanvasToolMode
 
     /// <summary>Create a group frame to contain other elements.</summary>
     GroupFrame,
+
+    /// <summary>Create a diamond (decision) shape.</summary>
+    Diamond,
+
+    /// <summary>Create a parallelogram (I/O) shape.</summary>
+    Parallelogram,
+
+    /// <summary>Create a cylinder (database) shape.</summary>
+    Cylinder,
+
+    /// <summary>Create a hexagon (preparation) shape.</summary>
+    Hexagon,
+
+    /// <summary>Create a rounded rectangle (terminal) shape.</summary>
+    RoundedRect,
+
+    /// <summary>Create a triangle shape.</summary>
+    Triangle,
 }
