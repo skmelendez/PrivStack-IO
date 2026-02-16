@@ -239,6 +239,14 @@
                                     </Grid>
                                     <Slider Value="{Binding RepelSlider}" Minimum="0" Maximum="100"/>
                                 </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Spring strength" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding SpringStrength, StringFormat='{}{0:P0}'}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding SpringSlider}" Minimum="0" Maximum="100"/>
+                                </StackPanel>
                             </StackPanel>
                         </Expander>
 
