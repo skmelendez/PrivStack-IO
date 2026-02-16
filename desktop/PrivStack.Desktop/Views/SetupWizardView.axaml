@@ -90,7 +90,8 @@
 
                     <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="8" Padding="12" Margin="0,4,0,0">
                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                            <TextBlock Text="🔒" FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                            <PathIcon Data="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"
+                                     Width="14" Height="14" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             <TextBlock Text="Your data never leaves your device. Everything is encrypted locally."
                                        Foreground="{DynamicResource ThemeTextMutedBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
                         </StackPanel>
@@ -181,7 +182,9 @@
                                 Background="Transparent" Padding="12" CornerRadius="8">
                             <Grid ColumnDefinitions="Auto,*,Auto">
                                 <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="8" VerticalAlignment="Center">
-                                    <TextBlock Text="📁" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <PathIcon Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
+                                             Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                             Foreground="White"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
                                     <TextBlock Text="Local Only (Recommended)" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
@@ -230,7 +233,9 @@
                                 Background="Transparent" Padding="12" CornerRadius="8">
                             <Grid ColumnDefinitions="Auto,*,Auto">
                                 <Border Grid.Column="0" Width="36" Height="36" Background="#3693F3" CornerRadius="8" VerticalAlignment="Center">
-                                    <TextBlock Text="☁️" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <PathIcon Data="M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"
+                                             Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                             Foreground="White"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
                                     <TextBlock Text="Sync via iCloud Drive" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
@@ -256,7 +261,9 @@
                                 Background="Transparent" Padding="12" CornerRadius="8">
                             <Grid ColumnDefinitions="Auto,*,Auto">
                                 <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemeWarningBrush}" CornerRadius="8" VerticalAlignment="Center">
-                                    <TextBlock Text="📂" FontSize="{DynamicResource ThemeFontSizeLg}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <PathIcon Data="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"
+                                             Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                             Foreground="White"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
                                     <TextBlock Text="Custom Sync Folder" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
