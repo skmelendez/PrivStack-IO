@@ -19,11 +19,11 @@ members = [
 ]
 
 [workspace.package]
-version = "1.11.0"
+version = "1.11.1"
 edition = "2024"
 license = "Proprietary"
 repository = "https://github.com/PrivStackApp/PrivStack-IO"
-rust-version = "1.85"
+rust-version = "1.91"
 
 [workspace.dependencies]
 # Serialization
