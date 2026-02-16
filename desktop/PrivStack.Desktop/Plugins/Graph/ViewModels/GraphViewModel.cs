@@ -79,15 +79,15 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
 
     public double RepelRadius => 200 + (RepelSlider / 100.0 * 300);
 
-    // Spring strength slider (0-100 maps to 0.0-0.3)
-    [ObservableProperty] private double _springSlider = 27;
+    // Center force slider (0-100 maps to 0.0-0.15)
+    [ObservableProperty] private double _centerForceSlider = 20;
 
-    public double SpringStrength => SpringSlider / 100.0 * 0.3;
+    public double CenterForce => CenterForceSlider / 100.0 * 0.15;
 
-    // Link distance slider (0-100 maps to 50-500)
-    [ObservableProperty] private double _linkDistanceSlider = 33;
+    // Link distance slider (0-100 maps to 200-2000)
+    [ObservableProperty] private double _linkDistanceSlider = 0;
 
-    public double LinkDistance => 50 + (LinkDistanceSlider / 100.0 * 450);
+    public double LinkDistance => 200 + (LinkDistanceSlider / 100.0 * 1800);
 
     // Orphan radio helpers
     public bool IsOrphanHide { get => OrphanMode == OrphanFilterMode.Hide; set { if (value) OrphanMode = OrphanFilterMode.Hide; } }
@@ -134,8 +134,8 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             _localDepth = _settings.Get("local_depth", 1);
             _timelineEnabled = _settings.Get("timeline_enabled", false);
             _repelSlider = _settings.Get("repel_radius", 70.0);
-            _springSlider = _settings.Get("spring_strength", 27.0);
-            _linkDistanceSlider = _settings.Get("link_distance", 33.0);
+            _centerForceSlider = _settings.Get("center_force", 20.0);
+            _linkDistanceSlider = _settings.Get("link_distance", 0.0);
             _isGraphSidebarCollapsed = _settings.Get("sidebar_collapsed", false);
         }
 
@@ -317,7 +317,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     partial void OnLocalDepthChanged(int value) { Save("local_depth", value); if (!_isInitializing && IsLocalView) _ = LoadGraphAsync(); }
     partial void OnIsGraphSidebarCollapsedChanged(bool value) { Save("sidebar_collapsed", value); }
     partial void OnRepelSliderChanged(double value) { Save("repel_radius", value); NotifyPhysics(nameof(RepelRadius)); }
-    partial void OnSpringSliderChanged(double value) { Save("spring_strength", value); NotifyPhysics(nameof(SpringStrength)); }
+    partial void OnCenterForceSliderChanged(double value) { Save("center_force", value); NotifyPhysics(nameof(CenterForce)); }
     partial void OnLinkDistanceSliderChanged(double value) { Save("link_distance", value); NotifyPhysics(nameof(LinkDistance)); }
     private void NotifyPhysics(string prop) { OnPropertyChanged(prop); if (!_isInitializing) PhysicsParametersChanged?.Invoke(this, EventArgs.Empty); }
     partial void OnSolarSystemScaleSliderChanged(double value) => NotifySolar(nameof(SolarSystemScale));
