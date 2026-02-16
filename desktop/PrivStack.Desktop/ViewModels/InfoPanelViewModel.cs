@@ -210,25 +210,25 @@ public partial class InfoPanelViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isGraphSettingsOpen;
 
-    // --- Graph physics sliders (same ranges as brain graph) ---
-    // Repel radius slider (0-100 maps to 300-400)
+    // --- Graph physics sliders (smaller ranges for info panel ~320px) ---
+    // Repel radius slider (0-100 maps to 30-80)
     [ObservableProperty] private double _neuronRepelSlider = 50;
-    public double NeuronRepelRadius => 300 + (NeuronRepelSlider / 100.0 * 100);
+    public double NeuronRepelRadius => 30 + (NeuronRepelSlider / 100.0 * 50);
     public double NeuronRepelDisplay => NeuronRepelSlider;
 
-    // Center force slider (0-100 maps to 0.0-0.005)
+    // Center force slider (0-100 maps to 0.0-0.05)
     [ObservableProperty] private double _neuronCenterForceSlider = 50;
-    public double NeuronCenterForce => NeuronCenterForceSlider / 100.0 * 0.005;
+    public double NeuronCenterForce => NeuronCenterForceSlider / 100.0 * 0.05;
     public double NeuronCenterForceDisplay => NeuronCenterForceSlider;
 
-    // Link distance slider (0-100 maps to 1000-2000)
+    // Link distance slider (0-100 maps to 50-200)
     [ObservableProperty] private double _neuronLinkDistanceSlider;
-    public double NeuronLinkDistance => 1000 + (NeuronLinkDistanceSlider / 100.0 * 1000);
+    public double NeuronLinkDistance => 50 + (NeuronLinkDistanceSlider / 100.0 * 150);
     public double NeuronLinkDistanceDisplay => NeuronLinkDistanceSlider;
 
-    // Link force slider (0-100 maps to 0.0-0.01)
+    // Link force slider (0-100 maps to 0.0-0.05)
     [ObservableProperty] private double _neuronLinkForceSlider = 50;
-    public double NeuronLinkForce => NeuronLinkForceSlider / 100.0 * 0.01;
+    public double NeuronLinkForce => NeuronLinkForceSlider / 100.0 * 0.05;
     public double NeuronLinkForceDisplay => NeuronLinkForceSlider;
 
     public event EventHandler? PhysicsParametersChanged;
