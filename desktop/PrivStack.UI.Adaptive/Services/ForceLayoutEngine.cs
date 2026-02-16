@@ -17,9 +17,11 @@ public sealed class PhysicsParameters
     /// <summary>Spring strength pulling nodes back to their anchor (0-1).</summary>
     public double SpringStrength { get; set; } = 0.08;
 
+    /// <summary>Min distance between connected nodes — pushed apart if closer.</summary>
+    public double LinkDistance { get; set; } = 200.0;
+
     // Kept for interface compat (unused by engine)
     public double RepulsionStrength { get; set; } = -8000;
-    public double LinkDistance { get; set; } = 900;
     public double LinkStrength { get; set; } = 0.15;
     public double CollisionStrength { get; set; } = 0.7;
     public double CenterStrength { get; set; } = 0.03;
@@ -47,6 +49,7 @@ public sealed class ForceLayoutEngine
     {
         _params.RepelRadius = source.RepelRadius;
         _params.SpringStrength = source.SpringStrength;
+        _params.LinkDistance = source.LinkDistance;
     }
 
     public bool IsRunning => _params.Alpha > _params.AlphaMin;
@@ -102,6 +105,7 @@ public sealed class ForceLayoutEngine
         if (nodes.Count == 0) return;
 
         ApplyRepel(nodes);
+        ApplyLinkMinDistance();
         ApplySpringToAnchor(nodes);
 
         _params.Alpha += (_params.AlphaMin - _params.Alpha) * _params.AlphaDecay;
@@ -150,6 +154,43 @@ public sealed class ForceLayoutEngine
                     nodes[j].Y += my;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Connected nodes closer than LinkDistance get pushed apart.
+    /// Same displacement logic as repel but only for linked pairs.
+    /// </summary>
+    private void ApplyLinkMinDistance()
+    {
+        if (_graphData is null) return;
+        var minDist = _params.LinkDistance;
+        if (minDist <= 0) return;
+
+        foreach (var edge in _graphData.Edges)
+        {
+            if (!_graphData.Nodes.TryGetValue(edge.SourceId, out var a)) continue;
+            if (!_graphData.Nodes.TryGetValue(edge.TargetId, out var b)) continue;
+
+            var dx = b.X - a.X;
+            var dy = b.Y - a.Y;
+            var dist = Math.Sqrt(dx * dx + dy * dy);
+
+            if (dist >= minDist) continue;
+
+            if (dist < 1)
+            {
+                dx = 1;
+                dy = 0;
+                dist = 1;
+            }
+
+            var deficit = (minDist - dist) * 0.5;
+            var mx = dx / dist * deficit;
+            var my = dy / dist * deficit;
+
+            if (!a.IsDragging && !a.IsPinned) { a.X -= mx; a.Y -= my; }
+            if (!b.IsDragging && !b.IsPinned) { b.X += mx; b.Y += my; }
         }
     }
 
