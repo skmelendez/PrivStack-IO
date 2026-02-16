@@ -117,6 +117,10 @@ public static class IconData
     public const string Mail = "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6";
     public const string MessageSquare = "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z";
     public const string Globe = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z";
+
+    // Lucide-style "whiteboard" — monitor/canvas with stand
+    public const string Whiteboard = "M3 3h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M8 21h8 M12 17v4";
+
     public const string MoreHorizontal = "M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z";
 
     // Lucide "link"
@@ -137,9 +141,9 @@ public static class IconData
             "Document" or "FileText" or "Notes" => Document,
             "CheckSquare" or "Tasks" => CheckSquare,
             "Calendar" => Calendar,
-            "Book" or "Journal" => Book,
+            "Book" or "BookOpen" or "Journal" => Book,
             "Lock" or "Passwords" => Lock,
-            "Folder" or "Files" => Folder,
+            "Folder" or "FolderLock" or "Files" => Folder,
             "Code" or "Snippets" => Code,
             "Rss" or "RSS" => Rss,
             "Users" or "Contacts" => Users,
@@ -182,6 +186,7 @@ public static class IconData
             "Mail" => Mail,
             "MessageSquare" => MessageSquare,
             "Globe" => Globe,
+            "Whiteboard" or "Canvas" => Whiteboard,
             "MoreHorizontal" => MoreHorizontal,
             _ => null
         };
