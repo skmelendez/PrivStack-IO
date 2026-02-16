@@ -62,40 +62,42 @@
                 </Grid>
             </Border>
 
-            <!-- Content area -->
-            <Panel Grid.Row="1">
-                <!-- Loading indicator -->
-                <Border IsVisible="{Binding IsLoading}"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Top"
-                        Margin="0,16,0,0">
-                    <TextBlock Text="Loading..."
-                               Foreground="{DynamicResource ThemeTextMutedBrush}"
-                               FontSize="{DynamicResource ThemeFontSizeSmMd}"/>
-                </Border>
-
-                <!-- Empty state: No item selected -->
-                <Border IsVisible="{Binding !HasActiveItem}"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Padding="16">
-                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <controls:IconControl Icon="Link" Size="24" StrokeThickness="1.5"
-                                              Stroke="{DynamicResource ThemeTextMutedBrush}"
-                                              HorizontalAlignment="Center"/>
-                        <TextBlock Text="Select an item to see details"
+            <!-- Content area: two stacked panels -->
+            <Grid Grid.Row="1" RowDefinitions="*,Auto">
+                <!-- ═══ Top panel: scrollable info content ═══ -->
+                <Panel Grid.Row="0">
+                    <!-- Loading indicator -->
+                    <Border IsVisible="{Binding IsLoading}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            Margin="0,16,0,0">
+                        <TextBlock Text="Loading..."
                                    Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                   TextAlignment="Center"/>
-                    </StackPanel>
-                </Border>
+                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"/>
+                    </Border>
 
-                <!-- Info tab content -->
-                <ScrollViewer x:Name="InfoScrollPanel"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              Padding="0">
-                    <StackPanel Spacing="0">
+                    <!-- Empty state: No item selected -->
+                    <Border IsVisible="{Binding !HasActiveItem}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Padding="16">
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                            <controls:IconControl Icon="Link" Size="24" StrokeThickness="1.5"
+                                                  Stroke="{DynamicResource ThemeTextMutedBrush}"
+                                                  HorizontalAlignment="Center"/>
+                            <TextBlock Text="Select an item to see details"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                       TextAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Info scrollable content -->
+                    <ScrollViewer x:Name="InfoScrollPanel"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Padding="0">
+                        <StackPanel Spacing="0">
 
                         <!-- ═══ Metadata Section ═══ -->
                         <StackPanel Spacing="8" Margin="12,10,12,0" IsVisible="{Binding HasActiveItem}">
@@ -861,174 +863,170 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- ═══ Graph Section (embedded at bottom) ═══ -->
-                        <StackPanel Spacing="0" Margin="0,0,0,0"
-                                    IsVisible="{Binding ShowGraphTab}">
-                            <Border Height="1"
-                                    Background="{DynamicResource ThemeBorderSubtleBrush}"
-                                    Margin="12,4,12,0"/>
-
-                            <!-- Graph header with settings cog -->
-                            <Grid ColumnDefinitions="*,Auto" Margin="12,8,12,4">
-                                <TextBlock Text="Graph"
-                                           FontWeight="SemiBold"
-                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                           VerticalAlignment="Center"/>
-                                <Button Grid.Column="1"
-                                        Padding="4" CornerRadius="4"
-                                        Background="Transparent"
-                                        Opacity="0.85" Cursor="Hand"
-                                        Command="{Binding ToggleGraphSettingsCommand}">
-                                    <Button.Styles>
-                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                            <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
-                                            <Setter Property="Opacity" Value="1"/>
-                                        </Style>
-                                    </Button.Styles>
-                                    <controls:IconControl Icon="Settings" Size="14" StrokeThickness="1.5"
-                                                          Stroke="{DynamicResource ThemeTextMutedBrush}"/>
-                                </Button>
-                            </Grid>
-
-                            <!-- Settings panel (inline, not overlay) -->
-                            <Border x:Name="GraphSettingsOverlay"
-                                    IsVisible="{Binding IsGraphSettingsOpen}"
-                                    Margin="12,0,12,4"
-                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                    BorderBrush="{DynamicResource ThemeBorderBrush}"
-                                    BorderThickness="1" CornerRadius="6" Padding="10">
-                                <StackPanel Spacing="10">
-                                    <!-- Depth control -->
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="Depth" FontWeight="SemiBold"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <Slider Minimum="1" Maximum="5"
-                                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                                    Value="{Binding GraphDepth}"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding GraphDepth}"
-                                                       Margin="8,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        </Grid>
-                                    </StackPanel>
-
-                                    <!-- Physics: Repel distance -->
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="Repel distance"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <Slider Minimum="0" Maximum="100"
-                                                    Value="{Binding NeuronRepelSlider}"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding NeuronRepelDisplay, StringFormat='{}{0:F0}%'}"
-                                                       Margin="8,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                       MinWidth="32"/>
-                                        </Grid>
-                                    </StackPanel>
-
-                                    <!-- Physics: Center force -->
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="Center force"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <Slider Minimum="0" Maximum="100"
-                                                    Value="{Binding NeuronCenterForceSlider}"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding NeuronCenterForceDisplay, StringFormat='{}{0:F0}%'}"
-                                                       Margin="8,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                       MinWidth="32"/>
-                                        </Grid>
-                                    </StackPanel>
-
-                                    <!-- Physics: Link distance -->
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="Link distance"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <Slider Minimum="0" Maximum="100"
-                                                    Value="{Binding NeuronLinkDistanceSlider}"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding NeuronLinkDistanceDisplay, StringFormat='{}{0:F0}%'}"
-                                                       Margin="8,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                       MinWidth="32"/>
-                                        </Grid>
-                                    </StackPanel>
-
-                                    <!-- Physics: Link force -->
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="Link force"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <Slider Minimum="0" Maximum="100"
-                                                    Value="{Binding NeuronLinkForceSlider}"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding NeuronLinkForceDisplay, StringFormat='{}{0:F0}%'}"
-                                                       Margin="8,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                       MinWidth="32"/>
-                                        </Grid>
-                                    </StackPanel>
-
-                                    <!-- Link type filters -->
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="Show types"
-                                                   FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <ItemsControl ItemsSource="{Binding GraphLinkTypeFilters}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <WrapPanel Orientation="Horizontal"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:GraphLinkTypeFilter">
-                                                    <CheckBox IsChecked="{Binding IsEnabled}"
-                                                              Margin="0,2,8,2"
-                                                              Cursor="Hand">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <controls:IconControl Icon="{Binding Icon}" Size="12"
-                                                                                  StrokeThickness="1.5"
-                                                                                  Stroke="{DynamicResource ThemeTextMutedBrush}"/>
-                                                            <TextBlock Text="{Binding DisplayName}"
-                                                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                                       VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                    </CheckBox>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Graph canvas -->
-                            <Border x:Name="GraphPanel" Height="280" Margin="0,0,0,8"
-                                    ClipToBounds="True"/>
-                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
-            </Panel>
+                </Panel>
+
+                <!-- ═══ Bottom panel: graph (independent, not scrollable) ═══ -->
+                <Panel Grid.Row="1" IsVisible="{Binding ShowGraphTab}"
+                       MinHeight="250" Height="280">
+                    <!-- Separator -->
+                    <Border VerticalAlignment="Top" Height="1"
+                            Background="{DynamicResource ThemeBorderSubtleBrush}"/>
+
+                    <!-- Graph canvas -->
+                    <Border x:Name="GraphPanel" Margin="0,1,0,0" ClipToBounds="True"/>
+
+                    <!-- Settings cog button (bottom-left) -->
+                    <Button HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                            Margin="8,0,0,8" Padding="6" CornerRadius="6"
+                            Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                            Opacity="0.85" Cursor="Hand"
+                            Command="{Binding ToggleGraphSettingsCommand}">
+                        <Button.Styles>
+                            <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+                                <Setter Property="Opacity" Value="1"/>
+                            </Style>
+                        </Button.Styles>
+                        <controls:IconControl Icon="Settings" Size="14" StrokeThickness="1.5"
+                                              Stroke="{DynamicResource ThemeTextMutedBrush}"/>
+                    </Button>
+
+                    <!-- Settings popover (floating, bottom-left) -->
+                    <Border x:Name="GraphSettingsOverlay"
+                            IsVisible="{Binding IsGraphSettingsOpen}"
+                            HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                            Margin="8,0,0,40" MaxWidth="240"
+                            Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                            BorderBrush="{DynamicResource ThemeBorderBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="12"
+                            BoxShadow="0 -2 8 0 #30000000">
+                        <StackPanel Spacing="10">
+                            <!-- Depth control -->
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Depth" FontWeight="SemiBold"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="1" Maximum="5"
+                                            TickFrequency="1" IsSnapToTickEnabled="True"
+                                            Value="{Binding GraphDepth}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding GraphDepth}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Physics: Repel distance -->
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Repel distance"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="0" Maximum="100"
+                                            Value="{Binding NeuronRepelSlider}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding NeuronRepelDisplay, StringFormat='{}{0:F0}%'}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               MinWidth="32"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Physics: Center force -->
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Center force"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="0" Maximum="100"
+                                            Value="{Binding NeuronCenterForceSlider}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding NeuronCenterForceDisplay, StringFormat='{}{0:F0}%'}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               MinWidth="32"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Physics: Link distance -->
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Link distance"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="0" Maximum="100"
+                                            Value="{Binding NeuronLinkDistanceSlider}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding NeuronLinkDistanceDisplay, StringFormat='{}{0:F0}%'}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               MinWidth="32"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Physics: Link force -->
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Link force"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Slider Minimum="0" Maximum="100"
+                                            Value="{Binding NeuronLinkForceSlider}"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding NeuronLinkForceDisplay, StringFormat='{}{0:F0}%'}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               MinWidth="32"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Link type filters -->
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Show types"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <ItemsControl ItemsSource="{Binding GraphLinkTypeFilters}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:GraphLinkTypeFilter">
+                                            <CheckBox IsChecked="{Binding IsEnabled}"
+                                                      Margin="0,2,8,2"
+                                                      Cursor="Hand">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <controls:IconControl Icon="{Binding Icon}" Size="12"
+                                                                          StrokeThickness="1.5"
+                                                                          Stroke="{DynamicResource ThemeTextMutedBrush}"/>
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Panel>
+            </Grid>
         </Grid>
     </Border>
 </UserControl>

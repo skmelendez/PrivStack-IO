@@ -210,10 +210,10 @@ public partial class InfoPanelViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isGraphSettingsOpen;
 
-    // --- Graph physics sliders (smaller ranges for info panel ~320px) ---
-    // Repel radius slider (0-100 maps to 30-80)
+    // --- Graph physics sliders (tuned for info panel ~320px) ---
+    // Repel radius slider (0-100 maps to 100-250)
     [ObservableProperty] private double _neuronRepelSlider = 50;
-    public double NeuronRepelRadius => 30 + (NeuronRepelSlider / 100.0 * 50);
+    public double NeuronRepelRadius => 100 + (NeuronRepelSlider / 100.0 * 150);
     public double NeuronRepelDisplay => NeuronRepelSlider;
 
     // Center force slider (0-100 maps to 0.0-0.05)
@@ -221,9 +221,9 @@ public partial class InfoPanelViewModel : ViewModelBase
     public double NeuronCenterForce => NeuronCenterForceSlider / 100.0 * 0.05;
     public double NeuronCenterForceDisplay => NeuronCenterForceSlider;
 
-    // Link distance slider (0-100 maps to 50-200)
+    // Link distance slider (0-100 maps to 250-500)
     [ObservableProperty] private double _neuronLinkDistanceSlider;
-    public double NeuronLinkDistance => 50 + (NeuronLinkDistanceSlider / 100.0 * 150);
+    public double NeuronLinkDistance => 250 + (NeuronLinkDistanceSlider / 100.0 * 250);
     public double NeuronLinkDistanceDisplay => NeuronLinkDistanceSlider;
 
     // Link force slider (0-100 maps to 0.0-0.05)
