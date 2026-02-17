@@ -97,11 +97,11 @@ public record DataTableInfo
     /// <summary>Formatted row count with thousands separator.</summary>
     public string FormattedRowCount => RowCount.ToString("N0");
 
-    /// <summary>Icon for the backing mode.</summary>
+    /// <summary>SVG path icon for the backing mode.</summary>
     public string BackingModeIcon => BackingMode switch
     {
-        "file" => "\U0001F4C4",        // 📄
-        "blob" => "\U0001F512",        // 🔒
-        _ => "\U0001F5C3\uFE0F",      // 🗃️
+        "file" => "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z",
+        "blob" => "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
+        _ => "M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z",
     };
 }

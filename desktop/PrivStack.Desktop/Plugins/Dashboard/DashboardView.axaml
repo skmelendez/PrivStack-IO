@@ -761,9 +761,10 @@
                                                                 <Border Grid.Column="3" Padding="8,4" CornerRadius="4"
                                                                         Background="{DynamicResource ThemeHoverBrush}" Margin="8,0,0,0">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <TextBlock Text="{Binding BackingModeIcon}"
-                                                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                                                   VerticalAlignment="Center"/>
+                                                                        <PathIcon Data="{Binding BackingModeIcon}"
+                                                                                 Width="10" Height="10"
+                                                                                 VerticalAlignment="Center"
+                                                                                 Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                                                         <TextBlock Text="{Binding BackingMode}"
                                                                                    FontSize="{DynamicResource ThemeFontSizeXs}"
                                                                                    Foreground="{DynamicResource ThemeTextMutedBrush}"

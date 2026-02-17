@@ -404,10 +404,10 @@ public partial class SettingsViewModel : ViewModelBase
     /// </summary>
     public List<StorageLocationOption> StorageLocationOptions { get; } =
     [
-        new(DataDirectoryType.Default, "Default (Local)", "📁"),
+        new(DataDirectoryType.Default, "Default (Local)", "M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"),
         new(DataDirectoryType.GoogleDrive, "Google Drive", "G"),
-        new(DataDirectoryType.ICloud, "iCloud Drive", "☁️"),
-        new(DataDirectoryType.Custom, "Custom Location", "📂")
+        new(DataDirectoryType.ICloud, "iCloud Drive", "M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"),
+        new(DataDirectoryType.Custom, "Custom Location", "M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z")
     ];
 
     [ObservableProperty]
