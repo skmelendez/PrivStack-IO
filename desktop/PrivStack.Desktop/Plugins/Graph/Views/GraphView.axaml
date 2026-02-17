@@ -3,8 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:PrivStack.Desktop.Plugins.Graph.ViewModels"
-             xmlns:models="using:PrivStack.Desktop.Plugins.Graph.Models"
              xmlns:converters="using:PrivStack.Desktop.Plugins.Graph.Converters"
+             xmlns:adaptive="using:PrivStack.UI.Adaptive.Controls"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="PrivStack.Desktop.Plugins.Graph.Views.GraphView"
              x:DataType="vm:GraphViewModel">
@@ -230,40 +230,7 @@
                                 <TextBlock Text="PHYSICS" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5"
                                            HorizontalAlignment="Stretch"/>
                             </Expander.Header>
-                            <StackPanel Spacing="8" Margin="8,4">
-                                <StackPanel Spacing="2">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Repel distance" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding RepelDisplay, StringFormat='{}{0:F0}%'}"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                    </Grid>
-                                    <Slider Value="{Binding RepelSlider}" Minimum="0" Maximum="100"/>
-                                </StackPanel>
-                                <StackPanel Spacing="2">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Center force" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding CenterForceDisplay, StringFormat='{}{0:F0}%'}"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                    </Grid>
-                                    <Slider Value="{Binding CenterForceSlider}" Minimum="0" Maximum="100"/>
-                                </StackPanel>
-                                <StackPanel Spacing="2">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Link distance" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding LinkDistanceDisplay, StringFormat='{}{0:F0}%'}"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                    </Grid>
-                                    <Slider Value="{Binding LinkDistanceSlider}" Minimum="0" Maximum="100"/>
-                                </StackPanel>
-                                <StackPanel Spacing="2">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Link force" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding LinkForceDisplay, StringFormat='{}{0:F0}%'}"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                    </Grid>
-                                    <Slider Value="{Binding LinkForceSlider}" Minimum="0" Maximum="100"/>
-                                </StackPanel>
-                            </StackPanel>
+                            <adaptive:GraphPhysicsPanel Settings="{Binding PhysicsSettings}" Margin="8,4"/>
                         </Expander>
 
                         <Border Height="1" Background="{DynamicResource ThemeBorderSubtleBrush}" Margin="0,2"/>

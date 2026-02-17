@@ -2,8 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
-using Avalonia.Layout;
-using Avalonia.Media;
 using PrivStack.UI.Adaptive.Models;
 
 namespace PrivStack.UI.Adaptive.Controls;
@@ -57,7 +55,6 @@ public sealed class GraphPhysicsPanel : Border
             FontSize = 11,
             Opacity = 0.7,
         };
-        labelBlock.SetValue(DynamicResourceExtension.ResourceKeyProperty, "ThemeFontSizeXs");
         Grid.SetColumn(labelBlock, 0);
         header.Children.Add(labelBlock);
 
