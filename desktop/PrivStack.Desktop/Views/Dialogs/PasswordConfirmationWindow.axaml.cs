@@ -14,19 +14,44 @@ public partial class PasswordConfirmationWindow : Window
         InitializeComponent();
     }
 
-    public void SetContent(string title, string message, string confirmButtonText = "Confirm")
+    public void SetContent(string title, string message, string confirmButtonText = "Confirm",
+        string? pluginName = null, string? pluginIcon = null)
     {
         TitleText.Text = title;
         Title = title;
-        MessageText.Text = message;
         ConfirmButton.Content = confirmButtonText;
+
+        if (!string.IsNullOrEmpty(pluginName))
+        {
+            PluginContextText.Text = $"{pluginName} is requesting access to encrypted storage";
+
+            if (!string.IsNullOrEmpty(pluginIcon))
+                PluginIcon.Icon = pluginIcon;
+            else
+                PluginIcon.IsVisible = false;
+
+            PluginContextBorder.IsVisible = true;
+            MessageText.IsVisible = false;
+        }
+        else
+        {
+            MessageText.Text = message;
+            MessageText.IsVisible = true;
+            PluginContextBorder.IsVisible = false;
+        }
     }
 
     public void ShowError(string message)
     {
         ErrorText.Text = message;
-        ErrorText.IsVisible = true;
+        ErrorBorder.IsVisible = true;
         PasswordBox.Text = string.Empty;
+        PasswordBox.Focus();
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
         PasswordBox.Focus();
     }
 
@@ -51,8 +76,14 @@ public partial class PasswordConfirmationWindow : Window
     private void OnPasswordKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
-        {
             OnConfirm(sender, e);
-        }
+        else if (e.Key == Key.Escape)
+            OnCancel(sender, e);
+    }
+
+    private void OnDragRegionPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginMoveDrag(e);
     }
 }

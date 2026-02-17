@@ -68,6 +68,35 @@ public class DialogService : IDialogService
         }
     }
 
+    public async Task<string?> ShowVaultUnlockAsync(
+        string? pluginName = null,
+        string? pluginIcon = null)
+    {
+        if (_owner == null)
+        {
+            _log.Warning("ShowVaultUnlockAsync called but owner is null");
+            return null;
+        }
+
+        try
+        {
+            var dialog = new PasswordConfirmationWindow();
+            dialog.SetContent(
+                "Vault Unlock Requested",
+                "Enter your master password to unlock the vault.",
+                "Unlock",
+                pluginName,
+                pluginIcon);
+            await dialog.ShowDialog<bool?>(_owner);
+            return dialog.Confirmed ? dialog.Password : null;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Error showing vault unlock dialog");
+            return null;
+        }
+    }
+
     public async Task<string?> ShowOpenFileDialogAsync(string title, (string Name, string Extension)[] filters)
     {
         if (_owner == null)

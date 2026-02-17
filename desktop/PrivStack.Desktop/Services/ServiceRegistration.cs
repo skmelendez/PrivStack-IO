@@ -105,10 +105,24 @@ public static class ServiceRegistration
         sdkHost.SetVaultUnlockPrompt(async (vaultId, ct) =>
         {
             return await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
-                await dialogService.ShowPasswordConfirmationAsync(
-                    "Unlock Vault",
-                    "Enter your master password to unlock the vault.",
-                    "Unlock"));
+            {
+                string? pluginName = null;
+                string? pluginIcon = null;
+
+                var pluginRegistry = provider.GetRequiredService<IPluginRegistry>();
+                var vaultConsumers = pluginRegistry.GetCapabilityProviders<IVaultConsumer>();
+                foreach (var consumer in vaultConsumers)
+                {
+                    if (consumer.VaultIds.Contains(vaultId) && consumer is IAppPlugin plugin)
+                    {
+                        pluginName = plugin.Metadata.Name;
+                        pluginIcon = plugin.Metadata.Icon;
+                        break;
+                    }
+                }
+
+                return await dialogService.ShowVaultUnlockAsync(pluginName, pluginIcon);
+            });
         });
 
         // Wire license read-only detection from SdkHost into the expiration service
