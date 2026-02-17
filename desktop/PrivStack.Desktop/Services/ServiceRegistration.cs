@@ -40,7 +40,8 @@ public static class ServiceRegistration
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IFontScaleService, FontScaleService>();
         services.AddSingleton<IResponsiveLayoutService, ResponsiveLayoutService>();
-        services.AddSingleton<IDialogService, DialogService>();
+        services.AddSingleton<DialogService>();
+        services.AddSingleton<IDialogService>(sp => sp.GetRequiredService<DialogService>());
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<ISyncIngestionService, SyncIngestionService>();
         services.AddSingleton<IPluginRegistry, PluginRegistry>();
