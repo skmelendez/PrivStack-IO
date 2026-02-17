@@ -491,6 +491,19 @@ public partial class CommandPaletteViewModel : ViewModelBase
 
         if (linkableResults is not null)
         {
+            // Rank by title relevance: exact > starts-with > contains > other
+            if (!string.IsNullOrEmpty(query) && linkableResults.Count > 1)
+            {
+                int ScoreTitle(string title)
+                {
+                    if (title.Equals(query, StringComparison.OrdinalIgnoreCase)) return 0;
+                    if (title.StartsWith(query, StringComparison.OrdinalIgnoreCase)) return 1;
+                    if (title.Contains(query, StringComparison.OrdinalIgnoreCase)) return 2;
+                    return 3;
+                }
+                linkableResults.Sort((a, b) => ScoreTitle(a.Title).CompareTo(ScoreTitle(b.Title)));
+            }
+
             foreach (var item in linkableResults)
             {
                 FilteredCommands.Add(new CommandItem(
