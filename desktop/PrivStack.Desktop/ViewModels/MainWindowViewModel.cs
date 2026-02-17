@@ -354,16 +354,8 @@ public partial class MainWindowViewModel : ViewModelBase
         // Register plugin command palettes
         RegisterPluginPalettes();
 
-        // Navigate to the last active tab or the first available plugin
-        var lastTab = _appSettings.Settings.LastActiveTab;
-        if (!string.IsNullOrEmpty(lastTab) && _pluginRegistry.GetPluginForNavItem(lastTab) != null)
-        {
-            _ = SelectTab(lastTab);
-        }
-        else if (_pluginRegistry.NavigationItems.Count > 0)
-        {
-            _ = SelectTab(_pluginRegistry.NavigationItems[0].Id);
-        }
+        // Initial tab selection is deferred to MainWindow.OnWindowOpened
+        // to avoid running DuckDB queries before the window is rendered.
 
         // Start auto-check for updates (checks setting internally)
         UpdateVM.StartAutoCheck(TimeSpan.FromHours(4));

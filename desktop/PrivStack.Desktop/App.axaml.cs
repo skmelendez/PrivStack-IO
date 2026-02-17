@@ -382,67 +382,55 @@ public partial class App : Application
             Log.Information("Plugin initialization complete");
         }
 
-        // Auto-seeding disabled — use "Reseed Sample Data" in Settings if needed
-        // _ = Task.Run(async () =>
-        // {
-        //     try
-        //     {
-        //         var seedService = Services.GetRequiredService<SeedDataService>();
-        //         await seedService.SeedIfNeededAsync();
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         Log.Error(ex, "Sample data seed failed");
-        //     }
-        // });
-
-        // Initialize backup service to start scheduled backups
-        Log.Information("Initializing backup service");
-        _ = Services.GetRequiredService<IBackupService>(); // Touch to trigger initialization
-        Log.Information("Backup service initialized");
-
-        // Initialize sensitive lock service with saved settings
-        // Sensitive features (Passwords, Vault) require separate unlock even after app unlock
+        // Initialize sensitive lock service with saved settings (fast — just sets a property)
         Log.Information("Initializing sensitive lock service");
         var appSettings = Services.GetRequiredService<IAppSettingsService>();
         var lockoutMinutes = appSettings.Settings.SensitiveLockoutMinutes;
         var sensitiveLock = Services.GetRequiredService<ISensitiveLockService>();
         sensitiveLock.LockoutMinutes = lockoutMinutes;
-        // Do NOT auto-unlock - user must explicitly unlock sensitive features
         Log.Information("Sensitive lock service initialized with {Minutes} minute lockout (locked)", lockoutMinutes);
 
-        // Start file-based event sync (cloud/NAS — no-op if workspace is local-only)
-        Services.GetRequiredService<IFileEventSyncService>().Start();
-
-        // Start snapshot sync: imports latest peer snapshot, then exports on close
-        _ = Services.GetRequiredService<ISnapshotSyncService>().StartAsync();
-
-        // Scan shared files dir for dataset imports from other peers
-        _ = Task.Run(() => DatasetFileSyncHelper.ScanAndImportAsync(
-            Services.GetRequiredService<IWorkspaceService>(),
-            Services.GetRequiredService<IDatasetService>()));
-
-        // Start the reminder scheduler for OS notifications
-        Services.GetRequiredService<ReminderSchedulerService>().Start();
-
-        // Start IPC server for browser extension bridge
-        Services.GetRequiredService<IIpcServer>().Start();
-
-        // Register native messaging host for browser extension discovery
-        var bridgePath = FindBridgePath();
-        if (bridgePath != null)
-            NativeMessagingRegistrar.Register(bridgePath, appSettings);
-
-        // Check license expiration state for read-only enforcement banner
+        // Check license expiration state for read-only enforcement banner (sets banner visibility)
         var licensing = Services.GetRequiredService<ILicensingService>();
         Services.GetRequiredService<LicenseExpirationService>().CheckLicenseStatus(licensing);
 
+        // Show window immediately — deferred services start afterward
         var mainWindow = new MainWindow
         {
             DataContext = Services.GetRequiredService<MainWindowViewModel>(),
         };
         desktop.MainWindow = mainWindow;
         mainWindow.Show();
+
+        // Start non-critical background services after the window is visible
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                Log.Information("Starting deferred background services");
+
+                _ = Services.GetRequiredService<IBackupService>(); // Touch to trigger initialization
+
+                Services.GetRequiredService<IFileEventSyncService>().Start();
+                await Services.GetRequiredService<ISnapshotSyncService>().StartAsync();
+                _ = DatasetFileSyncHelper.ScanAndImportAsync(
+                    Services.GetRequiredService<IWorkspaceService>(),
+                    Services.GetRequiredService<IDatasetService>());
+
+                Services.GetRequiredService<ReminderSchedulerService>().Start();
+                Services.GetRequiredService<IIpcServer>().Start();
+
+                var bridgePath = FindBridgePath();
+                if (bridgePath != null)
+                    NativeMessagingRegistrar.Register(bridgePath, appSettings);
+
+                Log.Information("Deferred background services started");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to start deferred background services");
+            }
+        });
     }
 
     /// <summary>

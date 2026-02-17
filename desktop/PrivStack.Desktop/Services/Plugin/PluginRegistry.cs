@@ -1862,7 +1862,7 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
         // ObservableCollection is bound to the sidebar — must run on UI thread
         if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
         {
-            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(RebuildNavigationItems).Wait();
+            Avalonia.Threading.Dispatcher.UIThread.Invoke(RebuildNavigationItems);
             return;
         }
 
