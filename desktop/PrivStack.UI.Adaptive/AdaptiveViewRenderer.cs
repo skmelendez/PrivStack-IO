@@ -6631,10 +6631,12 @@ public sealed class AdaptiveViewRenderer : UserControl
                     Spacing = 2,
                     Children =
                     {
-                        new TextBlock
+                        new PathIcon
                         {
-                            Text = "📁",
-                            FontSize = FontSize("ThemeFontSize2Xl", 28),
+                            Data = StreamGeometry.Parse("M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"),
+                            Width = 28,
+                            Height = 28,
+                            Foreground = TextMuted,
                             HorizontalAlignment = HorizontalAlignment.Center,
                             Margin = new Thickness(0, 0, 0, Dbl("ThemeSpacingXs", 4)),
                         },
@@ -6687,7 +6689,7 @@ public sealed class AdaptiveViewRenderer : UserControl
         {
             var id = item.GetStringProp("id") ?? "";
             var name = item.GetStringProp("display_name") ?? item.GetStringProp("name") ?? "Untitled";
-            var icon = item.GetStringProp("icon") ?? "📄";
+            var icon = item.GetStringProp("icon") ?? "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z";
             var sizeDisplay = item.GetStringProp("size_display") ?? "";
             var isFavorite = item.GetBoolProp("is_favorite", false);
             var isImage = item.GetBoolProp("is_image", false);
@@ -6709,6 +6711,18 @@ public sealed class AdaptiveViewRenderer : UserControl
                     },
                     CornerRadius = Radius("ThemeRadiusXs"),
                     ClipToBounds = true,
+                    Margin = new Thickness(0, 0, 0, Dbl("ThemeSpacingXs", 4)),
+                };
+            }
+            else if (icon.Length > 20 && icon.StartsWith('M'))
+            {
+                visualBlock = new PathIcon
+                {
+                    Data = StreamGeometry.Parse(icon),
+                    Width = 28,
+                    Height = 28,
+                    Foreground = TextMuted,
+                    HorizontalAlignment = HorizontalAlignment.Center,
                     Margin = new Thickness(0, 0, 0, Dbl("ThemeSpacingXs", 4)),
                 };
             }
@@ -6980,13 +6994,14 @@ public sealed class AdaptiveViewRenderer : UserControl
 
                 var folderRow = new DockPanel { LastChildFill = true };
 
-                var folderIcon = new TextBlock
+                var folderIcon = new PathIcon
                 {
-                    Text = "📁",
-                    FontSize = FontSize("ThemeFontSizeMd", 14),
+                    Data = StreamGeometry.Parse("M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"),
+                    Width = 14,
+                    Height = 14,
+                    Foreground = TextMuted,
                     VerticalAlignment = VerticalAlignment.Center,
-                    Width = 32,
-                    TextAlignment = TextAlignment.Center,
+                    Margin = new Thickness(9, 0),
                 };
                 DockPanel.SetDock(folderIcon, Dock.Left);
                 folderRow.Children.Add(folderIcon);
@@ -7037,7 +7052,7 @@ public sealed class AdaptiveViewRenderer : UserControl
         {
             var id = item.GetStringProp("id") ?? "";
             var name = item.GetStringProp("display_name") ?? item.GetStringProp("name") ?? "Untitled";
-            var icon = item.GetStringProp("icon") ?? "📄";
+            var icon = item.GetStringProp("icon") ?? "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z";
             var favoriteIcon = item.GetStringProp("favorite_icon") ?? "";
             var sizeDisplay = item.GetStringProp("size_display") ?? "";
             var modifiedDisplay = item.GetStringProp("modified_display") ?? "";
@@ -7066,6 +7081,18 @@ public sealed class AdaptiveViewRenderer : UserControl
                     ClipToBounds = true,
                     Width = 32,
                     VerticalAlignment = VerticalAlignment.Center,
+                };
+            }
+            else if (icon.Length > 20 && icon.StartsWith('M'))
+            {
+                iconControl = new PathIcon
+                {
+                    Data = StreamGeometry.Parse(icon),
+                    Width = 14,
+                    Height = 14,
+                    Foreground = TextMuted,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(9, 0),
                 };
             }
             else
@@ -7226,13 +7253,13 @@ public sealed class AdaptiveViewRenderer : UserControl
         }
 
         // Non-image or missing: icon placeholder
-        var previewIcon = mimeType switch
+        var previewIconPath = mimeType switch
         {
-            var m when m.StartsWith("image/") => "🖼",
-            var m when m.StartsWith("video/") => "🎬",
-            var m when m.StartsWith("audio/") => "🎵",
-            var m when m.Contains("pdf") => "📕",
-            _ => "📄",
+            var m when m.StartsWith("image/") => "M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z",
+            var m when m.StartsWith("video/") => "M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z",
+            var m when m.StartsWith("audio/") => "M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z",
+            var m when m.Contains("pdf") => "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z",
+            _ => "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z",
         };
 
         container.Children.Add(new Border
@@ -7247,10 +7274,12 @@ public sealed class AdaptiveViewRenderer : UserControl
                 Spacing = Dbl("ThemeSpacingSm", 8),
                 Children =
                 {
-                    new TextBlock
+                    new PathIcon
                     {
-                        Text = previewIcon,
-                        FontSize = FontSize("ThemeFontSize4Xl", 48),
+                        Data = StreamGeometry.Parse(previewIconPath),
+                        Width = 48,
+                        Height = 48,
+                        Foreground = TextMuted,
                         HorizontalAlignment = HorizontalAlignment.Center,
                     },
                     new TextBlock
