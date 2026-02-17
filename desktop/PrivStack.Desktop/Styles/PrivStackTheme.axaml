@@ -302,6 +302,17 @@
         <Setter Property="BoxShadow" Value="0 4 16 0 #14000000, 0 1 4 0 #0A000000"/>
     </Style>
 
+    <!-- Shadow-only utility classes (no background/padding/radius overrides) -->
+    <Style Selector="Border.shadow-sm">
+        <Setter Property="BoxShadow" Value="0 1 4 0 #0A000000, 0 1 2 0 #06000000"/>
+    </Style>
+    <Style Selector="Border.shadow-md">
+        <Setter Property="BoxShadow" Value="0 4 16 0 #14000000, 0 1 4 0 #0A000000"/>
+    </Style>
+    <Style Selector="Border.shadow-lg">
+        <Setter Property="BoxShadow" Value="0 8 32 0 #28000000, 0 2 8 0 #14000000"/>
+    </Style>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- BADGE/TAG STYLES                                                         -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -424,6 +435,10 @@
     </Style>
 
     <Style Selector="Border.modal-backdrop">
+        <Setter Property="Background" Value="#80000000"/>
+    </Style>
+
+    <Style Selector="Border.modal-backdrop-light">
         <Setter Property="Background" Value="#40000000"/>
     </Style>
 

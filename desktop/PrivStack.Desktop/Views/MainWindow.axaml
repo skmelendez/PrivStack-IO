@@ -89,15 +89,15 @@
             <!-- License expiration banner -->
             <Border Grid.Row="1"
                     IsVisible="{Binding IsLicenseExpiredBannerVisible}"
-                    Background="#E53E3E" Padding="8,6"
+                    Background="{DynamicResource ThemeDangerBrush}" Padding="8,6"
                     HorizontalAlignment="Stretch">
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Text="Your trial has expired. Your data is safe but the app is now read-only."
-                               Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontSize="{DynamicResource ThemeFontSizeSmMd}" VerticalAlignment="Center"/>
                     <Button Grid.Column="1" Content="Subscribe or Purchase"
                             Command="{Binding OpenPricingPageCommand}"
-                            Foreground="White" Background="Transparent"
-                            BorderBrush="White" BorderThickness="1" Padding="12,4" FontSize="12"
+                            Foreground="{DynamicResource ThemeTextPrimaryBrush}" Background="Transparent"
+                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1" Padding="12,4" FontSize="{DynamicResource ThemeFontSizeSm}"
                             Cursor="Hand"/>
                 </Grid>
             </Border>

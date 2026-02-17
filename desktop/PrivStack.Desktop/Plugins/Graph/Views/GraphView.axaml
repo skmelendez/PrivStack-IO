@@ -87,10 +87,10 @@
             <Setter Property="Fill" Value="{DynamicResource ThemeTextMutedBrush}"/>
         </Style>
         <Style Selector="ToggleButton.node-legend Ellipse.c-tags">
-            <Setter Property="Stroke" Value="#9CA3AF"/>
+            <Setter Property="Stroke" Value="{DynamicResource ThemeTextMutedBrush}"/>
         </Style>
         <Style Selector="ToggleButton.node-legend:checked Ellipse.c-tags">
-            <Setter Property="Fill" Value="#9CA3AF"/>
+            <Setter Property="Fill" Value="{DynamicResource ThemeTextMutedBrush}"/>
         </Style>
         <!-- Dim label when toggled off -->
         <Style Selector="ToggleButton.node-legend:not(:checked) TextBlock">

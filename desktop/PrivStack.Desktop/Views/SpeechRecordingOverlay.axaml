@@ -45,7 +45,7 @@
     <!-- Floating Recording Indicator -->
     <Grid>
         <!-- Semi-transparent backdrop -->
-        <Border Background="#40000000" PointerPressed="OnBackdropPressed"/>
+        <Border Classes="modal-backdrop-light" PointerPressed="OnBackdropPressed"/>
 
         <!-- Main Panel -->
         <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
@@ -54,7 +54,7 @@
                 VerticalAlignment="Center"
                 Padding="24,20"
                 MinWidth="320"
-                BoxShadow="0 8 32 0 #60000000">
+                Classes="modal">
 
             <!-- States container - only one visible at a time -->
             <Grid>
