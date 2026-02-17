@@ -18,6 +18,71 @@
         <Style Selector="Expander /template/ ToggleButton#PART_toggle">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         </Style>
+        <!-- Node type legend toggles -->
+        <Style Selector="ToggleButton.node-legend">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0,2"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend Ellipse">
+            <Setter Property="StrokeThickness" Value="1.5"/>
+            <Setter Property="Fill" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend Ellipse.c-notes">
+            <Setter Property="Stroke" Value="{DynamicResource ThemeSecondaryBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked Ellipse.c-notes">
+            <Setter Property="Fill" Value="{DynamicResource ThemeSecondaryBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend Ellipse.c-tasks">
+            <Setter Property="Stroke" Value="{DynamicResource ThemeSuccessBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked Ellipse.c-tasks">
+            <Setter Property="Fill" Value="{DynamicResource ThemeSuccessBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend Ellipse.c-contacts">
+            <Setter Property="Stroke" Value="{DynamicResource ThemeWarningBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked Ellipse.c-contacts">
+            <Setter Property="Fill" Value="{DynamicResource ThemeWarningBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend Ellipse.c-events">
+            <Setter Property="Stroke" Value="{DynamicResource ThemePrimaryBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked Ellipse.c-events">
+            <Setter Property="Fill" Value="{DynamicResource ThemePrimaryBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend Ellipse.c-journal">
+            <Setter Property="Stroke" Value="{DynamicResource ThemeDangerBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked Ellipse.c-journal">
+            <Setter Property="Fill" Value="{DynamicResource ThemeDangerBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend Ellipse.c-webclips">
+            <Setter Property="Stroke" Value="{DynamicResource ThemeTextMutedBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked Ellipse.c-webclips">
+            <Setter Property="Fill" Value="{DynamicResource ThemeTextMutedBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend Ellipse.c-tags">
+            <Setter Property="Stroke" Value="#9CA3AF"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked Ellipse.c-tags">
+            <Setter Property="Fill" Value="#9CA3AF"/>
+        </Style>
+        <!-- Dim label text when toggled off -->
+        <Style Selector="ToggleButton.node-legend TextBlock">
+            <Setter Property="Opacity" Value="0.4"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked TextBlock">
+            <Setter Property="Opacity" Value="1.0"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -182,53 +247,49 @@
                                 <TextBlock Text="NODE TYPES" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5"
                                            HorizontalAlignment="Stretch"/>
                             </Expander.Header>
-                            <StackPanel Spacing="4" Margin="8,4">
-                                <CheckBox IsChecked="{Binding ShowNotes}" HorizontalContentAlignment="Stretch">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Notes" VerticalAlignment="Center"/>
-                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeSecondaryBrush}" VerticalAlignment="Center"/>
+                            <StackPanel Spacing="2" Margin="8,4">
+                                <ToggleButton Classes="node-legend" IsChecked="{Binding ShowNotes}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Ellipse Width="10" Height="10" Classes="c-notes" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="Notes" VerticalAlignment="Center"/>
                                     </Grid>
-                                </CheckBox>
-                                <CheckBox IsChecked="{Binding ShowTasks}" HorizontalContentAlignment="Stretch">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Tasks" VerticalAlignment="Center"/>
-                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeSuccessBrush}" VerticalAlignment="Center"/>
+                                </ToggleButton>
+                                <ToggleButton Classes="node-legend" IsChecked="{Binding ShowTasks}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Ellipse Width="10" Height="10" Classes="c-tasks" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="Tasks" VerticalAlignment="Center"/>
                                     </Grid>
-                                </CheckBox>
-                                <CheckBox IsChecked="{Binding ShowContacts}" HorizontalContentAlignment="Stretch">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Contacts" VerticalAlignment="Center"/>
-                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeWarningBrush}" VerticalAlignment="Center"/>
+                                </ToggleButton>
+                                <ToggleButton Classes="node-legend" IsChecked="{Binding ShowContacts}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Ellipse Width="10" Height="10" Classes="c-contacts" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="Contacts" VerticalAlignment="Center"/>
                                     </Grid>
-                                </CheckBox>
-                                <CheckBox IsChecked="{Binding ShowEvents}" HorizontalContentAlignment="Stretch">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Events" VerticalAlignment="Center"/>
-                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemePrimaryBrush}" VerticalAlignment="Center"/>
+                                </ToggleButton>
+                                <ToggleButton Classes="node-legend" IsChecked="{Binding ShowEvents}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Ellipse Width="10" Height="10" Classes="c-events" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="Events" VerticalAlignment="Center"/>
                                     </Grid>
-                                </CheckBox>
-                                <CheckBox IsChecked="{Binding ShowJournal}" HorizontalContentAlignment="Stretch">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Journal" VerticalAlignment="Center"/>
-                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeDangerBrush}" VerticalAlignment="Center"/>
+                                </ToggleButton>
+                                <ToggleButton Classes="node-legend" IsChecked="{Binding ShowJournal}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Ellipse Width="10" Height="10" Classes="c-journal" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="Journal" VerticalAlignment="Center"/>
                                     </Grid>
-                                </CheckBox>
-                                <CheckBox IsChecked="{Binding ShowWebClips}" HorizontalContentAlignment="Stretch">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Web Clips" VerticalAlignment="Center"/>
-                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeTextMutedBrush}" VerticalAlignment="Center"/>
+                                </ToggleButton>
+                                <ToggleButton Classes="node-legend" IsChecked="{Binding ShowWebClips}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Ellipse Width="10" Height="10" Classes="c-webclips" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="Web Clips" VerticalAlignment="Center"/>
                                     </Grid>
-                                </CheckBox>
-                                <CheckBox IsChecked="{Binding ShowTags}" HorizontalContentAlignment="Stretch">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Tags" VerticalAlignment="Center"/>
-                                        <Ellipse Grid.Column="1" Width="10" Height="10" VerticalAlignment="Center">
-                                            <Ellipse.Fill>
-                                                <SolidColorBrush Color="#9CA3AF"/>
-                                            </Ellipse.Fill>
-                                        </Ellipse>
+                                </ToggleButton>
+                                <ToggleButton Classes="node-legend" IsChecked="{Binding ShowTags}">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Ellipse Width="10" Height="10" Classes="c-tags" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="Tags" VerticalAlignment="Center"/>
                                     </Grid>
-                                </CheckBox>
+                                </ToggleButton>
                             </StackPanel>
                         </Expander>
 
