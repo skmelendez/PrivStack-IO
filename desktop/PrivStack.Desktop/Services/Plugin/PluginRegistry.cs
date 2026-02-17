@@ -1653,6 +1653,12 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
                 HostFactory.CapabilityBroker.Register<ILinkableItemProvider>(linkProvider);
             }
 
+            // Auto-register graph data providers with the capability broker
+            if (plugin is IGraphDataProvider graphProvider)
+            {
+                HostFactory.CapabilityBroker.Register<IGraphDataProvider>(graphProvider);
+            }
+
             _log.Debug("Plugin activated: {PluginId}", plugin.Metadata.Id);
             RaisePluginStateChanged(plugin, PluginState.Active);
         }

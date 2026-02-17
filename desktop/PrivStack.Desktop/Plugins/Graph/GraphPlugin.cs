@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Plugins.Graph.Services;
 using PrivStack.Desktop.Plugins.Graph.ViewModels;
+using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Sdk;
 
 namespace PrivStack.Desktop.Plugins.Graph;
@@ -40,7 +42,8 @@ public sealed class GraphPlugin : PluginBase<GraphViewModel>
 
     protected override async Task<bool> OnInitializeAsync(CancellationToken cancellationToken)
     {
-        _graphService = new GraphDataService(Host!.Sdk);
+        var pluginRegistry = App.Services.GetRequiredService<IPluginRegistry>();
+        _graphService = new GraphDataService(Host!.Sdk, pluginRegistry);
         return await Task.FromResult(true);
     }
 

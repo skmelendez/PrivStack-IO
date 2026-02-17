@@ -1,7 +1,9 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using PrivStack.Sdk;
+using PrivStack.Sdk.Capabilities;
+using PrivStack.Sdk.Helpers;
 using PrivStack.Sdk.Json;
+using PrivStack.Desktop.Services.Plugin;
 using Serilog;
 
 namespace PrivStack.Desktop.Services;
@@ -18,25 +20,17 @@ public sealed record BacklinkEntry(
     DateTimeOffset? ModifiedAt = null);
 
 /// <summary>
-/// Computes backlinks by loading all entities, parsing wiki-links from content fields,
-/// and building a reverse index. Caches the result until explicitly invalidated.
+/// Computes backlinks by aggregating IGraphDataProvider contributions and legacy entity loading.
+/// Parses wiki-links from content fields and builds forward + reverse indices.
+/// Caches the result until explicitly invalidated.
 /// </summary>
 public sealed class BacklinkService
 {
     private static readonly ILogger _log = Log.ForContext<BacklinkService>();
     private static readonly JsonSerializerOptions JsonOptions = SdkJsonOptions.Default;
 
-    // Wiki-link format: [[type:id|Title]]
-    private static readonly Regex WikiLinkPattern = new(
-        @"\[\[([a-z]+(?:-[a-z]+)*):([^|]+)\|[^\]]+\]\]",
-        RegexOptions.Compiled);
-
-    // RTE markdown link format: [Title](privstack://type/id)
-    private static readonly Regex PrivstackUrlPattern = new(
-        @"privstack://([a-z]+(?:-[a-z]+)*)/([a-f0-9-]+)",
-        RegexOptions.Compiled);
-
     private readonly IPrivStackSdk _sdk;
+    private readonly IPluginRegistry _pluginRegistry;
 
     // Cached reverse index: "linkType:itemId" → list of backlink entries
     private Dictionary<string, List<BacklinkEntry>>? _reverseIndex;
@@ -49,17 +43,21 @@ public sealed class BacklinkService
 
     private readonly SemaphoreSlim _buildLock = new(1, 1);
 
-    // Temporary storage for page parent_id during index build
+    // Temporary storage for page parent_id during legacy index build
     private readonly Dictionary<string, string> _pageParentMap = new();
 
-    // Temporary storage for wiki page source_id during index build
+    // Temporary storage for wiki page source_id during legacy index build
     private readonly Dictionary<string, string> _pageWikiSourceMap = new();
 
     // Entity types to scan — derived from the shared EntityTypeMap.
     private static readonly (string EntityType, string LinkType, string Icon)[] EntityTypes =
         EntityTypeMap.All.Select(e => (e.EntityType, e.LinkType, e.Icon)).ToArray();
 
-    public BacklinkService(IPrivStackSdk sdk) => _sdk = sdk;
+    public BacklinkService(IPrivStackSdk sdk, IPluginRegistry pluginRegistry)
+    {
+        _sdk = sdk;
+        _pluginRegistry = pluginRegistry;
+    }
 
     /// <summary>
     /// Returns all items that link TO the specified entity.
@@ -122,13 +120,11 @@ public sealed class BacklinkService
         var depthMap = new Dictionary<string, int> { [centerKey] = 0 };
         var frontier = new HashSet<string> { centerKey };
 
-        // BFS traversal up to requested depth
         for (var hop = 1; hop <= depth; hop++)
         {
             var nextFrontier = new HashSet<string>();
             foreach (var key in frontier)
             {
-                // Forward links
                 if (_forwardLinks != null && _forwardLinks.TryGetValue(key, out var fwd))
                     foreach (var k in fwd)
                         if (!depthMap.ContainsKey(k))
@@ -137,7 +133,6 @@ public sealed class BacklinkService
                             nextFrontier.Add(k);
                         }
 
-                // Backlinks
                 if (_reverseIndex != null && _reverseIndex.TryGetValue(key, out var bl))
                     foreach (var entry in bl)
                     {
@@ -153,24 +148,18 @@ public sealed class BacklinkService
             if (frontier.Count == 0) break;
         }
 
-        // Apply link type filter (center node always kept)
         var neighborKeys = new HashSet<string>();
         if (_entityMap != null)
         {
             foreach (var key in depthMap.Keys)
             {
-                if (key == centerKey)
-                {
-                    neighborKeys.Add(key);
-                    continue;
-                }
+                if (key == centerKey) { neighborKeys.Add(key); continue; }
                 if (!_entityMap.TryGetValue(key, out var info)) continue;
                 if (allowedLinkTypes != null && !allowedLinkTypes.Contains(info.LinkType)) continue;
                 neighborKeys.Add(key);
             }
         }
 
-        // Build JSON nodes and edges for NeuronGraphControl
         var nodes = new List<JsonElement>();
         var edges = new List<JsonElement>();
 
@@ -192,7 +181,6 @@ public sealed class BacklinkService
             nodes.Add(node);
         }
 
-        // All edges between nodes in the final set
         if (_forwardLinks != null)
             foreach (var sourceKey in neighborKeys)
             {
@@ -212,7 +200,6 @@ public sealed class BacklinkService
 
     /// <summary>
     /// Returns the set of link types that have at least one entity in the index.
-    /// Ensures the index is built first.
     /// </summary>
     public async Task<HashSet<string>> GetAvailableLinkTypesAsync(CancellationToken ct = default)
     {
@@ -252,7 +239,7 @@ public sealed class BacklinkService
         await _buildLock.WaitAsync(ct);
         try
         {
-            if (_reverseIndex != null) return; // double-check after lock
+            if (_reverseIndex != null) return;
             await BuildIndexAsync(ct);
         }
         finally
@@ -266,44 +253,106 @@ public sealed class BacklinkService
         _log.Information("BacklinkService: building index...");
 
         var entityMap = new Dictionary<string, (string Title, string LinkType, DateTimeOffset? ModifiedAt, string? Icon)>();
-        var entityContents = new Dictionary<string, string>(); // key → concatenated content
-        var entityExplicitLinks = new Dictionary<string, List<string>>(); // key → list of "type:id" explicit links
-        var entityTags = new Dictionary<string, List<string>>(); // key → list of tag names
+        var entityContents = new Dictionary<string, string>();
+        var entityExplicitLinks = new Dictionary<string, List<string>>();
+        var entityTags = new Dictionary<string, List<string>>();
+        var coveredLinkTypes = new HashSet<string>();
 
-        // Load all entity types in parallel
-        var tasks = EntityTypes.Select(et => LoadEntitiesAsync(et.EntityType, et.LinkType, ct)).ToArray();
-        var results = await Task.WhenAll(tasks);
-
-        for (var i = 0; i < results.Length; i++)
+        // --- Phase 1: Collect from IGraphDataProvider providers ---
+        var providers = _pluginRegistry.GetCapabilityProviders<IGraphDataProvider>();
+        if (providers.Count > 0)
         {
-            var linkType = EntityTypes[i].LinkType;
-            var entityType = EntityTypes[i].EntityType;
-            var icon = EntityTypes[i].Icon;
-            var withContent = 0;
-            foreach (var (id, title, content, explicitLinks, modifiedAt, tags) in results[i])
+            var providerTasks = providers.Select(async p =>
             {
-                var key = $"{linkType}:{id}";
-                entityMap[key] = (title, linkType, modifiedAt, icon);
-                if (!string.IsNullOrEmpty(content))
+                try { return await p.GetGraphContributionAsync(ct); }
+                catch (Exception ex)
                 {
-                    entityContents[key] = content;
-                    withContent++;
+                    _log.Warning(ex, "BacklinkService: provider {Provider} failed", p.GetType().Name);
+                    return null;
                 }
-                if (explicitLinks.Count > 0)
+            }).ToArray();
+            var contributions = await Task.WhenAll(providerTasks);
+
+            foreach (var contribution in contributions)
+            {
+                if (contribution == null) continue;
+
+                foreach (var node in contribution.Nodes)
                 {
-                    entityExplicitLinks[key] = explicitLinks;
+                    coveredLinkTypes.Add(node.LinkType);
+                    entityMap[node.CompositeKey] = (node.Title, node.LinkType, node.ModifiedAt, node.Icon);
+                    if (node.Tags.Count > 0)
+                        entityTags[node.CompositeKey] = node.Tags.ToList();
                 }
-                if (tags.Count > 0)
+
+                foreach (var field in contribution.ContentFields)
                 {
-                    entityTags[key] = tags;
+                    if (!string.IsNullOrEmpty(field.Content))
+                        entityContents[field.OwnerKey] = field.Content;
+                }
+
+                // Convert structural edges to forward links
+                foreach (var edge in contribution.StructuralEdges)
+                {
+                    if (!entityMap.ContainsKey(edge.SourceKey) || !entityMap.ContainsKey(edge.TargetKey)) continue;
+                    AddForwardAndReverseLinks(edge.SourceKey, edge.TargetKey, entityMap,
+                        entityContents, entityExplicitLinks, isExplicit: false);
+                }
+
+                foreach (var link in contribution.ExplicitLinks)
+                {
+                    if (!entityExplicitLinks.TryGetValue(link.SourceKey, out var links))
+                    {
+                        links = [];
+                        entityExplicitLinks[link.SourceKey] = links;
+                    }
+                    links.Add(link.TargetKey);
                 }
             }
-            _log.Information("BacklinkService: loaded {Count} {EntityType} entities ({WithContent} with content)",
-                results[i].Count, entityType, withContent);
+
+            _log.Information("BacklinkService: {ProviderCount} providers contributed {NodeCount} entities, " +
+                "{CoveredTypes} link types covered",
+                providers.Count, entityMap.Count(kv => coveredLinkTypes.Contains(kv.Value.LinkType)),
+                coveredLinkTypes.Count);
         }
 
-        // For entities without content from list view, load individually
-        var entitiesToFetch = entityMap.Keys.Where(k => !entityContents.ContainsKey(k)).ToList();
+        // --- Phase 2: Legacy entity loading for uncovered types ---
+        var legacyEntityTypes = EntityTypes.Where(et => !coveredLinkTypes.Contains(et.LinkType)).ToArray();
+        if (legacyEntityTypes.Length > 0)
+        {
+            var tasks = legacyEntityTypes.Select(et => LoadEntitiesAsync(et.EntityType, et.LinkType, ct)).ToArray();
+            var results = await Task.WhenAll(tasks);
+
+            for (var i = 0; i < results.Length; i++)
+            {
+                var linkType = legacyEntityTypes[i].LinkType;
+                var entityType = legacyEntityTypes[i].EntityType;
+                var icon = legacyEntityTypes[i].Icon;
+                var withContent = 0;
+                foreach (var (id, title, content, explicitLinks, modifiedAt, tags) in results[i])
+                {
+                    var key = $"{linkType}:{id}";
+                    entityMap[key] = (title, linkType, modifiedAt, icon);
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        entityContents[key] = content;
+                        withContent++;
+                    }
+                    if (explicitLinks.Count > 0)
+                        entityExplicitLinks[key] = explicitLinks;
+                    if (tags.Count > 0)
+                        entityTags[key] = tags;
+                }
+                _log.Information("BacklinkService: loaded {Count} {EntityType} entities ({WithContent} with content)",
+                    results[i].Count, entityType, withContent);
+            }
+        }
+
+        // For legacy entities without content from list view, load individually
+        var legacyLinkTypeSet = new HashSet<string>(legacyEntityTypes.Select(et => et.LinkType));
+        var entitiesToFetch = entityMap.Keys
+            .Where(k => !entityContents.ContainsKey(k) && legacyLinkTypeSet.Contains(k.Split(':', 2)[0]))
+            .ToList();
         if (entitiesToFetch.Count > 0)
         {
             _log.Information("BacklinkService: fetching content for {Count} entities missing from list view", entitiesToFetch.Count);
@@ -315,7 +364,6 @@ public sealed class BacklinkService
                     if (parts.Length != 2) return;
                     var linkType = parts[0];
 
-                    // Reverse-map linkType back to SDK entity type
                     var sdkEntityType = EntityTypes.FirstOrDefault(et => et.LinkType == linkType).EntityType;
                     if (sdkEntityType == null) return;
 
@@ -329,23 +377,13 @@ public sealed class BacklinkService
 
                     if (response.Data.ValueKind == JsonValueKind.Undefined) return;
 
-                    var content = ExtractContentFromEntity(response.Data);
+                    var content = WikiLinkParser.ExtractContentFromEntity(response.Data);
                     var explicitLinks = ExtractExplicitLinksFromCustomFields(response.Data);
 
                     if (!string.IsNullOrEmpty(content))
-                    {
-                        lock (entityContents)
-                        {
-                            entityContents[key] = content;
-                        }
-                    }
+                        lock (entityContents) { entityContents[key] = content; }
                     if (explicitLinks.Count > 0)
-                    {
-                        lock (entityExplicitLinks)
-                        {
-                            entityExplicitLinks[key] = explicitLinks;
-                        }
-                    }
+                        lock (entityExplicitLinks) { entityExplicitLinks[key] = explicitLinks; }
                 }
                 catch (Exception ex)
                 {
@@ -358,8 +396,7 @@ public sealed class BacklinkService
                 entityContents.Count);
         }
 
-        // Parse links from content to build forward + reverse indices
-        // Supports both [[type:id|title]] wiki-links and privstack://type/id URLs
+        // --- Phase 3: Build forward + reverse indices from wiki-links ---
         var reverseIndex = new Dictionary<string, List<BacklinkEntry>>();
         var forwardLinks = new Dictionary<string, HashSet<string>>();
         var totalLinksFound = 0;
@@ -369,63 +406,48 @@ public sealed class BacklinkService
         {
             if (!entityMap.TryGetValue(sourceKey, out var sourceInfo)) continue;
 
-            // Collect matches from both patterns
-            var allMatches = new List<Match>();
-            allMatches.AddRange(WikiLinkPattern.Matches(content).Cast<Match>());
-            allMatches.AddRange(PrivstackUrlPattern.Matches(content).Cast<Match>());
-
-            foreach (var match in allMatches)
+            var parsedLinks = WikiLinkParser.ParseLinks(content);
+            foreach (var link in parsedLinks)
             {
                 ct.ThrowIfCancellationRequested();
-                var targetLinkType = match.Groups[1].Value;
-                var targetId = match.Groups[2].Value;
-                var targetKey = $"{targetLinkType}:{targetId}";
                 totalLinksFound++;
 
-                if (sourceKey == targetKey) continue;
-                if (!entityMap.ContainsKey(targetKey))
+                if (sourceKey == link.CompositeKey) continue;
+                if (!entityMap.ContainsKey(link.CompositeKey))
                 {
-                    _log.Debug("BacklinkService: unresolved link {SourceKey} -> {TargetKey} (target not in entity map)",
-                        sourceKey, targetKey);
+                    _log.Debug("BacklinkService: unresolved link {SourceKey} -> {TargetKey}",
+                        sourceKey, link.CompositeKey);
                     continue;
                 }
                 totalLinksResolved++;
 
-                // Forward link
                 if (!forwardLinks.TryGetValue(sourceKey, out var fwdSet))
                 {
                     fwdSet = [];
                     forwardLinks[sourceKey] = fwdSet;
                 }
-                fwdSet.Add(targetKey);
+                fwdSet.Add(link.CompositeKey);
 
-                // Reverse link (backlink)
-                if (!reverseIndex.TryGetValue(targetKey, out var entries))
+                if (!reverseIndex.TryGetValue(link.CompositeKey, out var entries))
                 {
                     entries = [];
-                    reverseIndex[targetKey] = entries;
+                    reverseIndex[link.CompositeKey] = entries;
                 }
 
-                // Avoid duplicate backlinks from same source
                 var parts = sourceKey.Split(':', 2);
                 var sourceId = parts.Length == 2 ? parts[1] : sourceKey;
                 if (entries.Any(e => e.SourceId == sourceId && e.SourceLinkType == sourceInfo.LinkType))
                     continue;
 
-                // Extract context snippet (surrounding text)
-                var snippet = ExtractSnippet(content, match.Index, 60);
+                var snippet = WikiLinkParser.ExtractSnippet(content, link.MatchIndex);
 
                 entries.Add(new BacklinkEntry(
-                    sourceId,
-                    sourceInfo.LinkType,
-                    sourceInfo.Title,
-                    sourceInfo.Icon,
-                    snippet,
-                    sourceInfo.ModifiedAt));
+                    sourceId, sourceInfo.LinkType, sourceInfo.Title, sourceInfo.Icon,
+                    snippet, sourceInfo.ModifiedAt));
             }
         }
 
-        // Process explicit links from custom_fields (Task linked_items, task_links)
+        // --- Phase 4: Process explicit links ---
         var explicitLinksFound = 0;
         var explicitLinksResolved = 0;
         foreach (var (sourceKey, explicitLinks) in entityExplicitLinks)
@@ -446,7 +468,6 @@ public sealed class BacklinkService
                 }
                 explicitLinksResolved++;
 
-                // Forward link
                 if (!forwardLinks.TryGetValue(sourceKey, out var fwdSet))
                 {
                     fwdSet = [];
@@ -454,30 +475,24 @@ public sealed class BacklinkService
                 }
                 fwdSet.Add(targetKey);
 
-                // Reverse link (backlink)
                 if (!reverseIndex.TryGetValue(targetKey, out var entries))
                 {
                     entries = [];
                     reverseIndex[targetKey] = entries;
                 }
 
-                // Avoid duplicate backlinks from same source
                 var parts = sourceKey.Split(':', 2);
                 var sourceId = parts.Length == 2 ? parts[1] : sourceKey;
                 if (entries.Any(e => e.SourceId == sourceId && e.SourceLinkType == sourceInfo.LinkType))
                     continue;
 
                 entries.Add(new BacklinkEntry(
-                    sourceId,
-                    sourceInfo.LinkType,
-                    sourceInfo.Title,
-                    sourceInfo.Icon,
-                    null, // No snippet for explicit links
-                    sourceInfo.ModifiedAt));
+                    sourceId, sourceInfo.LinkType, sourceInfo.Title, sourceInfo.Icon,
+                    null, sourceInfo.ModifiedAt));
             }
         }
 
-        // Add parent-child relationships from page hierarchy
+        // --- Phase 5: Legacy parent-child relationships ---
         var parentChildCount = 0;
         foreach (var (key, info) in entityMap)
         {
@@ -485,14 +500,12 @@ public sealed class BacklinkService
             var parts = key.Split(':', 2);
             if (parts.Length != 2) continue;
 
-            // Check if this page was loaded with parent_id info
             if (!_pageParentMap.TryGetValue(parts[1], out var parentId)) continue;
             if (string.IsNullOrEmpty(parentId)) continue;
 
             var parentKey = $"page:{parentId}";
             if (!entityMap.ContainsKey(parentKey)) continue;
 
-            // Forward link: child → parent
             if (!forwardLinks.TryGetValue(key, out var fwdSet))
             {
                 fwdSet = [];
@@ -500,7 +513,6 @@ public sealed class BacklinkService
             }
             fwdSet.Add(parentKey);
 
-            // Reverse link: parent has backlink from child
             if (!reverseIndex.TryGetValue(parentKey, out var entries))
             {
                 entries = [];
@@ -515,7 +527,6 @@ public sealed class BacklinkService
                 parentChildCount++;
             }
 
-            // Also add reverse: child sees parent as backlink
             if (!reverseIndex.TryGetValue(key, out var childEntries))
             {
                 childEntries = [];
@@ -534,7 +545,7 @@ public sealed class BacklinkService
         if (parentChildCount > 0)
             _log.Information("BacklinkService: added {Count} parent-child relationships", parentChildCount);
 
-        // Add wiki source → wiki page relationships
+        // --- Phase 6: Legacy wiki source relationships ---
         var wikiSourceCount = 0;
         foreach (var (pageId, sourceId) in _pageWikiSourceMap)
         {
@@ -542,7 +553,6 @@ public sealed class BacklinkService
             var wikiKey = $"wiki_source:{sourceId}";
             if (!entityMap.ContainsKey(pageKey) || !entityMap.ContainsKey(wikiKey)) continue;
 
-            // Forward link: wiki page → wiki source
             if (!forwardLinks.TryGetValue(pageKey, out var fwdSet))
             {
                 fwdSet = [];
@@ -550,7 +560,6 @@ public sealed class BacklinkService
             }
             fwdSet.Add(wikiKey);
 
-            // Reverse link: wiki source has backlink from wiki page
             if (!reverseIndex.TryGetValue(wikiKey, out var entries))
             {
                 entries = [];
@@ -565,7 +574,6 @@ public sealed class BacklinkService
                 wikiSourceCount++;
             }
 
-            // Also add reverse: page sees wiki source as backlink
             if (!reverseIndex.TryGetValue(pageKey, out var pageEntries))
             {
                 pageEntries = [];
@@ -584,7 +592,7 @@ public sealed class BacklinkService
         if (wikiSourceCount > 0)
             _log.Information("BacklinkService: added {Count} wiki source relationships", wikiSourceCount);
 
-        // Create tag virtual nodes and edges (item ↔ tag)
+        // --- Phase 7: Tag virtual nodes and edges ---
         var tagNodeCount = 0;
         var tagToItems = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var (entityKey, tags) in entityTags)
@@ -605,7 +613,6 @@ public sealed class BacklinkService
 
             foreach (var itemKey in itemKeys)
             {
-                // Forward link: item → tag
                 if (!forwardLinks.TryGetValue(itemKey, out var fwdSet))
                 {
                     fwdSet = [];
@@ -613,7 +620,6 @@ public sealed class BacklinkService
                 }
                 fwdSet.Add(tagKey);
 
-                // Reverse link: tag has backlink from item
                 if (!reverseIndex.TryGetValue(tagKey, out var entries))
                 {
                     entries = [];
@@ -641,9 +647,6 @@ public sealed class BacklinkService
         _reverseIndex = reverseIndex;
 
         var contentCount = entityContents.Count;
-
-        // Release temporary content strings — they can be large and are no longer needed
-        // once the link indices have been built.
         entityContents.Clear();
         entityExplicitLinks.Clear();
         entityTags.Clear();
@@ -656,6 +659,10 @@ public sealed class BacklinkService
             explicitLinksFound, explicitLinksResolved,
             reverseIndex.Count, forwardLinks.Count, tagNodeCount);
     }
+
+    // ========================================================================
+    // Legacy entity loading (used for types not covered by providers)
+    // ========================================================================
 
     private async Task<List<(string Id, string Title, string? Content, List<string> ExplicitLinks, DateTimeOffset? ModifiedAt, List<string> Tags)>> LoadEntitiesAsync(
         string entityType, string linkType, CancellationToken ct)
@@ -678,35 +685,20 @@ public sealed class BacklinkService
                 if (string.IsNullOrEmpty(id)) continue;
 
                 var title = ExtractTitle(item);
-
-                // Try to extract content from various fields
-                var content = ExtractContentFromEntity(item);
-
-                // Extract explicit links from custom_fields (Tasks linked_items, task_links)
+                var content = WikiLinkParser.ExtractContentFromEntity(item);
                 var explicitLinks = ExtractExplicitLinksFromCustomFields(item);
-
-                // Extract modified_at timestamp
                 var modifiedAt = ExtractModifiedAt(item);
-
-                // Extract tags
                 var tags = ExtractTags(item);
 
-                // Capture parent_id for page entities (used for parent-child relationships)
                 if (entityType == "page"
                     && item.TryGetProperty("parent_id", out var parentProp)
                     && parentProp.ValueKind == JsonValueKind.String)
                 {
                     var parentId = parentProp.GetString();
                     if (!string.IsNullOrEmpty(parentId))
-                    {
-                        lock (_pageParentMap)
-                        {
-                            _pageParentMap[id] = parentId;
-                        }
-                    }
+                        lock (_pageParentMap) { _pageParentMap[id] = parentId; }
                 }
 
-                // Capture source_id for wiki pages (used for wiki source relationships)
                 if (entityType == "page"
                     && item.TryGetProperty("source_type", out var srcTypeProp)
                     && srcTypeProp.GetString() == "github_wiki"
@@ -715,12 +707,7 @@ public sealed class BacklinkService
                 {
                     var sourceId = srcIdProp.GetString();
                     if (!string.IsNullOrEmpty(sourceId))
-                    {
-                        lock (_pageWikiSourceMap)
-                        {
-                            _pageWikiSourceMap[id] = sourceId;
-                        }
-                    }
+                        lock (_pageWikiSourceMap) { _pageWikiSourceMap[id] = sourceId; }
                 }
 
                 items.Add((id, title, content, explicitLinks, modifiedAt, tags));
@@ -735,7 +722,6 @@ public sealed class BacklinkService
 
     private static string ExtractTitle(JsonElement item)
     {
-        // Entity-specific fields (contacts, credentials, transactions, events)
         if (item.TryGetProperty("display_name", out var dn) && !string.IsNullOrEmpty(dn.GetString()))
             return dn.GetString()!;
 
@@ -744,7 +730,6 @@ public sealed class BacklinkService
         var combined = $"{first} {last}".Trim();
         if (!string.IsNullOrEmpty(combined)) return combined;
 
-        // Common fields — covers pages, tasks, projects, deals, snippets, journal, etc.
         foreach (var field in new[] { "title", "name", "full_name", "subject", "label",
                                       "service_name", "payee", "summary" })
         {
@@ -753,7 +738,6 @@ public sealed class BacklinkService
                 return prop.GetString()!;
         }
 
-        // Truncated description as last resort
         if (item.TryGetProperty("description", out var desc) && !string.IsNullOrEmpty(desc.GetString()))
         {
             var d = desc.GetString()!;
@@ -776,40 +760,14 @@ public sealed class BacklinkService
         return null;
     }
 
-    private static string? ExtractSnippet(string content, int matchIndex, int radius)
-    {
-        var start = Math.Max(0, matchIndex - radius);
-        var end = Math.Min(content.Length, matchIndex + radius);
-
-        // Extend to word boundaries
-        while (start > 0 && content[start] != ' ' && content[start] != '\n') start--;
-        while (end < content.Length && content[end] != ' ' && content[end] != '\n') end++;
-
-        var snippet = content[start..end].Trim();
-        if (start > 0) snippet = "..." + snippet;
-        if (end < content.Length) snippet += "...";
-
-        // Remove the link markup for cleaner display
-        snippet = WikiLinkPattern.Replace(snippet, m =>
-        {
-            var display = m.Value;
-            var pipeIdx = display.IndexOf('|');
-            return pipeIdx >= 0 ? display[(pipeIdx + 1)..^2] : display;
-        });
-
-        return string.IsNullOrWhiteSpace(snippet) ? null : snippet;
-    }
-
     /// <summary>
     /// Extracts explicit links from custom_fields (linked_items and task_links arrays),
     /// top-level linked_items (sticky notes), and foreign-key fields (project_id).
-    /// Returns a list of "type:id" strings.
     /// </summary>
     private static List<string> ExtractExplicitLinksFromCustomFields(JsonElement item)
     {
         var links = new List<string>();
 
-        // Top-level project_id (tasks → projects)
         if (item.TryGetProperty("project_id", out var projectIdProp) &&
             projectIdProp.ValueKind == JsonValueKind.String &&
             !string.IsNullOrEmpty(projectIdProp.GetString()))
@@ -817,7 +775,6 @@ public sealed class BacklinkService
             links.Add($"project:{projectIdProp.GetString()}");
         }
 
-        // Top-level linked_items (e.g. sticky notes store privstack://type/id URIs)
         if (item.TryGetProperty("linked_items", out var topLinkedItems) &&
             topLinkedItems.ValueKind == JsonValueKind.Array)
         {
@@ -827,23 +784,17 @@ public sealed class BacklinkService
                 var link = linkElement.GetString();
                 if (string.IsNullOrEmpty(link)) continue;
 
-                // Convert privstack://type/id URI to type:id format
-                var match = PrivstackUrlPattern.Match(link);
+                var match = WikiLinkParser.PrivstackUrlPattern.Match(link);
                 if (match.Success)
-                {
                     links.Add($"{match.Groups[1].Value}:{match.Groups[2].Value}");
-                }
                 else if (link.Contains(':'))
-                {
                     links.Add(link);
-                }
             }
         }
 
         if (item.TryGetProperty("custom_fields", out var customFields) &&
             customFields.ValueKind == JsonValueKind.Object)
         {
-            // Parse linked_items array: ["type:id", "type:id", ...]
             if (customFields.TryGetProperty("linked_items", out var linkedItems) &&
                 linkedItems.ValueKind == JsonValueKind.Array)
             {
@@ -856,17 +807,14 @@ public sealed class BacklinkService
                 }
             }
 
-            // Parse task_links array: [{ "link_type": "...", "item_id": "...", ... }, ...]
             if (customFields.TryGetProperty("task_links", out var taskLinks) &&
                 taskLinks.ValueKind == JsonValueKind.Array)
             {
                 foreach (var linkObj in taskLinks.EnumerateArray())
                 {
                     if (linkObj.ValueKind != JsonValueKind.Object) continue;
-
                     var linkType = linkObj.TryGetProperty("link_type", out var ltProp) ? ltProp.GetString() : null;
                     var itemId = linkObj.TryGetProperty("item_id", out var idProp) ? idProp.GetString() : null;
-
                     if (!string.IsNullOrEmpty(linkType) && !string.IsNullOrEmpty(itemId))
                         links.Add($"{linkType}:{itemId}");
                 }
@@ -874,60 +822,6 @@ public sealed class BacklinkService
         }
 
         return links;
-    }
-
-    /// <summary>
-    /// Extracts all text content from an entity JSON element.
-    /// Handles both flat string fields and structured block-based content (Notes pages).
-    /// </summary>
-    private static string? ExtractContentFromEntity(JsonElement item)
-    {
-        var parts = new List<string>();
-
-        foreach (var field in new[] { "content", "description", "notes", "body" })
-        {
-            if (!item.TryGetProperty(field, out var prop)) continue;
-
-            if (prop.ValueKind == JsonValueKind.String)
-            {
-                var text = prop.GetString();
-                if (!string.IsNullOrEmpty(text))
-                    parts.Add(text);
-            }
-            else if (prop.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
-            {
-                // Structured content (e.g. Notes block-based documents)
-                // Recursively extract all string values from the JSON tree
-                ExtractStringsFromJson(prop, parts);
-            }
-        }
-
-        return parts.Count > 0 ? string.Join("\n", parts) : null;
-    }
-
-    /// <summary>
-    /// Recursively extracts all string values from a JSON element tree.
-    /// This captures text from block-based content structures (paragraphs, headings,
-    /// list items, etc.) as well as privstack:// URLs embedded in the content.
-    /// </summary>
-    private static void ExtractStringsFromJson(JsonElement element, List<string> results)
-    {
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.String:
-                var text = element.GetString();
-                if (!string.IsNullOrEmpty(text))
-                    results.Add(text);
-                break;
-            case JsonValueKind.Object:
-                foreach (var property in element.EnumerateObject())
-                    ExtractStringsFromJson(property.Value, results);
-                break;
-            case JsonValueKind.Array:
-                foreach (var item in element.EnumerateArray())
-                    ExtractStringsFromJson(item, results);
-                break;
-        }
     }
 
     private static List<string> ExtractTags(JsonElement item)
@@ -939,5 +833,21 @@ public sealed class BacklinkService
             .Select(t => t.GetString() ?? "")
             .Where(t => !string.IsNullOrEmpty(t))
             .ToList();
+    }
+
+    private static void AddForwardAndReverseLinks(
+        string sourceKey, string targetKey,
+        Dictionary<string, (string Title, string LinkType, DateTimeOffset? ModifiedAt, string? Icon)> entityMap,
+        Dictionary<string, string> entityContents,
+        Dictionary<string, List<string>> entityExplicitLinks,
+        bool isExplicit)
+    {
+        // Structural edges from providers are tracked as explicit links for the index
+        if (!entityExplicitLinks.TryGetValue(sourceKey, out var links))
+        {
+            links = [];
+            entityExplicitLinks[sourceKey] = links;
+        }
+        links.Add(targetKey);
     }
 }
