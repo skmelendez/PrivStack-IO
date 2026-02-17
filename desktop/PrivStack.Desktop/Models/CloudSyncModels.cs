@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using Avalonia.Media;
+using PrivStack.Desktop.Services;
 
 namespace PrivStack.Desktop.Models;
 
@@ -59,11 +61,11 @@ public record CloudQuota
     public string QuotaDisplay => FormatBytes(StorageQuotaBytes);
     public string Summary => $"{UsedDisplay} / {QuotaDisplay}";
 
-    public string SeverityColor => UsagePercent switch
+    public IBrush SeverityBrush => UsagePercent switch
     {
-        > 95 => "#E53E3E",  // red
-        > 80 => "#D69E2E",  // yellow
-        _ => "#48BB78"      // green
+        > 95 => ThemeHelper.GetBrush("ThemeDangerBrush", Brushes.Red),
+        > 80 => ThemeHelper.GetBrush("ThemeWarningBrush", Brushes.Yellow),
+        _ => ThemeHelper.GetBrush("ThemeSuccessBrush", Brushes.Green)
     };
 
     private static string FormatBytes(ulong bytes) => bytes switch

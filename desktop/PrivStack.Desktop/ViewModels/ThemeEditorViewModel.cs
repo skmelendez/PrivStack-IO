@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -213,7 +214,7 @@ public partial class ThemeEditorViewModel : ViewModelBase
                 }
                 catch
                 {
-                    item.Color = Colors.Black;
+                    item.Color = ThemeHelper.GetColor("ThemeBackground", Colors.Black);
                 }
 
                 grp.Items.Add(item);

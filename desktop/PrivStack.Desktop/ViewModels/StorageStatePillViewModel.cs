@@ -24,7 +24,7 @@ public partial class StorageStatePillViewModel : ViewModelBase
     private DispatcherTimer? _cloudPollTimer;
 
     [ObservableProperty] private string _pillText = "Local";
-    [ObservableProperty] private IBrush _pillColor = Brushes.Gray;
+    [ObservableProperty] private IBrush _pillColor = ResolveBrush("ThemeTextMutedBrush");
 
     public StorageStatePillViewModel(
         IAppSettingsService appSettings,

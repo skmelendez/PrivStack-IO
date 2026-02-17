@@ -6,6 +6,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using PrivStack.Desktop.Services;
 
 namespace PrivStack.Desktop.Controls;
 
@@ -299,7 +300,7 @@ public class IconControl : Control
         var size = Size;
         var scale = size / 24.0; // Icons are designed for 24x24 viewbox
 
-        var stroke = Stroke ?? Brushes.White;
+        var stroke = Stroke ?? ThemeHelper.GetBrush("ThemeTextPrimaryBrush", Brushes.White);
         var pen = new Pen(stroke, StrokeThickness / scale)
         {
             LineCap = PenLineCap.Round,

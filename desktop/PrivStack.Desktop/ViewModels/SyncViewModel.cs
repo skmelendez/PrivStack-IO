@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PrivStack.Desktop.Models;
 using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Native;
+using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
 
 namespace PrivStack.Desktop.ViewModels;
@@ -243,7 +245,9 @@ public partial class SyncViewModel : ViewModelBase
     public string SyncButtonText => IsSyncRunning ? "Stop Sync" : "Start Sync";
 
     /// <summary>
-    /// Gets the status indicator color.
+    /// Gets the status indicator brush.
     /// </summary>
-    public string StatusIndicatorColor => IsSyncRunning ? "#A6E3A1" : "#6C7086";
+    public IBrush StatusIndicatorColor => IsSyncRunning
+        ? ThemeHelper.GetBrush("ThemeSuccessBrush", Brushes.Green)
+        : ThemeHelper.GetBrush("ThemeTextMutedBrush", Brushes.Gray);
 }

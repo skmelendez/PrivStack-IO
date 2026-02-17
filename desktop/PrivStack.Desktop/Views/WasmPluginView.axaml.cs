@@ -713,7 +713,7 @@ public partial class WasmPluginView : UserControl
         var messageBlock = new TextBlock
         {
             Text = $"{pluginName} is requesting permission for {capDisplayName}.",
-            Foreground = Avalonia.Media.Brushes.White,
+            Foreground = GetThemeBrush("ThemeTextOnAccentBrush") ?? Avalonia.Media.Brushes.White,
             FontSize = ThemeDouble("ThemeFontSizeSmMd", 13),
             FontWeight = Avalonia.Media.FontWeight.SemiBold,
             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
@@ -724,7 +724,7 @@ public partial class WasmPluginView : UserControl
         {
             Content = "Allow",
             FontSize = ThemeDouble("ThemeFontSizeSm", 12),
-            Foreground = Avalonia.Media.Brushes.White,
+            Foreground = GetThemeBrush("ThemeTextOnAccentBrush") ?? Avalonia.Media.Brushes.White,
             Background = GetThemeBrush("ThemeSuccessBrush") ?? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(40, 140, 70)),
             Padding = new Avalonia.Thickness(14, 6),
             Margin = new Avalonia.Thickness(8, 0, 0, 0),
@@ -736,7 +736,7 @@ public partial class WasmPluginView : UserControl
         {
             Content = "Deny",
             FontSize = ThemeDouble("ThemeFontSizeSm", 12),
-            Foreground = Avalonia.Media.Brushes.White,
+            Foreground = GetThemeBrush("ThemeTextOnAccentBrush") ?? Avalonia.Media.Brushes.White,
             Background = GetThemeBrush("ThemeDangerBrush") ?? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(160, 50, 50)),
             Padding = new Avalonia.Thickness(14, 6),
             Margin = new Avalonia.Thickness(4, 0, 0, 0),
@@ -829,7 +829,7 @@ public partial class WasmPluginView : UserControl
             Child = new TextBlock
             {
                 Text = message,
-                Foreground = Avalonia.Media.Brushes.White,
+                Foreground = GetThemeBrush("ThemeTextOnAccentBrush") ?? Avalonia.Media.Brushes.White,
                 FontSize = ThemeDouble("ThemeFontSizeSmMd", 13),
                 TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                 MaxWidth = 400,

@@ -404,7 +404,7 @@ public partial class HtmlContentControl : UserControl
         return new Border
         {
             BorderThickness = new Thickness(3, 0, 0, 0),
-            BorderBrush = Brushes.Gray,
+            BorderBrush = Application.Current?.FindResource("ThemeBorderBrush") as IBrush ?? Brushes.Gray,
             Padding = new Thickness(16, 8, 8, 8),
             Margin = new Thickness(0, 8, 0, 8),
             Child = innerPanel
@@ -419,7 +419,8 @@ public partial class HtmlContentControl : UserControl
 
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128)),
+            Background = Application.Current?.FindResource("ThemeCodeBlockBrush") as IBrush
+                          ?? new SolidColorBrush(Color.FromArgb(40, 128, 128, 128)),
             CornerRadius = new CornerRadius(4),
             Padding = new Thickness(12),
             Margin = new Thickness(0, 8, 0, 8),
@@ -631,7 +632,8 @@ public partial class HtmlContentControl : UserControl
                     inlines.Add(new Run(StripTags(innerContent))
                     {
                         FontFamily = GetThemeFont("ThemeFontMono"),
-                        Background = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128))
+                        Background = Application.Current?.FindResource("ThemeCodeBlockBrush") as IBrush
+                                      ?? new SolidColorBrush(Color.FromArgb(40, 128, 128, 128))
                     });
                     break;
                 case "a":

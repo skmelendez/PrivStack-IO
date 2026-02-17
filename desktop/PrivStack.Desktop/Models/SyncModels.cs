@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using Avalonia.Media;
+using PrivStack.Desktop.Services;
 
 namespace PrivStack.Desktop.Models;
 
@@ -25,13 +27,13 @@ public class DiscoveredPeer
     public string DisplayName => DeviceName ?? $"Peer {PeerId[..8]}...";
 
     /// <summary>
-    /// Gets a color based on discovery method.
+    /// Gets a brush based on discovery method.
     /// </summary>
-    public string DiscoveryColor => DiscoveryMethod switch
+    public IBrush DiscoveryBrush => DiscoveryMethod switch
     {
-        "Mdns" => "#A6E3A1", // Green for local
-        "Dht" => "#89B4FA",  // Blue for internet
-        _ => "#6C7086"
+        "Mdns" => ThemeHelper.GetBrush("ThemeSuccessBrush", Brushes.Green),
+        "Dht" => ThemeHelper.GetBrush("ThemePrimaryBrush", Brushes.DeepSkyBlue),
+        _ => ThemeHelper.GetBrush("ThemeTextMutedBrush", Brushes.Gray)
     };
 }
 

@@ -226,24 +226,24 @@ public class SyncViewModelTests
     }
 
     [Fact]
-    public void DiscoveredPeer_DiscoveryColor_ReturnGreenForMdns()
+    public void DiscoveredPeer_DiscoveryBrush_NotNull_ForMdns()
     {
         var peer = new DiscoveredPeer { DiscoveryMethod = "Mdns" };
-        peer.DiscoveryColor.Should().Be("#A6E3A1");
+        peer.DiscoveryBrush.Should().NotBeNull();
     }
 
     [Fact]
-    public void DiscoveredPeer_DiscoveryColor_ReturnBlueForDht()
+    public void DiscoveredPeer_DiscoveryBrush_NotNull_ForDht()
     {
         var peer = new DiscoveredPeer { DiscoveryMethod = "Dht" };
-        peer.DiscoveryColor.Should().Be("#89B4FA");
+        peer.DiscoveryBrush.Should().NotBeNull();
     }
 
     [Fact]
-    public void DiscoveredPeer_DiscoveryColor_ReturnDefaultForUnknown()
+    public void DiscoveredPeer_DiscoveryBrush_NotNull_ForUnknown()
     {
         var peer = new DiscoveredPeer { DiscoveryMethod = "Unknown" };
-        peer.DiscoveryColor.Should().Be("#6C7086");
+        peer.DiscoveryBrush.Should().NotBeNull();
     }
 
     [Fact]

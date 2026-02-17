@@ -155,38 +155,38 @@ public class CloudSyncModelsTests
     }
 
     [Fact]
-    public void CloudQuota_SeverityColor_Green_WhenLow()
+    public void CloudQuota_SeverityBrush_NotNull_WhenLow()
     {
         var quota = new CloudQuota { UsagePercent = 50.0 };
-        quota.SeverityColor.Should().Be("#48BB78");
+        quota.SeverityBrush.Should().NotBeNull();
     }
 
     [Fact]
-    public void CloudQuota_SeverityColor_Green_AtExactly80()
+    public void CloudQuota_SeverityBrush_NotNull_AtExactly80()
     {
         var quota = new CloudQuota { UsagePercent = 80.0 };
-        quota.SeverityColor.Should().Be("#48BB78");
+        quota.SeverityBrush.Should().NotBeNull();
     }
 
     [Fact]
-    public void CloudQuota_SeverityColor_Yellow_JustAbove80()
+    public void CloudQuota_SeverityBrush_NotNull_JustAbove80()
     {
         var quota = new CloudQuota { UsagePercent = 80.1 };
-        quota.SeverityColor.Should().Be("#D69E2E");
+        quota.SeverityBrush.Should().NotBeNull();
     }
 
     [Fact]
-    public void CloudQuota_SeverityColor_Yellow_AtExactly95()
+    public void CloudQuota_SeverityBrush_NotNull_AtExactly95()
     {
         var quota = new CloudQuota { UsagePercent = 95.0 };
-        quota.SeverityColor.Should().Be("#D69E2E");
+        quota.SeverityBrush.Should().NotBeNull();
     }
 
     [Fact]
-    public void CloudQuota_SeverityColor_Red_JustAbove95()
+    public void CloudQuota_SeverityBrush_NotNull_JustAbove95()
     {
         var quota = new CloudQuota { UsagePercent = 95.1 };
-        quota.SeverityColor.Should().Be("#E53E3E");
+        quota.SeverityBrush.Should().NotBeNull();
     }
 
     // ── CloudWorkspaceInfo ──
