@@ -22,13 +22,29 @@
         <Style Selector="ToggleButton.node-legend">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0,2"/>
+            <Setter Property="Padding" Value="4,4"/>
+            <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="ToggleButton.node-legend:pointerover /template/ ContentPresenter">
+        <Style Selector="ToggleButton.node-legend /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:checked:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.node-legend TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
         </Style>
         <Style Selector="ToggleButton.node-legend Ellipse">
             <Setter Property="StrokeThickness" Value="1.5"/>
@@ -76,12 +92,9 @@
         <Style Selector="ToggleButton.node-legend:checked Ellipse.c-tags">
             <Setter Property="Fill" Value="#9CA3AF"/>
         </Style>
-        <!-- Dim label text when toggled off -->
-        <Style Selector="ToggleButton.node-legend TextBlock">
+        <!-- Dim label when toggled off -->
+        <Style Selector="ToggleButton.node-legend:not(:checked) TextBlock">
             <Setter Property="Opacity" Value="0.4"/>
-        </Style>
-        <Style Selector="ToggleButton.node-legend:checked TextBlock">
-            <Setter Property="Opacity" Value="1.0"/>
         </Style>
     </UserControl.Styles>
 
@@ -196,50 +209,53 @@
                     <ScrollViewer Grid.Row="1" Padding="8,4" IsVisible="{Binding !IsGraphSidebarCollapsed}">
                     <StackPanel Spacing="8">
 
-                        <!-- VIEW group -->
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="VIEW" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5" Margin="0,0,0,2"/>
-                            <StackPanel IsVisible="{Binding IsLocalView}" Spacing="2">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Text="Local Depth" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding LocalDepth}"
-                                               FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                </Grid>
-                                <Slider Value="{Binding LocalDepth}" Minimum="1" Maximum="5"
-                                        TickFrequency="1" IsSnapToTickEnabled="True"/>
+                        <!-- View -->
+                        <Expander IsExpanded="True" Padding="0" HorizontalAlignment="Stretch">
+                            <Expander.Header>
+                                <TextBlock Text="VIEW" FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="Bold" Opacity="0.5"
+                                           HorizontalAlignment="Stretch"/>
+                            </Expander.Header>
+                            <StackPanel Spacing="4" Margin="8,4">
+                                <StackPanel IsVisible="{Binding IsLocalView}" Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Local Depth" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding LocalDepth}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding LocalDepth}" Minimum="1" Maximum="5"
+                                            TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Active Depth" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding HighlightDepth}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding HighlightDepth}" Minimum="1" Maximum="5"
+                                            TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                    <CheckBox Content="Hide inactive" IsChecked="{Binding HideInactiveNodes}"
+                                              FontSize="{DynamicResource ThemeFontSizeXs}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Min Links" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding MinLinkCount}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding MinLinkCount}" Minimum="0" Maximum="20"
+                                            TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Max Nodes" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding MaxNodes}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
+                                    </Grid>
+                                    <Slider Value="{Binding MaxNodes}" Minimum="50" Maximum="2500"
+                                            TickFrequency="50" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
                             </StackPanel>
-                            <StackPanel Spacing="2">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Text="Active Depth" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding HighlightDepth}"
-                                               FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                </Grid>
-                                <Slider Value="{Binding HighlightDepth}" Minimum="1" Maximum="5"
-                                        TickFrequency="1" IsSnapToTickEnabled="True"/>
-                                <CheckBox Content="Hide inactive" IsChecked="{Binding HideInactiveNodes}"
-                                          FontSize="{DynamicResource ThemeFontSizeXs}" Margin="0,2,0,0"/>
-                            </StackPanel>
-                            <StackPanel Spacing="2">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Text="Min Links" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding MinLinkCount}"
-                                               FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                </Grid>
-                                <Slider Value="{Binding MinLinkCount}" Minimum="0" Maximum="20"
-                                        TickFrequency="1" IsSnapToTickEnabled="True"/>
-                            </StackPanel>
-                            <StackPanel Spacing="2">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Text="Max Nodes" FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.7"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding MaxNodes}"
-                                               FontSize="{DynamicResource ThemeFontSizeXs}" Opacity="0.5"/>
-                                </Grid>
-                                <Slider Value="{Binding MaxNodes}" Minimum="50" Maximum="2500"
-                                        TickFrequency="50" IsSnapToTickEnabled="True"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Border Height="1" Background="{DynamicResource ThemeBorderSubtleBrush}" Margin="0,2"/>
+                        </Expander>
 
                         <!-- Node Types -->
                         <Expander IsExpanded="True" Padding="0" HorizontalAlignment="Stretch">
