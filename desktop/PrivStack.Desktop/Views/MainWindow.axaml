@@ -6,6 +6,7 @@
         xmlns:plugin="using:PrivStack.Desktop.Services.Plugin"
         xmlns:services="using:PrivStack.Desktop.Services"
         xmlns:emoji="using:PrivStack.UI.Adaptive.Controls.EmojiPicker"
+        xmlns:toast="using:PrivStack.Desktop.Views.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
@@ -399,6 +400,13 @@
                 </Grid>
             </Grid>
         </Grid>
+
+        <!-- Toast Notification Container (top-center, above all content) -->
+        <toast:ToastContainer ZIndex="1100"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Top"
+                              Margin="0,40,0,0"
+                              IsHitTestVisible="True"/>
 
         <!-- ============================================== -->
         <!-- FLOATING OVERLAYS - Outside main Grid layout  -->
