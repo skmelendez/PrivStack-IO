@@ -1112,8 +1112,12 @@ public partial class MainWindowViewModel : ViewModelBase
     /// </summary>
     public async Task NavigateToLinkedItemAsync(string linkType, string itemId)
     {
+        // Find a deep-link target that supports this link type (exact or via SupportedLinkTypes)
         var target = _pluginRegistry.GetCapabilityProvider<IDeepLinkTarget>(
             linkType, t => t.LinkType);
+
+        target ??= _pluginRegistry.GetCapabilityProviders<IDeepLinkTarget>()
+            .FirstOrDefault(t => t.SupportedLinkTypes.Contains(linkType, StringComparer.OrdinalIgnoreCase));
 
         if (target == null)
         {
@@ -1125,7 +1129,9 @@ public partial class MainWindowViewModel : ViewModelBase
         IAppPlugin? targetPlugin = null;
         foreach (var plugin in _pluginRegistry.ActivePlugins)
         {
-            if (plugin is IDeepLinkTarget dt && dt.LinkType == linkType)
+            if (plugin is IDeepLinkTarget dt &&
+                (dt.LinkType == linkType ||
+                 dt.SupportedLinkTypes.Contains(linkType, StringComparer.OrdinalIgnoreCase)))
             {
                 targetPlugin = plugin;
                 break;
@@ -1144,6 +1150,6 @@ public partial class MainWindowViewModel : ViewModelBase
             // Same-tab: skip tab switch entirely — no need to clear/reload.
         }
 
-        await target.NavigateToItemAsync(itemId);
+        await target.NavigateToItemAsync(linkType, itemId);
     }
 }
