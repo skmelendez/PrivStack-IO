@@ -183,13 +183,52 @@
                                            HorizontalAlignment="Stretch"/>
                             </Expander.Header>
                             <StackPanel Spacing="4" Margin="8,4">
-                                <CheckBox Content="Notes" IsChecked="{Binding ShowNotes}"/>
-                                <CheckBox Content="Tasks" IsChecked="{Binding ShowTasks}"/>
-                                <CheckBox Content="Contacts" IsChecked="{Binding ShowContacts}"/>
-                                <CheckBox Content="Events" IsChecked="{Binding ShowEvents}"/>
-                                <CheckBox Content="Journal" IsChecked="{Binding ShowJournal}"/>
-                                <CheckBox Content="Web Clips" IsChecked="{Binding ShowWebClips}"/>
-                                <CheckBox Content="Tags" IsChecked="{Binding ShowTags}"/>
+                                <CheckBox IsChecked="{Binding ShowNotes}" HorizontalContentAlignment="Stretch">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Notes" VerticalAlignment="Center"/>
+                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeSecondaryBrush}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ShowTasks}" HorizontalContentAlignment="Stretch">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Tasks" VerticalAlignment="Center"/>
+                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeSuccessBrush}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ShowContacts}" HorizontalContentAlignment="Stretch">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Contacts" VerticalAlignment="Center"/>
+                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeWarningBrush}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ShowEvents}" HorizontalContentAlignment="Stretch">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Events" VerticalAlignment="Center"/>
+                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemePrimaryBrush}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ShowJournal}" HorizontalContentAlignment="Stretch">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Journal" VerticalAlignment="Center"/>
+                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeDangerBrush}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ShowWebClips}" HorizontalContentAlignment="Stretch">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Web Clips" VerticalAlignment="Center"/>
+                                        <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{DynamicResource ThemeTextMutedBrush}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ShowTags}" HorizontalContentAlignment="Stretch">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Tags" VerticalAlignment="Center"/>
+                                        <Ellipse Grid.Column="1" Width="10" Height="10" VerticalAlignment="Center">
+                                            <Ellipse.Fill>
+                                                <SolidColorBrush Color="#9CA3AF"/>
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+                                    </Grid>
+                                </CheckBox>
                             </StackPanel>
                         </Expander>
 
