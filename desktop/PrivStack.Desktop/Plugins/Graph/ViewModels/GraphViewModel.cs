@@ -1,11 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using PrivStack.Desktop.Plugins.Graph.Models;
 using PrivStack.Desktop.Plugins.Graph.Services;
 using PrivStack.Sdk;
+using PrivStack.UI.Adaptive.Models;
 
 namespace PrivStack.Desktop.Plugins.Graph.ViewModels;
 
+public enum OrphanFilterMode { Hide, Show, Only }
 public enum GraphVisualizationMode { ForceDirected, SolarSystem }
 
 public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
@@ -74,29 +75,14 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     public string TimelineStartLabel => TimelineStartDate.LocalDateTime.ToString("MMM d, yyyy");
     public string TimelineEndLabel => TimelineEndDate.LocalDateTime.ToString("MMM d, yyyy");
 
-    // Repel radius slider (0-100 maps to 300-400)
-    [ObservableProperty] private double _repelSlider = 50;
+    // Physics settings (graph plugin ranges: repel 300-400, center 0-0.005, dist 1000-2000, force 0-0.01)
+    public GraphPhysicsSettings PhysicsSettings { get; } = new(300, 400, 0, 0.005, 1000, 2000, 0, 0.01);
 
-    public double RepelRadius => 300 + (RepelSlider / 100.0 * 100);
-    public double RepelDisplay => RepelSlider;
-
-    // Center force slider (0-100 maps to 0.0-0.005)
-    [ObservableProperty] private double _centerForceSlider = 50;
-
-    public double CenterForce => CenterForceSlider / 100.0 * 0.005;
-    public double CenterForceDisplay => CenterForceSlider;
-
-    // Link distance slider (0-100 maps to 1000-2000)
-    [ObservableProperty] private double _linkDistanceSlider = 0;
-
-    public double LinkDistance => 1000 + (LinkDistanceSlider / 100.0 * 1000);
-    public double LinkDistanceDisplay => LinkDistanceSlider;
-
-    // Link force slider (0-100 maps to 0.0-0.01)
-    [ObservableProperty] private double _linkForceSlider = 50;
-
-    public double LinkForce => LinkForceSlider / 100.0 * 0.01;
-    public double LinkForceDisplay => LinkForceSlider;
+    // Convenience accessors for code-behind
+    public double RepelRadius => PhysicsSettings.RepelRadius;
+    public double CenterForce => PhysicsSettings.CenterForce;
+    public double LinkDistance => PhysicsSettings.LinkDistance;
+    public double LinkForce => PhysicsSettings.LinkForce;
 
     // Orphan radio helpers
     public bool IsOrphanHide { get => OrphanMode == OrphanFilterMode.Hide; set { if (value) OrphanMode = OrphanFilterMode.Hide; } }
@@ -142,13 +128,14 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             _hideInactiveNodes = _settings.Get("hide_inactive_nodes", false);
             _localDepth = _settings.Get("local_depth", 1);
             _timelineEnabled = _settings.Get("timeline_enabled", false);
-            _repelSlider = _settings.Get("repel_radius", 70.0);
-            _centerForceSlider = _settings.Get("center_force", 20.0);
-            _linkDistanceSlider = _settings.Get("link_distance", 0.0);
-            _linkForceSlider = _settings.Get("link_force", 50.0);
+            PhysicsSettings.RepelSlider = _settings.Get("repel_radius", 70.0);
+            PhysicsSettings.CenterForceSlider = _settings.Get("center_force", 20.0);
+            PhysicsSettings.LinkDistanceSlider = _settings.Get("link_distance", 0.0);
+            PhysicsSettings.LinkForceSlider = _settings.Get("link_force", 50.0);
             _isGraphSidebarCollapsed = _settings.Get("sidebar_collapsed", false);
         }
 
+        PhysicsSettings.PhysicsChanged += OnPhysicsSettingsChanged;
         _isInitializing = false;
     }
 
@@ -191,14 +178,14 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     {
         if (_fullGraphData == null) { GraphData = null; NodeCount = 0; EdgeCount = 0; return; }
 
-        var includeNodeTypes = new HashSet<NodeType>();
-        if (ShowNotes) { includeNodeTypes.Add(NodeType.Note); includeNodeTypes.Add(NodeType.WikiSource); }
-        if (ShowTasks) { includeNodeTypes.Add(NodeType.Task); includeNodeTypes.Add(NodeType.Project); }
-        if (ShowContacts) { includeNodeTypes.Add(NodeType.Contact); includeNodeTypes.Add(NodeType.Company); includeNodeTypes.Add(NodeType.ContactGroup); }
-        if (ShowEvents) includeNodeTypes.Add(NodeType.Event);
-        if (ShowJournal) includeNodeTypes.Add(NodeType.Journal);
-        if (ShowWebClips) includeNodeTypes.Add(NodeType.WebClip);
-        if (ShowTags) includeNodeTypes.Add(NodeType.Tag);
+        var includeNodeTypes = new HashSet<string>();
+        if (ShowNotes) { includeNodeTypes.Add("note"); includeNodeTypes.Add("wiki_source"); }
+        if (ShowTasks) { includeNodeTypes.Add("task"); includeNodeTypes.Add("project"); }
+        if (ShowContacts) { includeNodeTypes.Add("contact"); includeNodeTypes.Add("company"); includeNodeTypes.Add("contact_group"); }
+        if (ShowEvents) includeNodeTypes.Add("event");
+        if (ShowJournal) includeNodeTypes.Add("journal");
+        if (ShowWebClips) includeNodeTypes.Add("web_clip");
+        if (ShowTags) includeNodeTypes.Add("tag");
 
         var candidateNodes = _fullGraphData.Nodes.Where(kv => MatchesBasicFilters(kv.Value, includeNodeTypes)).ToDictionary(kv => kv.Key, kv => kv.Value);
         var filteredEdges = _fullGraphData.Edges.Where(e => candidateNodes.ContainsKey(e.SourceId) && candidateNodes.ContainsKey(e.TargetId)).ToList();
@@ -217,7 +204,7 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
             var filteredLinkCount = filteredLinkCounts.GetValueOrDefault(kv.Key, 0);
             var isOrphan = filteredLinkCount == 0;
             if (filteredLinkCount < MinLinkCount) continue;
-            if (kv.Value.NodeType == NodeType.Tag && isOrphan && !ShowOrphanedTags) continue;
+            if (kv.Value.NodeType == "tag" && isOrphan && !ShowOrphanedTags) continue;
             if (OrphanMode == OrphanFilterMode.Hide && isOrphan) continue;
             if (OrphanMode == OrphanFilterMode.Only && !isOrphan) continue;
             finalNodes[kv.Key] = kv.Value;
@@ -249,11 +236,11 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
         IsNodeLimitActive = preCapCount > MaxNodes;
     }
 
-    private bool MatchesBasicFilters(GraphNode node, HashSet<NodeType> includeNodeTypes)
+    private bool MatchesBasicFilters(GraphNode node, HashSet<string> includeNodeTypes)
     {
         if (includeNodeTypes.Count > 0 && !includeNodeTypes.Contains(node.NodeType)) return false;
         if (!string.IsNullOrWhiteSpace(SearchText) && !node.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) return false;
-        if (node.NodeType != NodeType.Tag && node.ModifiedAt != default && TimelineEnabled)
+        if (node.NodeType != "tag" && node.ModifiedAt != default && TimelineEnabled)
         {
             if (node.ModifiedAt < TimelineStartDate || node.ModifiedAt > TimelineEndDate) return false;
         }
@@ -326,11 +313,14 @@ public partial class GraphViewModel : PrivStack.Sdk.ViewModelBase
     partial void OnTimelineMaxDateChanged(DateTimeOffset value) { OnPropertyChanged(nameof(TimelineEndDate)); OnPropertyChanged(nameof(TimelineEndLabel)); }
     partial void OnLocalDepthChanged(int value) { Save("local_depth", value); if (!_isInitializing && IsLocalView) _ = LoadGraphAsync(); }
     partial void OnIsGraphSidebarCollapsedChanged(bool value) { Save("sidebar_collapsed", value); }
-    partial void OnRepelSliderChanged(double value) { Save("repel_radius", value); OnPropertyChanged(nameof(RepelDisplay)); NotifyPhysics(nameof(RepelRadius)); }
-    partial void OnCenterForceSliderChanged(double value) { Save("center_force", value); OnPropertyChanged(nameof(CenterForceDisplay)); NotifyPhysics(nameof(CenterForce)); }
-    partial void OnLinkDistanceSliderChanged(double value) { Save("link_distance", value); OnPropertyChanged(nameof(LinkDistanceDisplay)); NotifyPhysics(nameof(LinkDistance)); }
-    partial void OnLinkForceSliderChanged(double value) { Save("link_force", value); OnPropertyChanged(nameof(LinkForceDisplay)); NotifyPhysics(nameof(LinkForce)); }
-    private void NotifyPhysics(string prop) { OnPropertyChanged(prop); if (!_isInitializing) PhysicsParametersChanged?.Invoke(this, EventArgs.Empty); }
+    private void OnPhysicsSettingsChanged(object? sender, EventArgs e)
+    {
+        Save("repel_radius", PhysicsSettings.RepelSlider);
+        Save("center_force", PhysicsSettings.CenterForceSlider);
+        Save("link_distance", PhysicsSettings.LinkDistanceSlider);
+        Save("link_force", PhysicsSettings.LinkForceSlider);
+        if (!_isInitializing) PhysicsParametersChanged?.Invoke(this, EventArgs.Empty);
+    }
     partial void OnSolarSystemScaleSliderChanged(double value) => NotifySolar(nameof(SolarSystemScale));
     partial void OnStarSpacingSliderChanged(double value) => NotifySolar(nameof(StarSpacingMultiplier));
     partial void OnOrbitScaleSliderChanged(double value) => NotifySolar(nameof(OrbitScaleMultiplier));

@@ -13104,17 +13104,13 @@ public sealed class AdaptiveViewRenderer : UserControl
         {
             var physics = new PhysicsParameters();
             if (el.TryGetProperty("repulsion", out var rep) && rep.ValueKind == JsonValueKind.Number)
-                physics.RepulsionStrength = rep.GetDouble();
+                physics.RepelRadius = rep.GetDouble();
             if (el.TryGetProperty("link_distance", out var ld) && ld.ValueKind == JsonValueKind.Number)
                 physics.LinkDistance = ld.GetDouble();
             if (el.TryGetProperty("link_strength", out var ls) && ls.ValueKind == JsonValueKind.Number)
                 physics.LinkStrength = ls.GetDouble();
-            if (el.TryGetProperty("collision_strength", out var cs) && cs.ValueKind == JsonValueKind.Number)
-                physics.CollisionStrength = cs.GetDouble();
             if (el.TryGetProperty("center_strength", out var cstr) && cstr.ValueKind == JsonValueKind.Number)
                 physics.CenterStrength = cstr.GetDouble();
-            if (el.TryGetProperty("velocity_decay", out var vd) && vd.ValueKind == JsonValueKind.Number)
-                physics.VelocityDecay = vd.GetDouble();
 
             var physicsEnabled = el.GetBoolProp("physics_enabled", true);
 
@@ -13843,12 +13839,10 @@ public sealed class AdaptiveViewRenderer : UserControl
                     ? vEl.GetDouble() : 0;
                 switch (param)
                 {
-                    case "repulsion": physics.RepulsionStrength = value; break;
+                    case "repulsion": physics.RepelRadius = value; break;
                     case "link_distance": physics.LinkDistance = value; break;
                     case "link_strength": physics.LinkStrength = value; break;
-                    case "collision_strength": physics.CollisionStrength = value; break;
                     case "center_strength": physics.CenterStrength = value; break;
-                    case "velocity_decay": physics.VelocityDecay = value; break;
                 }
             }
             catch { /* ignore parse errors */ }
