@@ -41,7 +41,7 @@
                                 Padding="12,6" Margin="0,0,8,8"/>
                         <Button Content="Default" Padding="12,6" Margin="0,0,8,8"/>
                         <Button Content="Danger" Background="{DynamicResource ThemeDangerBrush}"
-                                Foreground="White" Padding="12,6" Margin="0,0,8,8"/>
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}" Padding="12,6" Margin="0,0,8,8"/>
                     </WrapPanel>
                 </StackPanel>
             </Border>

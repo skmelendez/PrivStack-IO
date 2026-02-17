@@ -462,6 +462,16 @@ public sealed class AdaptiveViewRenderer : UserControl
     private static IBrush SuccessBrush => Brush("ThemeSuccessBrush", Brushes.Green);
     private static IBrush WarningBrush => Brush("ThemeWarningBrush", Brushes.Orange);
     private static IBrush DangerBrush => Brush("ThemeDangerBrush", Brushes.Red);
+    private static IBrush TextOnAccent => Brush("ThemeTextOnAccentBrush", Brushes.White);
+
+    private static Color ShadowColor
+    {
+        get
+        {
+            var brush = Brush("ThemeShadowBrush", new SolidColorBrush(Color.Parse("#40000000")));
+            return (brush as SolidColorBrush)?.Color ?? Color.Parse("#40000000");
+        }
+    }
 
     // ================================================================
     // View state parsing
@@ -1949,7 +1959,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                 {
                     Text = "Reposition",
                     FontSize = FontSize("ThemeFontSizeXs", 11),
-                    Foreground = Avalonia.Media.Brushes.White,
+                    Foreground = TextOnAccent,
                 };
                 container.Cursor = null;
                 // Save position
@@ -1964,7 +1974,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                 {
                     Text = "Done",
                     FontSize = FontSize("ThemeFontSizeXs", 11),
-                    Foreground = Avalonia.Media.Brushes.White,
+                    Foreground = TextOnAccent,
                 };
                 container.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.SizeNorthSouth);
             }
@@ -2017,7 +2027,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             Height = 3,
             Width = 40,
             CornerRadius = new CornerRadius(2),
-            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromArgb(120, 255, 255, 255)),
+            Background = Brush("ThemeOverlayLightBrush", new SolidColorBrush(Color.FromArgb(120, 255, 255, 255))),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Opacity = 0,
@@ -2067,9 +2077,9 @@ public sealed class AdaptiveViewRenderer : UserControl
             {
                 Text = label,
                 FontSize = FontSize("ThemeFontSizeXs", 11),
-                Foreground = Avalonia.Media.Brushes.White,
+                Foreground = TextOnAccent,
             },
-            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromArgb(160, 0, 0, 0)),
+            Background = Brush("ThemeOverlayDarkBrush", new SolidColorBrush(Color.FromArgb(160, 0, 0, 0))),
             CornerRadius = Radius("ThemeRadiusSm"),
             Padding = new Thickness(Dbl("ThemeSpacingSm", 8), Dbl("ThemeSpacingXs", 4)),
             Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
@@ -2357,7 +2367,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             _ => SurfaceElevated,
         };
 
-        var fg = variant == "default" ? TextSecondary : Brushes.White;
+        var fg = variant == "default" ? TextSecondary : TextOnAccent;
 
         return new Border
         {
@@ -2460,7 +2470,7 @@ public sealed class AdaptiveViewRenderer : UserControl
         if (isActive)
         {
             button.Background = Primary;
-            button.Foreground = Brushes.White;
+            button.Foreground = TextOnAccent;
         }
 
         if (variant == "ghost")
@@ -3004,7 +3014,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             if (isActive)
             {
                 btn.Background = Primary;
-                btn.Foreground = Brushes.White;
+                btn.Foreground = TextOnAccent;
             }
 
             // Per-tab command overrides bar-level command
@@ -3148,7 +3158,7 @@ public sealed class AdaptiveViewRenderer : UserControl
         // Semi-transparent backdrop that fills the entire area
         var backdrop = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(128, 0, 0, 0)),
+            Background = Brush("ThemeOverlayDarkBrush", new SolidColorBrush(Color.FromArgb(128, 0, 0, 0))),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
@@ -3284,7 +3294,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                         // Create backdrop that fills the entire overlay
                         var backdropClone = new Border
                         {
-                            Background = new SolidColorBrush(Color.FromArgb(128, 0, 0, 0)),
+                            Background = Brush("ThemeOverlayDarkBrush", new SolidColorBrush(Color.FromArgb(128, 0, 0, 0))),
                         };
                         if (onCloseCommand != null)
                         {
@@ -3861,7 +3871,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                 {
                     Text = unreadCount.ToString(),
                     FontSize = FontSize("ThemeFontSizeXs", 10),
-                    Foreground = Brushes.White,
+                    Foreground = TextOnAccent,
                     FontWeight = FontWeight.SemiBold,
                 },
             });
@@ -4543,7 +4553,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                     Text = day.DayNumber.ToString(),
                     FontSize = FontSize("ThemeFontSizeSm", 12),
                     FontWeight = Avalonia.Media.FontWeight.Bold,
-                    Foreground = Avalonia.Media.Brushes.White,
+                    Foreground = TextOnAccent,
                     HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                 }
@@ -4570,7 +4580,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                     Text = timeLabel,
                     FontSize = FontSize("ThemeFontSizeXs", 10),
                     FontWeight = FontWeight.SemiBold,
-                    Foreground = Avalonia.Media.Brushes.White,
+                    Foreground = TextOnAccent,
                     VerticalAlignment = VerticalAlignment.Center,
                 });
             }
@@ -4578,7 +4588,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             {
                 Text = evt.Title,
                 FontSize = FontSize("ThemeFontSizeXs", 10),
-                Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Colors.White, 0.9),
+                Foreground = new SolidColorBrush(((TextOnAccent as SolidColorBrush)?.Color ?? Colors.White), 0.9),
                 TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
                 MaxLines = 1,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -4721,7 +4731,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             : Primary;
         var eventColor = eventBrush is Avalonia.Media.SolidColorBrush scbPopup
             ? scbPopup.Color
-            : Avalonia.Media.Colors.DodgerBlue;
+            : (Primary as SolidColorBrush)?.Color ?? Colors.DodgerBlue;
 
         // --- Build popup content ---
         // Outer horizontal: accent bar | content
@@ -4779,8 +4789,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             ToolTip.SetTip(btn, tooltip);
             btn.PointerEntered += (s, _) =>
             {
-                if (s is Border b) b.Background = new Avalonia.Media.SolidColorBrush(
-                    Avalonia.Media.Color.Parse("#20808080"));
+                if (s is Border b) b.Background = HoverSubtle;
             };
             btn.PointerExited += (s, _) =>
             {
@@ -4994,7 +5003,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             ClipToBounds = true,
-            BoxShadow = new BoxShadows(new BoxShadow { Blur = 16, OffsetY = 6, Color = Avalonia.Media.Color.Parse("#40000000") }),
+            BoxShadow = new BoxShadows(new BoxShadow { Blur = 16, OffsetY = 6, Color = ShadowColor }),
         };
 
         var popup = new Popup
@@ -5085,15 +5094,15 @@ public sealed class AdaptiveViewRenderer : UserControl
             // Named colors — these are explicit plugin-specified palette colors
             return color.ToLowerInvariant() switch
             {
-                "red" => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444")),
-                "green" => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#22C55E")),
+                "red" => Brush("ThemeTagRedBrush", new SolidColorBrush(Color.Parse("#EF4444"))),
+                "green" => Brush("ThemeTagGreenBrush", new SolidColorBrush(Color.Parse("#22C55E"))),
                 "blue" => Primary,
-                "yellow" => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#EAB308")),
-                "orange" => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#F97316")),
-                "purple" => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#A855F7")),
-                "pink" => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#EC4899")),
-                "teal" => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#14B8A6")),
-                "gray" or "grey" => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#6B7280")),
+                "yellow" => Brush("ThemeTagYellowBrush", new SolidColorBrush(Color.Parse("#EAB308"))),
+                "orange" => Brush("ThemeTagOrangeBrush", new SolidColorBrush(Color.Parse("#F97316"))),
+                "purple" => Brush("ThemeTagPurpleBrush", new SolidColorBrush(Color.Parse("#A855F7"))),
+                "pink" => Brush("ThemeTagPinkBrush", new SolidColorBrush(Color.Parse("#EC4899"))),
+                "teal" => Brush("ThemeTagTealBrush", new SolidColorBrush(Color.Parse("#14B8A6"))),
+                "gray" or "grey" => Brush("ThemeTagGrayBrush", new SolidColorBrush(Color.Parse("#6B7280"))),
                 _ => Primary,
             };
         }
@@ -5231,7 +5240,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                 Text = day.DayNumber.ToString(),
                 FontSize = FontSize("ThemeFontSizeLg", 18),
                 FontWeight = Avalonia.Media.FontWeight.Bold,
-                Foreground = day.IsToday ? Avalonia.Media.Brushes.White : TextPrimary,
+                Foreground = day.IsToday ? TextOnAccent : TextPrimary,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             };
 
@@ -5316,7 +5325,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                         {
                             Text = evt.Title,
                             FontSize = FontSize("ThemeFontSizeXs", 10),
-                            Foreground = Avalonia.Media.Brushes.White,
+                            Foreground = TextOnAccent,
                             TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
                         }
                     };
@@ -5517,7 +5526,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             {
                 var quarterLine = new Border
                 {
-                    BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#20808080")),
+                    BorderBrush = HoverSubtle,
                     BorderThickness = new Thickness(0, 0, 0, 1),
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
                 };
@@ -5645,7 +5654,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             Text = evt.Title,
             FontSize = FontSize("ThemeFontSizeXs", 10),
             FontWeight = FontWeight.SemiBold,
-            Foreground = Avalonia.Media.Brushes.White,
+            Foreground = TextOnAccent,
             TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
             MaxLines = 1,
         });
@@ -5657,7 +5666,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             {
                 Text = timeRange,
                 FontSize = FontSize("ThemeFontSizeXxs", 9),
-                Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Colors.White, 0.75),
+                Foreground = new SolidColorBrush(((TextOnAccent as SolidColorBrush)?.Color ?? Colors.White), 0.75),
                 TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
                 MaxLines = 1,
                 Margin = new Thickness(0, 1, 0, 0),
@@ -5684,7 +5693,7 @@ public sealed class AdaptiveViewRenderer : UserControl
         // Darker left accent border for polished look
         var eventColor = eventBrush is Avalonia.Media.SolidColorBrush scb
             ? scb.Color
-            : Avalonia.Media.Colors.DodgerBlue;
+            : (Primary as SolidColorBrush)?.Color ?? Colors.DodgerBlue;
         var accentColor = Avalonia.Media.Color.FromArgb(
             255,
             (byte)Math.Max(0, eventColor.R - 40),
@@ -6200,7 +6209,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                     {
                         Text = evt.Title,
                         FontSize = FontSize("ThemeFontSizeSm", 12),
-                        Foreground = Avalonia.Media.Brushes.White,
+                        Foreground = TextOnAccent,
                         TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
                     }
                 };
@@ -6819,10 +6828,8 @@ public sealed class AdaptiveViewRenderer : UserControl
 
         var selectionRect = new Border
         {
-            Background = new Avalonia.Media.SolidColorBrush(
-                Avalonia.Media.Color.FromArgb(40, 100, 150, 255)),
-            BorderBrush = new Avalonia.Media.SolidColorBrush(
-                Avalonia.Media.Color.FromArgb(120, 100, 150, 255)),
+            Background = Brush("ThemeLinkBackgroundBrush", new SolidColorBrush(Color.FromArgb(40, 100, 150, 255))),
+            BorderBrush = Brush("ThemeLinkBackgroundActiveBrush", new SolidColorBrush(Color.FromArgb(120, 100, 150, 255))),
             BorderThickness = new Thickness(1),
             IsVisible = false,
             IsHitTestVisible = false,
@@ -7620,7 +7627,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                     {
                         Text = "Archived",
                         FontSize = FontSize("ThemeFontSizeXs", 10),
-                        Foreground = Brushes.White,
+                        Foreground = TextOnAccent,
                     },
                 });
             }
@@ -7636,7 +7643,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                     {
                         Text = "Trashed",
                         FontSize = FontSize("ThemeFontSizeXs", 10),
-                        Foreground = Brushes.White,
+                        Foreground = TextOnAccent,
                     },
                 });
             }
@@ -8165,7 +8172,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             for (var i = 0; i < 2; i++)
             {
                 modeButtons[i].Background = i == mode ? Primary : Brushes.Transparent;
-                modeButtons[i].Foreground = i == mode ? Brushes.White : TextMuted;
+                modeButtons[i].Foreground = i == mode ? TextOnAccent : TextMuted;
             }
 
             switch (mode)
@@ -8203,7 +8210,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                             Data = StreamGeometry.Parse(modeIconPaths[i]),
                             Width = 12,
                             Height = 12,
-                            Foreground = i == 0 ? Brushes.White : TextMuted,
+                            Foreground = i == 0 ? TextOnAccent : TextMuted,
                         },
                         new TextBlock { Text = modeLabels[i], VerticalAlignment = VerticalAlignment.Center },
                     },
@@ -8214,7 +8221,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                 FontSize = FontSize("ThemeFontSizeSm", 12),
                 CornerRadius = cornerRadius,
                 Background = i == 0 ? Primary : Brushes.Transparent,
-                Foreground = i == 0 ? Brushes.White : TextMuted,
+                Foreground = i == 0 ? TextOnAccent : TextMuted,
             };
             modeButtons[i].Click += (_, _) =>
             {
@@ -8966,7 +8973,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             BoxShadow = new BoxShadows(new BoxShadow
             {
                 OffsetX = 0, OffsetY = 4, Blur = 12,
-                Color = Color.FromArgb(80, 0, 0, 0),
+                Color = ShadowColor,
             }),
         };
 
@@ -9417,7 +9424,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             BoxShadow = new BoxShadows(new BoxShadow
             {
                 OffsetX = 0, OffsetY = 4, Blur = 12,
-                Color = Color.FromArgb(80, 0, 0, 0),
+                Color = ShadowColor,
             }),
         };
 
@@ -10521,7 +10528,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             },
             HorizontalAlignment = HorizontalAlignment.Right,
             Background = Primary,
-            Foreground = Brushes.White,
+            Foreground = TextOnAccent,
             Padding = new Thickness(Dbl("ThemeSpacingMd", 12), Dbl("ThemeSpacingXs", 4)),
             CornerRadius = new CornerRadius(4),
         };
@@ -10535,7 +10542,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(Dbl("ThemeSpacingSm", 8)),
-            BoxShadow = new BoxShadows(new BoxShadow { Blur = 8, OffsetY = 4, Color = Color.Parse("#40000000") }),
+            BoxShadow = new BoxShadows(new BoxShadow { Blur = 8, OffsetY = 4, Color = ShadowColor }),
             MinWidth = 280,
         };
 
@@ -10687,7 +10694,9 @@ public sealed class AdaptiveViewRenderer : UserControl
         }
 
         // The button itself
-        var underlineColor = isForeground ? Color.Parse("#0B6E99") : Color.Parse("#DFAB01");
+        var fgUnderline = (Brush("ThemeLinkBrush", new SolidColorBrush(Color.Parse("#0B6E99"))) as SolidColorBrush)?.Color ?? Color.Parse("#0B6E99");
+        var bgUnderline = (Brush("ThemeHighlightUnderlineBrush", new SolidColorBrush(Color.Parse("#DFAB01"))) as SolidColorBrush)?.Color ?? Color.Parse("#DFAB01");
+        var underlineColor = isForeground ? fgUnderline : bgUnderline;
         var btnContent = new StackPanel
         {
             Orientation = Orientation.Vertical,
@@ -10782,12 +10791,12 @@ public sealed class AdaptiveViewRenderer : UserControl
         {
             Text = "\u2715",  // ✕
             FontSize = FontSize("ThemeFontSizeXsSm", 11),
-            Foreground = Brushes.White,
+            Foreground = TextOnAccent,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        var deleteBtnDefaultBg = new SolidColorBrush(Color.FromArgb(160, 60, 90, 140));
-        var deleteBtnHoverBg = new SolidColorBrush(Color.FromArgb(220, 80, 120, 180));
+        var deleteBtnDefaultBg = Brush("ThemeDeleteBtnBrush", new SolidColorBrush(Color.FromArgb(160, 60, 90, 140)));
+        var deleteBtnHoverBg = Brush("ThemeDeleteBtnHoverBrush", new SolidColorBrush(Color.FromArgb(220, 80, 120, 180)));
         var deleteBtn = new Border
         {
             Child = deleteBtnText,
@@ -11248,7 +11257,7 @@ public sealed class AdaptiveViewRenderer : UserControl
         {
             Content = new TextBlock { Text = "Update", FontSize = FontSize("ThemeFontSizeSm", 12) },
             Background = Primary,
-            Foreground = Brushes.White,
+            Foreground = TextOnAccent,
             Padding = new Thickness(Dbl("ThemeSpacingMd", 12), Dbl("ThemeSpacingXs", 4)),
             CornerRadius = new CornerRadius(4),
         };
@@ -11267,7 +11276,7 @@ public sealed class AdaptiveViewRenderer : UserControl
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(Dbl("ThemeSpacingSm", 8)),
-                BoxShadow = new BoxShadows(new BoxShadow { Blur = 8, OffsetY = 4, Color = Color.Parse("#40000000") }),
+                BoxShadow = new BoxShadows(new BoxShadow { Blur = 8, OffsetY = 4, Color = ShadowColor }),
                 MinWidth = 280,
             },
             PlacementTarget = editor,
@@ -13697,7 +13706,7 @@ public sealed class AdaptiveViewRenderer : UserControl
 
         var backdrop = new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#80000000")),
+            Background = Brush("ThemeModalBackdropBrush", new SolidColorBrush(Color.Parse("#80000000"))),
         };
         backdrop.PointerPressed += (_, _) => CloseOverlay();
 
@@ -13760,7 +13769,7 @@ public sealed class AdaptiveViewRenderer : UserControl
             Child = new TextBlock
             {
                 Text = message,
-                Foreground = Brushes.White,
+                Foreground = TextOnAccent,
                 FontSize = FontSize("ThemeFontSizeSmMd", 13),
             },
         };

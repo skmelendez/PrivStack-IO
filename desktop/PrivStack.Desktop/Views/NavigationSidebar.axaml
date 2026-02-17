@@ -476,7 +476,7 @@
                                                         <TextBlock Text="{Binding UserInitial}"
                                                                    IsVisible="{Binding !HasProfileImage}"
                                                                    FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="SemiBold"
-                                                                   Foreground="White"
+                                                                   Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"/>
                                                     </Panel>
@@ -625,7 +625,7 @@
                                                     <TextBlock Text="{Binding UserInitial}"
                                                                IsVisible="{Binding !HasProfileImage}"
                                                                FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="SemiBold"
-                                                               Foreground="White"
+                                                               Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"/>
                                                 </Panel>

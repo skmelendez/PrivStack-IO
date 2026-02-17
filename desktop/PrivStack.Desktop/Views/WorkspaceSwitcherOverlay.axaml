@@ -148,7 +148,7 @@
                                             </TextBlock>
                                             <Button Grid.Column="1" Content="Delete"
                                                     Background="{DynamicResource ThemeDangerBrush}"
-                                                    Foreground="White"
+                                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                     Padding="12,6" CornerRadius="4" Margin="8,0,4,0"
                                                     FontSize="{DynamicResource ThemeFontSizeSm}"
                                                     Command="{Binding $parent[UserControl].((vm:WorkspaceSwitcherViewModel)DataContext).DeleteWorkspaceCommand}"
@@ -202,7 +202,7 @@
                             <Button Grid.Column="1" Content="Create"
                                     Command="{Binding CreateWorkspaceCommand}"
                                     Background="{DynamicResource ThemePrimaryBrush}"
-                                    Foreground="White"
+                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                     Padding="16,8" CornerRadius="6" Margin="8,0,4,0"
                                     FontSize="{DynamicResource ThemeFontSizeSm}"/>
                             <Button Grid.Column="2" Content="Cancel"

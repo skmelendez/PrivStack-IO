@@ -108,7 +108,7 @@
                             Command="{Binding ConfirmDownloadCommand}"
                             Padding="16,8"
                             Background="{DynamicResource ThemePrimaryBrush}"
-                            Foreground="White"/>
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"/>
                 </StackPanel>
             </StackPanel>
 

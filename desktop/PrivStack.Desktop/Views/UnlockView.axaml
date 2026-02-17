@@ -69,7 +69,7 @@
                         HorizontalContentAlignment="Center"
                         Classes="action-btn"
                         Background="{DynamicResource ThemePrimaryBrush}"
-                        Foreground="White"
+                        Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                         Padding="16,12"
                         IsVisible="{Binding !IsAppLoading}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -138,7 +138,7 @@
                                        TextWrapping="Wrap" TextAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                                 <Button Command="{Binding ConfirmResetDataCommand}"
-                                        Background="{DynamicResource ThemeDangerBrush}" Foreground="White"
+                                        Background="{DynamicResource ThemeDangerBrush}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                         Padding="14,8" CornerRadius="6"
                                         FontSize="{DynamicResource ThemeFontSizeXsSm}" FontWeight="SemiBold"
                                         Content="Wipe Data &amp; Reset"/>

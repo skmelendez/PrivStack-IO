@@ -220,7 +220,7 @@
                                                         IsVisible="{Binding Color, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                     <TextBlock Text="{Binding Value}"
                                                                FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                               Foreground="White"
+                                                               Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                                FontWeight="SemiBold"/>
                                                 </Border>
                                                 <!-- Plain text variant (when no Color) -->
@@ -637,7 +637,7 @@
                                             <Button Content="Save"
                                                     Command="{Binding SavePropertyDefinitionCommand}"
                                                     Background="{DynamicResource ThemePrimaryBrush}"
-                                                    Foreground="White"
+                                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                     Padding="10,5"
                                                     CornerRadius="4"
                                                     FontSize="{DynamicResource ThemeFontSizeSmMd}"

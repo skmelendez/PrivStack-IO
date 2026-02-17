@@ -1135,7 +1135,7 @@
                     <Button Content="Reset Settings"
                             Command="{Binding ResetSettingsCommand}"
                             Background="{DynamicResource ThemeDangerBrush}"
-                            Foreground="White"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                             Padding="16,8"
                             HorizontalAlignment="Left"/>
 
@@ -1152,7 +1152,7 @@
                                 Command="{Binding ReseedSampleDataCommand}"
                                 IsEnabled="{Binding !IsReseeding}"
                                 Background="{DynamicResource ThemeDangerBrush}"
-                                Foreground="White"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                 Padding="16,8"
                                 Margin="0,0,12,8"/>
 
@@ -1160,7 +1160,7 @@
                                 Command="{Binding WipeSeedDataCommand}"
                                 IsEnabled="{Binding !IsReseeding}"
                                 Background="{DynamicResource ThemeDangerBrush}"
-                                Foreground="White"
+                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                 Padding="16,8"
                                 Margin="0,0,12,8"/>
 

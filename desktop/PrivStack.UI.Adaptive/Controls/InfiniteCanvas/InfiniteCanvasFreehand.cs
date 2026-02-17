@@ -90,7 +90,7 @@ public sealed partial class InfiniteCanvasControl
     {
         if (element.StrokePoints.Count < 2) return;
 
-        var strokeColor = ParseColor(element.StrokeColor, Colors.White);
+        var strokeColor = ParseColor(element.StrokeColor, GetColor("ThemeTextPrimaryColor", Colors.White));
         var pen = new Pen(
             new SolidColorBrush(strokeColor),
             element.StrokeWidth * Zoom,
