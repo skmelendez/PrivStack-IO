@@ -6,6 +6,7 @@ using AvaloniaEdit;
 using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Desktop.ViewModels;
 using PrivStack.Sdk;
 using RichTextEditorControl = PrivStack.UI.Adaptive.Controls.RichTextEditor.RichTextEditor;
@@ -128,9 +129,14 @@ public partial class MainWindow : Window
             vm.PropertyChanged += OnMainVmPropertyChanged;
 
             var lastTab = _settings.Settings.LastActiveTab;
-            if (!string.IsNullOrEmpty(lastTab))
+            var pluginRegistry = App.Services.GetRequiredService<IPluginRegistry>();
+            if (!string.IsNullOrEmpty(lastTab) && pluginRegistry.GetPluginForNavItem(lastTab) != null)
             {
                 vm.SelectTabCommand.Execute(lastTab);
+            }
+            else if (pluginRegistry.NavigationItems.Count > 0)
+            {
+                vm.SelectTabCommand.Execute(pluginRegistry.NavigationItems[0].Id);
             }
         }
 
