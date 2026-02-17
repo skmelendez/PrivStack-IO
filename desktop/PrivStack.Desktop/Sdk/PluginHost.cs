@@ -23,6 +23,7 @@ internal sealed class PluginHost : IPluginHost
         Services.Abstractions.IUiDispatcher dispatcher,
         IInfoPanelService infoPanelService,
         IFocusModeService focusModeService,
+        IToastService toastService,
         IConnectionService? connectionService = null,
         IPropertyService? propertyService = null)
     {
@@ -34,6 +35,7 @@ internal sealed class PluginHost : IPluginHost
         DialogService = dialogService;
         InfoPanel = infoPanelService;
         FocusMode = focusModeService;
+        Toast = toastService;
         Connections = connectionService;
         Properties = propertyService;
         Messenger = WeakReferenceMessenger.Default;
@@ -48,6 +50,7 @@ internal sealed class PluginHost : IPluginHost
     public ISdkDialogService? DialogService { get; }
     public IInfoPanelService InfoPanel { get; }
     public IFocusModeService FocusMode { get; }
+    public IToastService Toast { get; }
     public IConnectionService? Connections { get; }
     public IPropertyService? Properties { get; }
     public IMessenger Messenger { get; }

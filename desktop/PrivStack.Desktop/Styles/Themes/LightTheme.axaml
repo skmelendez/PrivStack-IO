@@ -88,6 +88,10 @@
     <Color x:Key="ThemeWarning">#B45309</Color>
     <Color x:Key="ThemeWarningMuted">#26B45309</Color>
 
+    <!-- Info - informational messages -->
+    <Color x:Key="ThemeInfo">#2563EB</Color>
+    <Color x:Key="ThemeInfoMuted">#262563EB</Color>
+
     <!-- Danger - errors, destructive actions -->
     <Color x:Key="ThemeDanger">#DC2626</Color>
     <Color x:Key="ThemeDangerMuted">#26DC2626</Color>
@@ -157,6 +161,8 @@
     <SolidColorBrush x:Key="ThemeSuccessMutedBrush" Color="{StaticResource ThemeSuccessMuted}"/>
     <SolidColorBrush x:Key="ThemeWarningBrush" Color="{StaticResource ThemeWarning}"/>
     <SolidColorBrush x:Key="ThemeWarningMutedBrush" Color="{StaticResource ThemeWarningMuted}"/>
+    <SolidColorBrush x:Key="ThemeInfoBrush" Color="{StaticResource ThemeInfo}"/>
+    <SolidColorBrush x:Key="ThemeInfoMutedBrush" Color="{StaticResource ThemeInfoMuted}"/>
     <SolidColorBrush x:Key="ThemeDangerBrush" Color="{StaticResource ThemeDanger}"/>
     <SolidColorBrush x:Key="ThemeDangerMutedBrush" Color="{StaticResource ThemeDangerMuted}"/>
 

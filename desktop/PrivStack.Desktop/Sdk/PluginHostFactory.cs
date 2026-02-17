@@ -24,6 +24,7 @@ internal sealed class PluginHostFactory
     private readonly IFocusModeService _focusModeService;
     private readonly IConnectionService _connectionService;
     private readonly IPropertyService _propertyService;
+    private readonly IToastService _toastService;
 
     public ICapabilityBroker CapabilityBroker => _capabilityBroker;
 
@@ -38,6 +39,7 @@ internal sealed class PluginHostFactory
         _focusModeService = App.Services.GetRequiredService<IFocusModeService>();
         _connectionService = App.Services.GetRequiredService<IConnectionService>();
         _propertyService = App.Services.GetRequiredService<EntityMetadataService>();
+        _toastService = App.Services.GetRequiredService<IToastService>();
 
         // Register the default local filesystem storage provider
         _capabilityBroker.Register<IStorageProvider>(new LocalStorageProvider());
@@ -49,6 +51,6 @@ internal sealed class PluginHostFactory
 
     public IPluginHost CreateHost(string pluginId)
     {
-        return new PluginHost(_sdkHost, _capabilityBroker, pluginId, _dialogService, _appSettings, _pluginRegistry, _dispatcher, _infoPanelService, _focusModeService, _connectionService, _propertyService);
+        return new PluginHost(_sdkHost, _capabilityBroker, pluginId, _dialogService, _appSettings, _pluginRegistry, _dispatcher, _infoPanelService, _focusModeService, _toastService, _connectionService, _propertyService);
     }
 }

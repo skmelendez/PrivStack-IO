@@ -10,6 +10,7 @@ using PrivStack.Desktop.Services.Update;
 using PrivStack.Desktop.ViewModels;
 using PrivStack.Sdk;
 using PrivStack.Sdk.Capabilities;
+using IToastService = PrivStack.Sdk.IToastService;
 
 namespace PrivStack.Desktop.Services;
 
@@ -45,6 +46,9 @@ public static class ServiceRegistration
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<ISyncIngestionService, SyncIngestionService>();
         services.AddSingleton<IPluginRegistry, PluginRegistry>();
+
+        services.AddSingleton<ToastService>();
+        services.AddSingleton<IToastService>(sp => sp.GetRequiredService<ToastService>());
 
         services.AddSingleton<FocusModeService>();
         services.AddSingleton<IFocusModeService>(sp => sp.GetRequiredService<FocusModeService>());

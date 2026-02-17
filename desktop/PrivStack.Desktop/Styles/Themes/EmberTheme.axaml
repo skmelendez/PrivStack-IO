@@ -55,6 +55,8 @@
     <Color x:Key="ThemeSuccessMuted">#4D5A9848</Color>
     <Color x:Key="ThemeWarning">#D0A030</Color>
     <Color x:Key="ThemeWarningMuted">#4DD0A030</Color>
+    <Color x:Key="ThemeInfo">#5B8AD0</Color>
+    <Color x:Key="ThemeInfoMuted">#4D5B8AD0</Color>
     <Color x:Key="ThemeDanger">#D04040</Color>
     <Color x:Key="ThemeDangerMuted">#4DD04040</Color>
 
@@ -106,6 +108,8 @@
     <SolidColorBrush x:Key="ThemeSuccessMutedBrush" Color="{StaticResource ThemeSuccessMuted}"/>
     <SolidColorBrush x:Key="ThemeWarningBrush" Color="{StaticResource ThemeWarning}"/>
     <SolidColorBrush x:Key="ThemeWarningMutedBrush" Color="{StaticResource ThemeWarningMuted}"/>
+    <SolidColorBrush x:Key="ThemeInfoBrush" Color="{StaticResource ThemeInfo}"/>
+    <SolidColorBrush x:Key="ThemeInfoMutedBrush" Color="{StaticResource ThemeInfoMuted}"/>
     <SolidColorBrush x:Key="ThemeDangerBrush" Color="{StaticResource ThemeDanger}"/>
     <SolidColorBrush x:Key="ThemeDangerMutedBrush" Color="{StaticResource ThemeDangerMuted}"/>
 
