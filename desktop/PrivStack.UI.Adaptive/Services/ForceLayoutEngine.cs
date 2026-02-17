@@ -23,12 +23,6 @@ public sealed class PhysicsParameters
     /// <summary>Spring attraction between connected nodes (0-1).</summary>
     public double LinkStrength { get; set; } = 0.005;
 
-    // Kept for interface compat (unused by engine)
-    public double RepulsionStrength { get; set; } = -8000;
-    public double SpringStrength { get; set; } = 0.08;
-    public double CollisionStrength { get; set; } = 0.7;
-    public double VelocityDecay { get; set; } = 0.6;
-    public double MinSeparation { get; set; } = 90.0;
     public double Alpha { get; set; } = 1.0;
     public double AlphaMin { get; set; } = 0.001;
     public double AlphaDecay { get; set; } = 0.02;
