@@ -213,26 +213,14 @@ public partial class InfoPanelViewModel : ViewModelBase
     [ObservableProperty]
     private double _graphPanelHeight = 280;
 
-    // --- Graph physics sliders (tuned for info panel ~320px) ---
-    // Repel radius slider (0-100 maps to 100-250)
-    [ObservableProperty] private double _neuronRepelSlider = 50;
-    public double NeuronRepelRadius => 100 + (NeuronRepelSlider / 100.0 * 150);
-    public double NeuronRepelDisplay => NeuronRepelSlider;
+    // Physics settings (info panel ranges: repel 100-250, center 0-0.05, dist 250-500, force 0-0.05)
+    public GraphPhysicsSettings PhysicsSettings { get; } = new(100, 250, 0, 0.05, 250, 500, 0, 0.05);
 
-    // Center force slider (0-100 maps to 0.0-0.05)
-    [ObservableProperty] private double _neuronCenterForceSlider = 50;
-    public double NeuronCenterForce => NeuronCenterForceSlider / 100.0 * 0.05;
-    public double NeuronCenterForceDisplay => NeuronCenterForceSlider;
-
-    // Link distance slider (0-100 maps to 250-500)
-    [ObservableProperty] private double _neuronLinkDistanceSlider;
-    public double NeuronLinkDistance => 250 + (NeuronLinkDistanceSlider / 100.0 * 250);
-    public double NeuronLinkDistanceDisplay => NeuronLinkDistanceSlider;
-
-    // Link force slider (0-100 maps to 0.0-0.05)
-    [ObservableProperty] private double _neuronLinkForceSlider = 50;
-    public double NeuronLinkForce => NeuronLinkForceSlider / 100.0 * 0.05;
-    public double NeuronLinkForceDisplay => NeuronLinkForceSlider;
+    // Convenience accessors for code-behind
+    public double NeuronRepelRadius => PhysicsSettings.RepelRadius;
+    public double NeuronCenterForce => PhysicsSettings.CenterForce;
+    public double NeuronLinkDistance => PhysicsSettings.LinkDistance;
+    public double NeuronLinkForce => PhysicsSettings.LinkForce;
 
     public event EventHandler? PhysicsParametersChanged;
 
@@ -292,10 +280,11 @@ public partial class InfoPanelViewModel : ViewModelBase
         GraphPanelHeight = Math.Clamp(_appSettings.Settings.InfoPanelGraphHeight, 100, 800);
 
         // Restore physics sliders
-        NeuronRepelSlider = _appSettings.Settings.InfoPanelRepelSlider;
-        NeuronCenterForceSlider = _appSettings.Settings.InfoPanelCenterForceSlider;
-        NeuronLinkDistanceSlider = _appSettings.Settings.InfoPanelLinkDistanceSlider;
-        NeuronLinkForceSlider = _appSettings.Settings.InfoPanelLinkForceSlider;
+        PhysicsSettings.RepelSlider = _appSettings.Settings.InfoPanelRepelSlider;
+        PhysicsSettings.CenterForceSlider = _appSettings.Settings.InfoPanelCenterForceSlider;
+        PhysicsSettings.LinkDistanceSlider = _appSettings.Settings.InfoPanelLinkDistanceSlider;
+        PhysicsSettings.LinkForceSlider = _appSettings.Settings.InfoPanelLinkForceSlider;
+        PhysicsSettings.PhysicsChanged += OnPhysicsSettingsChanged;
 
         // Subscribe to active item changes
         _infoPanelService.ActiveItemChanged += OnActiveItemChanged;
@@ -344,41 +333,13 @@ public partial class InfoPanelViewModel : ViewModelBase
         _appSettings.SaveDebounced();
     }
 
-    partial void OnNeuronRepelSliderChanged(double value)
+    private void OnPhysicsSettingsChanged(object? sender, EventArgs e)
     {
-        _appSettings.Settings.InfoPanelRepelSlider = value;
+        _appSettings.Settings.InfoPanelRepelSlider = PhysicsSettings.RepelSlider;
+        _appSettings.Settings.InfoPanelCenterForceSlider = PhysicsSettings.CenterForceSlider;
+        _appSettings.Settings.InfoPanelLinkDistanceSlider = PhysicsSettings.LinkDistanceSlider;
+        _appSettings.Settings.InfoPanelLinkForceSlider = PhysicsSettings.LinkForceSlider;
         _appSettings.SaveDebounced();
-        OnPropertyChanged(nameof(NeuronRepelDisplay));
-        NotifyNeuronPhysics(nameof(NeuronRepelRadius));
-    }
-
-    partial void OnNeuronCenterForceSliderChanged(double value)
-    {
-        _appSettings.Settings.InfoPanelCenterForceSlider = value;
-        _appSettings.SaveDebounced();
-        OnPropertyChanged(nameof(NeuronCenterForceDisplay));
-        NotifyNeuronPhysics(nameof(NeuronCenterForce));
-    }
-
-    partial void OnNeuronLinkDistanceSliderChanged(double value)
-    {
-        _appSettings.Settings.InfoPanelLinkDistanceSlider = value;
-        _appSettings.SaveDebounced();
-        OnPropertyChanged(nameof(NeuronLinkDistanceDisplay));
-        NotifyNeuronPhysics(nameof(NeuronLinkDistance));
-    }
-
-    partial void OnNeuronLinkForceSliderChanged(double value)
-    {
-        _appSettings.Settings.InfoPanelLinkForceSlider = value;
-        _appSettings.SaveDebounced();
-        OnPropertyChanged(nameof(NeuronLinkForceDisplay));
-        NotifyNeuronPhysics(nameof(NeuronLinkForce));
-    }
-
-    private void NotifyNeuronPhysics(string prop)
-    {
-        OnPropertyChanged(prop);
         PhysicsParametersChanged?.Invoke(this, EventArgs.Empty);
     }
 

@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using PrivStack.Sdk.Json;
 using System.Text.RegularExpressions;
-using PrivStack.Desktop.Plugins.Graph.Models;
+using PrivStack.UI.Adaptive.Models;
 using PrivStack.Sdk;
 using Serilog;
 
@@ -55,22 +55,22 @@ public sealed class GraphDataService
 
         // Load all entity types in parallel
         // LinkType MUST match ILinkableItemProvider.LinkType so wiki-link targets resolve correctly.
-        var pageTask = LoadEntitiesAsync("page", "page", NodeType.Note);
-        var taskTask = LoadEntitiesAsync("task", "task", NodeType.Task);
-        var projectTask = LoadEntitiesAsync("project", "project", NodeType.Project);
-        var contactTask = LoadEntitiesAsync("contact", "contact", NodeType.Contact);
-        var journalTask = LoadEntitiesAsync("journal_entry", "journal", NodeType.Journal);
-        var eventTask = LoadEntitiesAsync("event", "event", NodeType.Event);
-        var dealTask = LoadEntitiesAsync("deal", "deal", NodeType.Deal);
-        var transactionTask = LoadEntitiesAsync("transaction", "transaction", NodeType.Transaction);
-        var snippetTask = LoadEntitiesAsync("snippet", "snippet", NodeType.Snippet);
-        var rssTask = LoadEntitiesAsync("rss_article", "rss_article", NodeType.RssArticle);
-        var credentialTask = LoadEntitiesAsync("credential", "credential", NodeType.Credential);
-        var fileTask = LoadEntitiesAsync("vault_file", "file", NodeType.File);
-        var companyTask = LoadEntitiesAsync("company", "company", NodeType.Company);
-        var groupTask = LoadEntitiesAsync("contact_group", "contact_group", NodeType.ContactGroup);
-        var wikiSourceTask = LoadEntitiesAsync("wiki_source", "wiki_source", NodeType.WikiSource);
-        var webClipTask = LoadEntitiesAsync("web_clip", "web_clip", NodeType.WebClip);
+        var pageTask = LoadEntitiesAsync("page", "page", "note");
+        var taskTask = LoadEntitiesAsync("task", "task", "task");
+        var projectTask = LoadEntitiesAsync("project", "project", "project");
+        var contactTask = LoadEntitiesAsync("contact", "contact", "contact");
+        var journalTask = LoadEntitiesAsync("journal_entry", "journal", "journal");
+        var eventTask = LoadEntitiesAsync("event", "event", "event");
+        var dealTask = LoadEntitiesAsync("deal", "deal", "deal");
+        var transactionTask = LoadEntitiesAsync("transaction", "transaction", "transaction");
+        var snippetTask = LoadEntitiesAsync("snippet", "snippet", "snippet");
+        var rssTask = LoadEntitiesAsync("rss_article", "rss_article", "rss");
+        var credentialTask = LoadEntitiesAsync("credential", "credential", "credential");
+        var fileTask = LoadEntitiesAsync("vault_file", "file", "file");
+        var companyTask = LoadEntitiesAsync("company", "company", "company");
+        var groupTask = LoadEntitiesAsync("contact_group", "contact_group", "contact_group");
+        var wikiSourceTask = LoadEntitiesAsync("wiki_source", "wiki_source", "wiki_source");
+        var webClipTask = LoadEntitiesAsync("web_clip", "web_clip", "web_clip");
 
         await Task.WhenAll(pageTask, taskTask, projectTask, contactTask, journalTask, eventTask,
             dealTask, transactionTask, snippetTask, rssTask, credentialTask, fileTask,
@@ -106,7 +106,7 @@ public sealed class GraphDataService
         // Calculate link counts
         foreach (var edge in graphData.Edges)
         {
-            var isStructural = edge.Type is EdgeType.TagRelation or EdgeType.ProjectMembership or EdgeType.ParentChild or EdgeType.GroupMembership or EdgeType.CompanyMembership or EdgeType.WikiSourceMembership;
+            var isStructural = edge.EdgeType is "tag" or "project" or "parent" or "group" or "company" or "wiki_source";
             if (graphData.Nodes.TryGetValue(edge.SourceId, out var source))
             {
                 source.LinkCount++;
@@ -131,7 +131,7 @@ public sealed class GraphDataService
         return globalGraph.GetLocalGraph(itemId, depth);
     }
 
-    private async Task<List<GraphNode>> LoadEntitiesAsync(string entityType, string linkType, NodeType nodeType)
+    private async Task<List<GraphNode>> LoadEntitiesAsync(string entityType, string linkType, string nodeType)
     {
         var nodes = new List<GraphNode>();
         try
@@ -344,7 +344,7 @@ public sealed class GraphDataService
             }
             if (edgeSet.Add((sourceKey, targetKey)))
             {
-                graphData.Edges.Add(new GraphEdge { SourceId = sourceKey, TargetId = targetKey, Type = EdgeType.WikiLink });
+                graphData.Edges.Add(new GraphEdge { SourceId = sourceKey, TargetId = targetKey, EdgeType = "link" });
             }
         }
     }
@@ -369,7 +369,7 @@ public sealed class GraphDataService
                     {
                         SourceId = sourceKey,
                         TargetId = projectKey,
-                        Type = EdgeType.ProjectMembership,
+                        EdgeType = "project",
                     });
                 }
             }
@@ -404,7 +404,7 @@ public sealed class GraphDataService
                 }
                 if (edgeSet.Add((sourceKey, targetKey)))
                 {
-                    graphData.Edges.Add(new GraphEdge { SourceId = sourceKey, TargetId = targetKey, Type = EdgeType.WikiLink });
+                    graphData.Edges.Add(new GraphEdge { SourceId = sourceKey, TargetId = targetKey, EdgeType = "link" });
                 }
             }
         }
@@ -432,7 +432,7 @@ public sealed class GraphDataService
                 }
                 if (edgeSet.Add((sourceKey, targetKey)))
                 {
-                    graphData.Edges.Add(new GraphEdge { SourceId = sourceKey, TargetId = targetKey, Type = EdgeType.WikiLink });
+                    graphData.Edges.Add(new GraphEdge { SourceId = sourceKey, TargetId = targetKey, EdgeType = "link" });
                 }
             }
         }
@@ -474,7 +474,7 @@ public sealed class GraphDataService
                     {
                         SourceId = contactKey,
                         TargetId = companyKey,
-                        Type = EdgeType.CompanyMembership,
+                        EdgeType = "company",
                     });
                     count++;
                 }
@@ -531,7 +531,7 @@ public sealed class GraphDataService
                         {
                             SourceId = contactKey,
                             TargetId = groupKey,
-                            Type = EdgeType.GroupMembership,
+                            EdgeType = "group",
                         });
                         count++;
                     }
@@ -583,7 +583,7 @@ public sealed class GraphDataService
                     {
                         SourceId = taskKey,
                         TargetId = projectKey,
-                        Type = EdgeType.ProjectMembership,
+                        EdgeType = "project",
                     });
                     count++;
                 }
@@ -616,7 +616,7 @@ public sealed class GraphDataService
             var tagNodeId = $"tag:{tag}";
             graphData.Nodes[tagNodeId] = new GraphNode
             {
-                Id = tagNodeId, Title = $"#{tag}", NodeType = NodeType.Tag, LinkType = "tag",
+                Id = tagNodeId, Title = $"#{tag}", NodeType = "tag", LinkType = "tag",
                 Tags = [], ModifiedAt = DateTimeOffset.UtcNow,
                 X = _random.NextDouble() * 1000 - 500, Y = _random.NextDouble() * 1000 - 500
             };
@@ -625,7 +625,7 @@ public sealed class GraphDataService
             {
                 if (edgeSet.Add((itemId, tagNodeId)))
                 {
-                    graphData.Edges.Add(new GraphEdge { SourceId = itemId, TargetId = tagNodeId, Type = EdgeType.TagRelation, Label = tag });
+                    graphData.Edges.Add(new GraphEdge { SourceId = itemId, TargetId = tagNodeId, EdgeType = "tag", Label = tag });
                 }
             }
         }
@@ -666,7 +666,7 @@ public sealed class GraphDataService
                     {
                         SourceId = childKey,
                         TargetId = parentKey,
-                        Type = EdgeType.ParentChild,
+                        EdgeType = "parent",
                     });
                     count++;
                 }
@@ -717,7 +717,7 @@ public sealed class GraphDataService
                     {
                         SourceId = pageKey,
                         TargetId = wikiKey,
-                        Type = EdgeType.WikiSourceMembership,
+                        EdgeType = "wiki_source",
                     });
                     count++;
                 }
