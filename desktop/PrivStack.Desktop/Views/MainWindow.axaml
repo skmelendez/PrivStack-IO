@@ -292,8 +292,9 @@
                                                 <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
                                             </Style>
                                         </Button.Styles>
-                                        <TextBlock Text="⏸" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                        <PathIcon Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z"
+                                                 Width="10" Height="10"
+                                                 Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                                     </Button>
 
                                     <!-- Resume button (visible when paused) -->
@@ -308,8 +309,9 @@
                                                 <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
                                             </Style>
                                         </Button.Styles>
-                                        <TextBlock Text="&#x25B8;" FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                   Foreground="{DynamicResource ThemeSuccessBrush}"/>
+                                        <PathIcon Data="M8 5v14l11-7z"
+                                                 Width="10" Height="10"
+                                                 Foreground="{DynamicResource ThemeSuccessBrush}"/>
                                     </Button>
 
                                     <!-- Stop button -->
@@ -323,8 +325,9 @@
                                                 <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
                                             </Style>
                                         </Button.Styles>
-                                        <TextBlock Text="■" FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                   Foreground="{DynamicResource ThemeDangerBrush}"/>
+                                        <PathIcon Data="M6 6h12v12H6z"
+                                                 Width="10" Height="10"
+                                                 Foreground="{DynamicResource ThemeDangerBrush}"/>
                                     </Button>
                                 </StackPanel>
                             </Border>

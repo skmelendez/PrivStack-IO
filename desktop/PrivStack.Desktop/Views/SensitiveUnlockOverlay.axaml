@@ -16,8 +16,10 @@
                 <Border Background="{DynamicResource ThemeHoverBrush}"
                         CornerRadius="50" Width="80" Height="80"
                         HorizontalAlignment="Center">
-                    <TextBlock Text="&#x1F512;" FontSize="{DynamicResource ThemeFontSize3Xl}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <PathIcon Data="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"
+                               Width="48" Height="48"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                 </Border>
 
                 <!-- Title -->

@@ -89,7 +89,8 @@
                                     Command="{Binding SwitchTabCommand}"
                                     CommandParameter="{x:Static vm:DashboardTab.Overview}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="&#x1F4CA;" FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                    <PathIcon Data="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"
+                                             Width="14" Height="14" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                     <TextBlock Text="Overview"/>
                                 </StackPanel>
                             </Button>
@@ -98,7 +99,8 @@
                                     Command="{Binding SwitchTabCommand}"
                                     CommandParameter="{x:Static vm:DashboardTab.Data}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="&#x1F5C3;&#xFE0F;" FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                    <PathIcon Data="M20 6H12l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 12H5V9h14v9z"
+                                             Width="14" Height="14" Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                     <TextBlock Text="Data"/>
                                 </StackPanel>
                             </Button>
@@ -594,8 +596,12 @@
                                 Background="{DynamicResource ThemeSurfaceElevatedBrush}"
                                 BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="&#x1F5C3;&#xFE0F; Database" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Data="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"
+                                              Width="14" Height="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Database" FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                </StackPanel>
                                 <TextBlock Text="{Binding TotalDatabaseSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                 <TextBlock Text="{Binding TotalDatabaseEstimate}"
@@ -611,8 +617,12 @@
                                 Background="{DynamicResource ThemeSurfaceElevatedBrush}"
                                 BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="&#x1F4C1; Files" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
+                                              Width="14" Height="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Files" FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                </StackPanel>
                                 <TextBlock Text="{Binding TotalFilesSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                 <TextBlock Text="Media library" FontSize="{DynamicResource ThemeFontSizeXsSm}"
@@ -624,8 +634,12 @@
                                 Background="{DynamicResource ThemeSurfaceElevatedBrush}"
                                 BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="&#x1F512; Vault" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Data="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"
+                                              Width="14" Height="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Vault" FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                </StackPanel>
                                 <TextBlock Text="{Binding TotalVaultSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                 <TextBlock Text="{Binding TotalVaultEstimate}"
@@ -641,8 +655,12 @@
                                 Background="{DynamicResource ThemePrimaryMutedBrush}"
                                 BoxShadow="0 1 4 0 #0A000000, 0 1 2 0 #06000000">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="&#x1F4BE; Total" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Data="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"
+                                              Width="14" Height="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Total" FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                </StackPanel>
                                 <TextBlock Text="{Binding TotalStorageSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                 <TextBlock Text="{Binding TotalStorageEstimate}"
@@ -790,7 +808,9 @@
                                 FontSize="{DynamicResource ThemeFontSizeSm}"
                                 ToolTip.Tip="Runs WAL checkpoint and vacuum to reclaim disk space">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="&#x1F9F9;" VerticalAlignment="Center"/>
+                                <PathIcon Data="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.26.32 4.57L9.06 8.12c1.31-.9 3.02-.75 4.57.32l5.73-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"
+                                         Width="14" Height="14" VerticalAlignment="Center"
+                                         Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                 <TextBlock Text="Clean Database" VerticalAlignment="Center"
                                            IsVisible="{Binding !IsRunningMaintenance}"/>
                                 <TextBlock Text="Cleaning..." VerticalAlignment="Center"
@@ -805,7 +825,9 @@
                                 FontSize="{DynamicResource ThemeFontSizeSm}"
                                 ToolTip.Tip="Scans for orphaned metadata records and removes them">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="&#x1F50D;" VerticalAlignment="Center"/>
+                                <PathIcon Data="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                                         Width="14" Height="14" VerticalAlignment="Center"
+                                         Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                 <TextBlock Text="Validate Metadata" VerticalAlignment="Center"
                                            IsVisible="{Binding !IsValidatingMetadata}"/>
                                 <TextBlock Text="Validating..." VerticalAlignment="Center"

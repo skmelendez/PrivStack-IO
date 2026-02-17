@@ -351,10 +351,11 @@
                             CornerRadius="4" Padding="12"
                             IsVisible="{Binding HasSpeechWarning}">
                         <Grid ColumnDefinitions="Auto,*">
-                            <TextBlock Grid.Column="0" Text="&#x26A0;&#xFE0F;"
-                                       FontSize="{DynamicResource ThemeFontSizeSm}"
-                                       VerticalAlignment="Top"
-                                       Margin="0,0,8,0"/>
+                            <PathIcon Grid.Column="0"
+                                     Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"
+                                     Width="14" Height="14"
+                                     VerticalAlignment="Top" Margin="0,2,8,0"
+                                     Foreground="{DynamicResource ThemeWarningBrush}"/>
                             <TextBlock Grid.Column="1" Text="{Binding SpeechWarningMessage}"
                                        FontSize="{DynamicResource ThemeFontSizeSm}"
                                        Foreground="{DynamicResource ThemeWarningBrush}"
@@ -464,7 +465,10 @@
                                     HorizontalContentAlignment="Stretch"
                                     Padding="8,6" CornerRadius="4">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <TextBlock Grid.Column="0" Text="&#x1F4C1;" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <PathIcon Grid.Column="0"
+                                             Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
+                                             Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"
+                                             Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                     <TextBlock Grid.Column="1" Text="Default (Local)" FontSize="{DynamicResource ThemeFontSizeXsSm}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
                                                Foreground="{DynamicResource ThemePrimaryBrush}"
@@ -498,7 +502,10 @@
                                     HorizontalContentAlignment="Stretch"
                                     Padding="8,6" CornerRadius="4">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <TextBlock Grid.Column="0" Text="&#x2601;&#xFE0F;" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <PathIcon Grid.Column="0"
+                                             Data="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"
+                                             Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"
+                                             Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="iCloud Drive" FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
                                         <TextBlock Text="Not found" FontSize="{DynamicResource ThemeFontSize2Xs}" Foreground="{DynamicResource ThemeTextMutedBrush}"
@@ -516,7 +523,10 @@
                                     HorizontalContentAlignment="Stretch"
                                     Padding="8,6" CornerRadius="4">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <TextBlock Grid.Column="0" Text="&#x1F4C2;" FontSize="{DynamicResource ThemeFontSizeSm}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <PathIcon Grid.Column="0"
+                                             Data="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"
+                                             Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"
+                                             Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                     <TextBlock Grid.Column="1" Text="Custom Location" FontSize="{DynamicResource ThemeFontSizeXsSm}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="2" Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}"
                                                Foreground="{DynamicResource ThemePrimaryBrush}"
