@@ -49,6 +49,15 @@ public interface IPrivStackSdk
     Task VaultUnlock(string vaultId, string password, CancellationToken ct = default);
     Task VaultLock(string vaultId, CancellationToken ct = default);
     Task<bool> VaultIsUnlocked(string vaultId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Requests the host to prompt the user for their master password and unlock
+    /// the specified vault. Returns true if the vault was successfully unlocked.
+    /// Plugins should call this when a vault operation fails due to a locked vault
+    /// instead of implementing their own unlock UI.
+    /// </summary>
+    Task<bool> RequestVaultUnlockAsync(string vaultId, CancellationToken ct = default);
+
     Task VaultBlobStore(string vaultId, string blobId, byte[] data, CancellationToken ct = default);
     Task<byte[]> VaultBlobRead(string vaultId, string blobId, CancellationToken ct = default);
     Task VaultBlobDelete(string vaultId, string blobId, CancellationToken ct = default);
