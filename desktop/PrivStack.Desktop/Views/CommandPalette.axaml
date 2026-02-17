@@ -12,13 +12,13 @@
     <!-- Overlay Background -->
     <Grid>
         <!-- Backdrop (click to close) -->
-        <Border Background="#80000000" PointerPressed="OnBackdropPressed"/>
+        <Border Classes="modal-backdrop" PointerPressed="OnBackdropPressed"/>
 
         <!-- Palette Container -->
         <Border Background="{DynamicResource ThemeBorderBrush}" CornerRadius="12"
                 HorizontalAlignment="Center" VerticalAlignment="Top"
                 Margin="0,80,0,0" Width="500"
-                BoxShadow="0 8 32 0 #40000000">
+                Classes="modal">
             <Grid RowDefinitions="Auto,Auto,Auto,*">
                 <!-- Palette Title (visible in PluginPalette mode) -->
                 <TextBlock Grid.Row="0"

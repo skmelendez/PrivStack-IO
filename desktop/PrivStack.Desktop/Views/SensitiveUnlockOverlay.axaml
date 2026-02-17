@@ -5,12 +5,13 @@
              x:DataType="vm:SensitiveUnlockViewModel">
 
     <!-- Semi-transparent dark overlay that covers the entire sensitive view -->
-    <Grid Background="#E0181820">
+    <Panel>
+        <Border Classes="modal-backdrop"/>
         <Border Background="{DynamicResource ThemeSurfaceBrush}"
                 CornerRadius="12" Padding="32"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 Width="400"
-                BoxShadow="0 8 32 0 #40000000">
+                Classes="modal">
             <StackPanel Spacing="16">
                 <!-- Lock Icon -->
                 <Border Background="{DynamicResource ThemeHoverBrush}"
@@ -48,7 +49,7 @@
                 </TextBox>
 
                 <!-- Error Message -->
-                <Border Background="#30F38BA8" CornerRadius="6" Padding="12,8"
+                <Border Background="{DynamicResource ThemeDangerMutedBrush}" CornerRadius="6" Padding="12,8"
                         IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                     <TextBlock Text="{Binding ErrorMessage}"
                                Foreground="{DynamicResource ThemeDangerBrush}"
@@ -62,7 +63,7 @@
                         Command="{Binding UnlockCommand}"
                         IsEnabled="{Binding !IsUnlocking}"
                         Background="{DynamicResource ThemePrimaryBrush}"
-                        Foreground="White"
+                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                         Padding="12,10"
                         CornerRadius="6"
                         FontWeight="SemiBold">
@@ -80,5 +81,5 @@
                            Margin="0,8,0,0"/>
             </StackPanel>
         </Border>
-    </Grid>
+    </Panel>
 </UserControl>

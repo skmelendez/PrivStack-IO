@@ -10,13 +10,13 @@
     <!-- Overlay Background -->
     <Grid Name="OverlayGrid">
         <!-- Backdrop (click to close) -->
-        <Border Background="#80000000" PointerPressed="OnBackdropPressed"/>
+        <Border Classes="modal-backdrop" PointerPressed="OnBackdropPressed"/>
 
         <!-- Picker Container -->
         <Border Background="{DynamicResource ThemeBorderBrush}" CornerRadius="12"
                 HorizontalAlignment="Center" VerticalAlignment="Top"
                 Margin="0,80,0,0" Width="380"
-                BoxShadow="0 8 32 0 #40000000">
+                Classes="modal">
             <Grid RowDefinitions="Auto,Auto,Auto,*">
                 <!-- Search Input -->
                 <Border Grid.Row="0" Background="{DynamicResource ThemeSurfaceElevatedBrush}" CornerRadius="8" Margin="12,12,12,0" Padding="4">

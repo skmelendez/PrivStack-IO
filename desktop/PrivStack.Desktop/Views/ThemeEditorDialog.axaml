@@ -11,7 +11,7 @@
 
     <Panel>
         <!-- Semi-transparent backdrop -->
-        <Border Background="#80000000"
+        <Border Classes="modal-backdrop"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 PointerPressed="OnBackdropPressed"/>
@@ -24,7 +24,7 @@
                 BorderBrush="{DynamicResource ThemeBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="12"
-                BoxShadow="0 8 32 0 #60000000"
+                Classes="modal"
                 ClipToBounds="True">
 
             <Grid RowDefinitions="Auto,*">

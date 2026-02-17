@@ -47,8 +47,8 @@
                                 <!-- Initial fallback (shown when no image) -->
                                 <TextBlock Text="{Binding UserInitial}"
                                            IsVisible="{Binding !HasProfileImage}"
-                                           FontSize="18" FontWeight="SemiBold"
-                                           Foreground="White"
+                                           FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
                             </Panel>

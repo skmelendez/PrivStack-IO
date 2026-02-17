@@ -8,7 +8,7 @@
             BorderThickness="1"
             CornerRadius="8"
             Padding="4"
-            BoxShadow="0 4 16 0 #30000000">
+            Classes="elevated-card">
         <StackPanel Name="TonePanel"
                     Orientation="Horizontal"
                     Spacing="2"/>
