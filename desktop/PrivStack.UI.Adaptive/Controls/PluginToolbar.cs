@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 
 namespace PrivStack.UI.Adaptive.Controls;
 
@@ -101,8 +102,8 @@ public sealed class PluginToolbar : Border
         _searchNormal = BuildSearchBox();
         _searchNormalPill = BuildSearchPill(_searchNormal);
         _searchNormalPill.HorizontalAlignment = HorizontalAlignment.Center;
-        _searchNormalPill.MinWidth = 200;
-        _searchNormalPill.MaxWidth = 300;
+        _searchNormalPill.MinWidth = 300;
+        _searchNormalPill.MaxWidth = 400;
         _searchNormalPill.Bind(IsVisibleProperty,
             _searchNormalPill.GetResourceObservable("ThemeIsNotCompactMode"));
 
@@ -242,6 +243,12 @@ public sealed class PluginToolbar : Border
             Text = SearchText,
             Watermark = SearchWatermark,
         };
+
+        // Kill the Fluent theme's PART_BorderElement border in all states
+        var noBorder = new Setter(Border.BorderThicknessProperty, new Thickness(0));
+        tb.Styles.Add(new Style(x => x.OfType<TextBox>().Template().Name("PART_BorderElement")) { Setters = { noBorder } });
+        tb.Styles.Add(new Style(x => x.OfType<TextBox>().Class(":focus").Template().Name("PART_BorderElement")) { Setters = { noBorder } });
+        tb.Styles.Add(new Style(x => x.OfType<TextBox>().Class(":pointerover").Template().Name("PART_BorderElement")) { Setters = { noBorder } });
         tb.Bind(TextBox.ForegroundProperty,
             tb.GetResourceObservable("ThemeTextPrimaryBrush"));
 

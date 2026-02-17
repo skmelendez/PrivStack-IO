@@ -1,5 +1,5 @@
 <Project>
   <PropertyGroup>
-    <PrivStackSdkVersion>1.37.0</PrivStackSdkVersion>
+    <PrivStackSdkVersion>1.37.1</PrivStackSdkVersion>
   </PropertyGroup>
 </Project>
