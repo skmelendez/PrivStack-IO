@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:services="using:PrivStack.Desktop.Services"
+             xmlns:controls="using:PrivStack.Desktop.Controls"
              x:Class="PrivStack.Desktop.Views.Controls.ToastContainer"
              x:DataType="services:ToastService"
              IsHitTestVisible="True">
@@ -36,36 +37,18 @@
             <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
         </Style>
 
-        <!-- Type-specific toast card backgrounds and borders -->
-        <Style Selector="Border.toast-success">
-            <Setter Property="Background" Value="{DynamicResource ThemeSuccessMutedBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeSuccessBrush}"/>
+        <!-- Type-specific left accent border colors -->
+        <Style Selector="Border.toast-success Border.toast-accent">
+            <Setter Property="Background" Value="{DynamicResource ThemeSuccessBrush}"/>
         </Style>
-        <Style Selector="Border.toast-info">
-            <Setter Property="Background" Value="{DynamicResource ThemeInfoMutedBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInfoBrush}"/>
+        <Style Selector="Border.toast-info Border.toast-accent">
+            <Setter Property="Background" Value="{DynamicResource ThemeInfoBrush}"/>
         </Style>
-        <Style Selector="Border.toast-warning">
-            <Setter Property="Background" Value="{DynamicResource ThemeWarningMutedBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeWarningBrush}"/>
+        <Style Selector="Border.toast-warning Border.toast-accent">
+            <Setter Property="Background" Value="{DynamicResource ThemeWarningBrush}"/>
         </Style>
-        <Style Selector="Border.toast-error">
-            <Setter Property="Background" Value="{DynamicResource ThemeDangerMutedBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeDangerBrush}"/>
-        </Style>
-
-        <!-- Type-specific icon colors -->
-        <Style Selector="PathIcon.icon-success">
-            <Setter Property="Foreground" Value="{DynamicResource ThemeSuccessBrush}"/>
-        </Style>
-        <Style Selector="PathIcon.icon-info">
-            <Setter Property="Foreground" Value="{DynamicResource ThemeInfoBrush}"/>
-        </Style>
-        <Style Selector="PathIcon.icon-warning">
-            <Setter Property="Foreground" Value="{DynamicResource ThemeWarningBrush}"/>
-        </Style>
-        <Style Selector="PathIcon.icon-error">
-            <Setter Property="Foreground" Value="{DynamicResource ThemeDangerBrush}"/>
+        <Style Selector="Border.toast-error Border.toast-accent">
+            <Setter Property="Background" Value="{DynamicResource ThemeDangerBrush}"/>
         </Style>
     </UserControl.Styles>
 
@@ -78,36 +61,44 @@
         <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="services:ActiveToast">
                 <Border Classes="toast-card visible"
+                        Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                        BorderBrush="{DynamicResource ThemeBorderBrush}"
                         BorderThickness="1"
                         CornerRadius="8"
-                        Padding="14,10"
-                        BoxShadow="0 4 16 0 #30000000"
+                        BoxShadow="0 4 20 0 #40000000"
                         ClipToBounds="True"
                         Tag="{Binding TypeClass}">
 
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                        <!-- Type icon — one per type, toggled via IsVisible -->
-                        <Panel Grid.Column="0" Width="16" Height="16" VerticalAlignment="Top" Margin="0,2,10,0">
-                            <PathIcon Data="M20 6L9 17l-5-5"
-                                      Classes="icon-success"
-                                      Width="16" Height="16"
-                                      IsVisible="{Binding IsSuccess}"/>
-                            <PathIcon Data="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 16v-4 M12 8h.01"
-                                      Classes="icon-info"
-                                      Width="16" Height="16"
-                                      IsVisible="{Binding IsInfo}"/>
-                            <PathIcon Data="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01"
-                                      Classes="icon-warning"
-                                      Width="16" Height="16"
-                                      IsVisible="{Binding IsWarning}"/>
-                            <PathIcon Data="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 8v4 M12 16h.01"
-                                      Classes="icon-error"
-                                      Width="16" Height="16"
-                                      IsVisible="{Binding IsError}"/>
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                        <!-- Colored left accent strip -->
+                        <Border Grid.Column="0" Classes="toast-accent"
+                                Width="4" CornerRadius="8,0,0,8"
+                                Margin="-1,-1,0,-1"/>
+
+                        <!-- Type icon — stroke-based via IconControl -->
+                        <Panel Grid.Column="1" Width="16" Height="16"
+                               VerticalAlignment="Top" Margin="12,12,10,0">
+                            <controls:IconControl Icon="Check"
+                                                  Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemeSuccessBrush}"
+                                                  IsVisible="{Binding IsSuccess}"/>
+                            <controls:IconControl Icon="Info"
+                                                  Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemeInfoBrush}"
+                                                  IsVisible="{Binding IsInfo}"/>
+                            <controls:IconControl Icon="AlertCircle"
+                                                  Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemeWarningBrush}"
+                                                  IsVisible="{Binding IsWarning}"/>
+                            <controls:IconControl Icon="AlertCircle"
+                                                  Size="16" StrokeThickness="2"
+                                                  Stroke="{DynamicResource ThemeDangerBrush}"
+                                                  IsVisible="{Binding IsError}"/>
                         </Panel>
 
                         <!-- Label + Message -->
-                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="2" Spacing="2"
+                                    VerticalAlignment="Center" Margin="0,10,0,10">
                             <TextBlock Text="{Binding FriendlyLabel}"
                                        FontWeight="SemiBold"
                                        FontSize="{DynamicResource ThemeFontSizeSm}"
@@ -120,7 +111,7 @@
                         </StackPanel>
 
                         <!-- Action button (optional) -->
-                        <Button Grid.Column="2"
+                        <Button Grid.Column="3"
                                 Classes="toast-action"
                                 Content="{Binding ActionLabel}"
                                 IsVisible="{Binding ActionLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -137,19 +128,19 @@
                                 Click="OnActionClick"/>
 
                         <!-- Dismiss button -->
-                        <Button Grid.Column="3"
+                        <Button Grid.Column="4"
                                 Classes="toast-dismiss"
                                 Background="Transparent"
                                 BorderThickness="0"
                                 Padding="4"
-                                Margin="6,0,0,0"
+                                Margin="6,0,8,0"
                                 MinHeight="0" MinWidth="0"
                                 VerticalAlignment="Top"
                                 Cursor="Hand"
                                 Click="OnDismissClick">
-                            <PathIcon Data="M18 6L6 18 M6 6l12 12"
-                                      Width="12" Height="12"
-                                      Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            <controls:IconControl Icon="X"
+                                                  Size="12" StrokeThickness="1.5"
+                                                  Stroke="{DynamicResource ThemeTextMutedBrush}"/>
                         </Button>
                     </Grid>
                 </Border>
