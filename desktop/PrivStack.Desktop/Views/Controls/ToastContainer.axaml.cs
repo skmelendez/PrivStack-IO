@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.LogicalTree;
+using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Services;
 
 namespace PrivStack.Desktop.Views.Controls;
@@ -13,26 +13,19 @@ public partial class ToastContainer : UserControl
     public ToastContainer()
     {
         InitializeComponent();
-    }
 
-    protected override void OnLoaded(RoutedEventArgs e)
-    {
-        base.OnLoaded(e);
-
-        if (_toastService == null)
-        {
-            _toastService = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
-                .GetService<ToastService>(App.Services);
-            if (_toastService != null)
-                DataContext = _toastService;
-        }
+        // Resolve immediately so DataContext is set before bindings evaluate.
+        // App.Services is guaranteed to exist before MainWindow is constructed.
+        _toastService = App.Services.GetService<ToastService>();
+        if (_toastService != null)
+            DataContext = _toastService;
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
 
-        // Listen for new items to apply type-based CSS classes to the Border
+        // Listen for new toast card Borders to apply type-based CSS classes
         this.AddHandler(Border.LoadedEvent, OnBorderLoaded, handledEventsToo: true);
     }
 
