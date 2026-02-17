@@ -100,6 +100,17 @@ public static class ServiceRegistration
         if (provider.GetRequiredService<ISyncOutboundService>() is SyncOutboundService outbound)
             outbound.SetFileEventSync(provider.GetRequiredService<IFileEventSyncService>());
 
+        // Wire vault unlock prompt — plugins call RequestVaultUnlockAsync to trigger this
+        var dialogService = provider.GetRequiredService<DialogService>();
+        sdkHost.SetVaultUnlockPrompt(async (vaultId, ct) =>
+        {
+            return await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+                await dialogService.ShowPasswordConfirmationAsync(
+                    "Unlock Vault",
+                    "Enter your master password to unlock the vault.",
+                    "Unlock"));
+        });
+
         // Wire license read-only detection from SdkHost into the expiration service
         var expirationService = provider.GetRequiredService<LicenseExpirationService>();
         sdkHost.LicenseReadOnlyBlocked += (_, _) => expirationService.OnMutationBlocked();

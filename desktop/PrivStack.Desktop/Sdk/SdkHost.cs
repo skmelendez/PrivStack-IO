@@ -22,6 +22,7 @@ internal sealed class SdkHost : IPrivStackSdk, IDisposable
     private readonly ReaderWriterLockSlim _switchLock = new();
     private volatile bool _isSwitching;
     private ISyncOutboundService? _syncOutbound;
+    private Func<string, CancellationToken, Task<string?>>? _vaultUnlockPrompt;
 
     /// <summary>
     /// Raised when a mutation is blocked because the license is in read-only mode.
@@ -37,6 +38,14 @@ internal sealed class SdkHost : IPrivStackSdk, IDisposable
     /// Wires the outbound sync service. Called after DI construction.
     /// </summary>
     public void SetSyncOutbound(ISyncOutboundService service) => _syncOutbound = service;
+
+    /// <summary>
+    /// Wires the vault unlock prompt callback. The callback receives a vault ID and
+    /// should show a password dialog to the user. Returns the entered password or null
+    /// if cancelled.
+    /// </summary>
+    public void SetVaultUnlockPrompt(Func<string, CancellationToken, Task<string?>> prompt) =>
+        _vaultUnlockPrompt = prompt;
 
     /// <summary>
     /// True when the native runtime is initialized and not mid-workspace-switch.
@@ -358,6 +367,38 @@ internal sealed class SdkHost : IPrivStackSdk, IDisposable
         if (!AcquireReadLock(out _)) return Task.FromResult(false);
         try { return Task.FromResult(NativeLib.VaultIsUnlocked(vaultId)); }
         finally { _switchLock.ExitReadLock(); }
+    }
+
+    public async Task<bool> RequestVaultUnlockAsync(string vaultId, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        // Already unlocked — nothing to do
+        if (await VaultIsUnlocked(vaultId, ct)) return true;
+
+        if (_vaultUnlockPrompt == null)
+        {
+            _log.Warning("RequestVaultUnlockAsync called but no unlock prompt is registered");
+            return false;
+        }
+
+        var password = await _vaultUnlockPrompt(vaultId, ct);
+        if (string.IsNullOrEmpty(password)) return false;
+
+        try
+        {
+            // Initialize if needed
+            if (!await VaultIsInitialized(vaultId, ct))
+                await VaultInitialize(vaultId, password, ct);
+
+            await VaultUnlock(vaultId, password, ct);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "Failed to unlock vault {VaultId} via user prompt", vaultId);
+            return false;
+        }
     }
 
     public Task VaultBlobStore(string vaultId, string blobId, byte[] data, CancellationToken ct = default)
