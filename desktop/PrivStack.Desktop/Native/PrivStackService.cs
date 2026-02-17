@@ -480,7 +480,7 @@ public sealed class PrivStackService : IPrivStackNative
     /// alongside the master password. These use the same master password
     /// as the app-level auth, unlike user-managed vaults (e.g., Files).
     /// </summary>
-    private static readonly string[] StandardVaultIds = ["connections"];
+    private static readonly string[] StandardVaultIds = ["connections", "email-credentials", "calendar-credentials"];
 
     /// <summary>
     /// Ensures all standard vaults are created, initialized, and unlocked.
