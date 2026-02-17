@@ -518,20 +518,26 @@ public partial class MainWindowViewModel : ViewModelBase
 
         palette.LinkableItemNavigator = async (pluginId, itemId) =>
         {
-            // Find the plugin's nav item and switch to its tab
             var plugin = _pluginRegistry.ActivePlugins
                 .FirstOrDefault(p => p.Metadata.Id == pluginId);
 
-            string? navItemId = plugin?.NavigationItem?.Id;
-            if (navItemId != null)
+            // Native C# plugins: use IDeepLinkTarget directly
+            if (plugin is IDeepLinkTarget deepLink)
             {
-                await SelectTab(navItemId);
+                var navId = plugin.NavigationItem?.Id;
+                if (navId != null && navId != SelectedTab)
+                    await SelectTabForEntityNavigation(navId);
+                await deepLink.NavigateToItemAsync(itemId);
+                return;
             }
 
-            // Invoke the deep-link-target on the plugin (mutates plugin state)
+            // WASM plugins: FFI deep-link
+            string? navItemId = plugin?.NavigationItem?.Id;
+            if (navItemId != null)
+                await SelectTab(navItemId);
+
             await Task.Run(() => Native.NativeLibrary.PluginNavigateToItem(pluginId, itemId));
 
-            // Refresh the view so the UI reflects the navigated-to item
             if (navItemId != null
                 && _pluginViewModelCache.TryGetValue(navItemId, out var vm)
                 && vm is WasmViewModelProxy wasmVm)
