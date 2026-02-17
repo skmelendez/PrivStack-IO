@@ -73,6 +73,11 @@ public interface IPluginHost
     IPropertyService? Properties { get; }
 
     /// <summary>
+    /// Toast notification service for transient in-app messages.
+    /// </summary>
+    IToastService Toast { get; }
+
+    /// <summary>
     /// The active workspace data directory.
     /// Plugins should store all workspace-specific files under this path.
     /// </summary>
