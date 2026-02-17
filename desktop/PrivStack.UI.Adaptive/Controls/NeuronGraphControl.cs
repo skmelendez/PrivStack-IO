@@ -668,14 +668,17 @@ public sealed class NeuronGraphControl : Control
             IBrush edgeBrush;
             double thickness;
 
-            const double edgeBaseOpacity = 0.75;
+            const double edgeActiveOpacity = 0.75;
+            const double edgeDimOpacity = 0.15;
             var blendedColor = BlendColors(GetNodeColor(src.NodeType), GetNodeColor(tgt.NodeType));
 
             if (EnableHighlightMode)
             {
+                var isActivePath = edgeOpacity > 0.5;
+                var alpha = isActivePath ? edgeActiveOpacity : edgeDimOpacity;
                 edgeBrush = new SolidColorBrush(Color.FromArgb(
-                    (byte)(blendedColor.A * edgeBaseOpacity), blendedColor.R, blendedColor.G, blendedColor.B));
-                thickness = edgeOpacity > 0.7 ? 1.2 : 0.7;
+                    (byte)(blendedColor.A * alpha), blendedColor.R, blendedColor.G, blendedColor.B));
+                thickness = isActivePath ? 1.2 : 0.7;
             }
             else
             {
@@ -683,7 +686,7 @@ public sealed class NeuronGraphControl : Control
                 var maxDepth = Math.Max(src.Depth, tgt.Depth);
 
                 edgeBrush = new SolidColorBrush(Color.FromArgb(
-                    (byte)(blendedColor.A * edgeBaseOpacity), blendedColor.R, blendedColor.G, blendedColor.B));
+                    (byte)(blendedColor.A * edgeActiveOpacity), blendedColor.R, blendedColor.G, blendedColor.B));
                 thickness = isConnectedToCenter ? 1.5 : maxDepth >= 2 ? 0.7 : 1.0;
             }
 
