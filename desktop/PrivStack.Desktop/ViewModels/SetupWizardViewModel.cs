@@ -760,6 +760,11 @@ public partial class SetupWizardViewModel : ViewModelBase
         CurrentStep = SetupStep.Workspace;
     }
 
+    /// <summary>
+    /// Parse-only license validation — checks format, signature, and expiry.
+    /// Does NOT activate on device (requires runtime). Activation happens in
+    /// <see cref="ActivateLicenseOnDevice"/> after runtime initialization.
+    /// </summary>
     private void ValidateLicense()
     {
         if (string.IsNullOrWhiteSpace(LicenseKey))
@@ -769,17 +774,17 @@ public partial class SetupWizardViewModel : ViewModelBase
             return;
         }
 
-        Log.Information("[Activate] Validating license key (length: {Length})", LicenseKey.Length);
+        Log.Information("[License] Validating license key (length: {Length})", LicenseKey.Length);
 
         try
         {
-            Log.Information("[Activate] Parsing license key...");
+            Log.Information("[License] Parsing license key...");
             var licenseInfo = _licensingService.ParseLicenseKey<LicenseInfo>(LicenseKey);
-            Log.Information("[Activate] Parsed — Plan: {Plan}, Status: {Status}", licenseInfo.Plan, licenseInfo.Status);
+            Log.Information("[License] Parsed — Plan: {Plan}, Status: {Status}", licenseInfo.Plan, licenseInfo.Status);
 
             if (licenseInfo.Status is "expired" or "readonly")
             {
-                Log.Warning("[Activate] License status disqualified: {Status}", licenseInfo.Status);
+                Log.Warning("[License] License status disqualified: {Status}", licenseInfo.Status);
                 IsSubscriptionExpired = true;
                 ExpiredMessage = licenseInfo.Status == "readonly"
                     ? "Your license is in read-only mode (grace period expired)."
@@ -788,31 +793,19 @@ public partial class SetupWizardViewModel : ViewModelBase
                 return;
             }
 
-            Log.Information("[Activate] Activating license on device...");
-            var activation = _licensingService.ActivateLicense<ActivationInfo>(LicenseKey);
-            Log.Information("[Activate] Activation result — IsValid: {IsValid}", activation.IsValid);
-
-            if (!activation.IsValid)
-            {
-                LicenseError = "Failed to activate license on this device";
-                IsLicenseValid = false;
-                return;
-            }
-
             IsLicenseValid = true;
             LicenseError = string.Empty;
             LicenseTier = FormatLicensePlan(licenseInfo.Plan);
-            Log.Information("[Activate] License activated successfully — Tier: {Tier}", LicenseTier);
+            Log.Information("[License] License parsed successfully — Tier: {Tier}", LicenseTier);
         }
         catch (PrivStackException ex)
         {
-            Log.Error(ex, "[Activate] License validation failed — ErrorCode: {Code}", ex.ErrorCode);
+            Log.Error(ex, "[License] License validation failed — ErrorCode: {Code}", ex.ErrorCode);
             LicenseError = ex.ErrorCode switch
             {
                 PrivStackError.LicenseInvalidFormat => "Invalid license key format",
                 PrivStackError.LicenseInvalidSignature => "License key signature invalid",
                 PrivStackError.LicenseExpired => HandleExpiredLicenseError(),
-                PrivStackError.LicenseActivationFailed => "Activation failed - device limit may be exceeded",
                 _ => $"License validation failed: {ex.Message}"
             };
             IsLicenseValid = false;
@@ -821,6 +814,47 @@ public partial class SetupWizardViewModel : ViewModelBase
         {
             LicenseError = $"Error: {ex.Message}";
             IsLicenseValid = false;
+        }
+    }
+
+    /// <summary>
+    /// Device activation — requires runtime to be initialized.
+    /// Called from <see cref="InitializeServiceAndContinue"/> after workspace + runtime setup.
+    /// </summary>
+    private bool ActivateLicenseOnDevice()
+    {
+        if (string.IsNullOrWhiteSpace(LicenseKey) || LicenseTier == "Read-Only")
+            return true; // Read-only mode doesn't need activation
+
+        try
+        {
+            Log.Information("[Activate] Activating license on device...");
+            var activation = _licensingService.ActivateLicense<ActivationInfo>(LicenseKey);
+            Log.Information("[Activate] Activation result — IsValid: {IsValid}", activation.IsValid);
+
+            if (!activation.IsValid)
+            {
+                SetupError = "Failed to activate license on this device. Device limit may be exceeded.";
+                return false;
+            }
+
+            return true;
+        }
+        catch (PrivStackException ex)
+        {
+            Log.Error(ex, "[Activate] Device activation failed — ErrorCode: {Code}", ex.ErrorCode);
+            SetupError = ex.ErrorCode switch
+            {
+                PrivStackError.LicenseActivationFailed => "Activation failed - device limit may be exceeded",
+                _ => $"License activation failed: {ex.Message}"
+            };
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[Activate] Unexpected activation error");
+            SetupError = $"License activation failed: {ex.Message}";
+            return false;
         }
     }
 
@@ -1039,11 +1073,15 @@ public partial class SetupWizardViewModel : ViewModelBase
 
             LoadDeviceInfo();
 
-            // 5. Check for existing auth data
+            // 5. Activate license on this device (requires runtime)
+            if (!ActivateLicenseOnDevice())
+                return SetupStep.DataDirectory;
+
+            // 6. Check for existing auth data
             IsExistingData = _authService.IsAuthInitialized();
             Log.Information("Auth initialized (existing data): {IsExisting}", IsExistingData);
 
-            // 6. Connect PrivStack Cloud if selected (FFI is now available)
+            // 7. Connect PrivStack Cloud if selected (FFI is now available)
             if (IsPrivStackCloudSelected && IsCloudSyncAvailable)
             {
                 try
