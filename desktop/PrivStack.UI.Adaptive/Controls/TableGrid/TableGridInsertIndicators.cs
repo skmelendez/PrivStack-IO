@@ -183,6 +183,23 @@ internal static class TableGridInsertIndicators
         };
     }
 
+    private static IBrush GetBrush(string key, IBrush fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app is null) return fallback;
+        if (app.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+            return b;
+        return fallback;
+    }
+
+    private static double GetDouble(string key, double fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app?.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) == true && v is double d)
+            return d;
+        return fallback;
+    }
+
     private static Border CreateIndicator(Control themeSource)
     {
         var primaryBrush = Brushes.DodgerBlue as IBrush;
@@ -192,8 +209,8 @@ internal static class TableGridInsertIndicators
         var text = new TextBlock
         {
             Text = "+",
-            Foreground = Brushes.White,
-            FontSize = 11,
+            Foreground = GetBrush("ThemeTextPrimaryBrush", Brushes.White),
+            FontSize = GetDouble("ThemeFontSizeXs", 11),
             FontWeight = FontWeight.Bold,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,

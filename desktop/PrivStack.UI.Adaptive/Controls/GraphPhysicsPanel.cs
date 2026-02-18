@@ -41,6 +41,14 @@ public sealed class GraphPhysicsPanel : Border
         }
     }
 
+    private static double GetDouble(string key, double fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app?.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) == true && v is double d)
+            return d;
+        return fallback;
+    }
+
     private static StackPanel BuildSliderRow(string label, string sliderBinding, string displayBinding)
     {
         var row = new StackPanel { Spacing = 2 };
@@ -52,7 +60,7 @@ public sealed class GraphPhysicsPanel : Border
         var labelBlock = new TextBlock
         {
             Text = label,
-            FontSize = 11,
+            FontSize = GetDouble("ThemeFontSizeXs", 11),
             Opacity = 0.7,
         };
         Grid.SetColumn(labelBlock, 0);
@@ -60,7 +68,7 @@ public sealed class GraphPhysicsPanel : Border
 
         var displayBlock = new TextBlock
         {
-            FontSize = 11,
+            FontSize = GetDouble("ThemeFontSizeXs", 11),
             Opacity = 0.5,
             MinWidth = 32,
         };

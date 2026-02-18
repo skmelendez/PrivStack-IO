@@ -25,6 +25,15 @@ internal sealed class TableGridFreezeLayout
     public ScrollViewer ScrollViewer => _scrollViewer;
     public DockPanel Container => _container;
 
+    private static IBrush GetBrush(string key, IBrush fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app is null) return fallback;
+        if (app.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+            return b;
+        return fallback;
+    }
+
     public TableGridFreezeLayout()
     {
         _frozenGrid = new Grid { Margin = new Thickness(0, 0, 0, 14) };
@@ -43,7 +52,7 @@ internal sealed class TableGridFreezeLayout
         _divider = new Border
         {
             Width = 1,
-            Background = new SolidColorBrush(Color.Parse("#40888888")),
+            Background = GetBrush("ThemeBorderSubtleBrush", new SolidColorBrush(Color.Parse("#40888888"))),
             VerticalAlignment = VerticalAlignment.Stretch,
         };
 

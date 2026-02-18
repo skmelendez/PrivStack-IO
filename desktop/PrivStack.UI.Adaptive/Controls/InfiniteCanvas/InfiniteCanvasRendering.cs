@@ -175,14 +175,18 @@ public sealed partial class InfiniteCanvasControl
         var tl = WorldToScreen(x, y);
         var rect = new Rect(tl.X, tl.Y, w * Zoom, h * Zoom);
 
-        var brush = new SolidColorBrush(Colors.CornflowerBlue, 0.2);
-        var pen = new Pen(Brushes.CornflowerBlue, 1) { DashStyle = DashStyle.Dash };
+        var previewPrimary = GetBrush("ThemePrimaryBrush", Brushes.CornflowerBlue);
+        var previewColor = previewPrimary is ISolidColorBrush scbPreview ? scbPreview.Color : Colors.CornflowerBlue;
+        var brush = new SolidColorBrush(previewColor, 0.2);
+        var pen = new Pen(previewPrimary, 1) { DashStyle = DashStyle.Dash };
         ctx.DrawRectangle(brush, pen, rect, 4, 4);
     }
 
     private void DrawPerformanceBadge(DrawingContext ctx, int count)
     {
-        var badgeBrush = new SolidColorBrush(Colors.OrangeRed, 0.9);
+        var dangerBrush = GetBrush("ThemeDangerBrush", Brushes.OrangeRed);
+        var dangerColor = dangerBrush is ISolidColorBrush scbDanger ? scbDanger.Color : Colors.OrangeRed;
+        var badgeBrush = new SolidColorBrush(dangerColor, 0.9);
         var badgeRect = new Rect(Bounds.Width - 160, 8, 150, 28);
         ctx.DrawRectangle(badgeBrush, null, badgeRect, 6, 6);
 
@@ -191,7 +195,7 @@ public sealed partial class InfiniteCanvasControl
             CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             GetSansTypeface(FontWeight.SemiBold),
-            12, Brushes.White);
+            12, GetBrush("ThemeTextPrimaryBrush", Brushes.White));
         ctx.DrawText(ft, new Point(badgeRect.X + 8, badgeRect.Y + 6));
     }
 

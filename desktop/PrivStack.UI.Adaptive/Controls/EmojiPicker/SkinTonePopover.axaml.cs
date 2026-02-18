@@ -42,7 +42,7 @@ public partial class SkinTonePopover : UserControl
                 Child = new TextBlock
                 {
                     Text = variants[i],
-                    FontSize = 22,
+                    FontSize = GetDouble("ThemeFontSize2Xl", 22),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
                 },
@@ -78,5 +78,13 @@ public partial class SkinTonePopover : UserControl
     public void Hide()
     {
         IsVisible = false;
+    }
+
+    private static double GetDouble(string key, double fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app?.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) == true && v is double d)
+            return d;
+        return fallback;
     }
 }

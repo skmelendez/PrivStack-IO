@@ -18,9 +18,11 @@ public sealed partial class InfiniteCanvasControl
     {
         var normalRadius = 5.0 * Zoom;
         var hoverRadius = 7.0 * Zoom;
-        var normalBrush = new SolidColorBrush(Colors.CornflowerBlue, 0.6);
-        var hoverBrush = new SolidColorBrush(Colors.CornflowerBlue, 0.9);
-        var outlinePen = new Pen(Brushes.White, 1.5 * Zoom);
+        var primaryBrush = GetBrush("ThemePrimaryBrush", Brushes.CornflowerBlue);
+        var primaryColor = primaryBrush is ISolidColorBrush scbPrimary ? scbPrimary.Color : Colors.CornflowerBlue;
+        var normalBrush = new SolidColorBrush(primaryColor, 0.6);
+        var hoverBrush = new SolidColorBrush(primaryColor, 0.9);
+        var outlinePen = new Pen(GetBrush("ThemeTextPrimaryBrush", Brushes.White), 1.5 * Zoom);
 
         foreach (var element in data.Elements)
         {

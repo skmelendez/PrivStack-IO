@@ -212,14 +212,14 @@ public sealed class TableGrid : Border
 
         _errorText = new TextBlock
         {
-            Foreground = new SolidColorBrush(Color.Parse("#C42B1C")),
-            FontSize = 12,
+            Foreground = GetBrush("ThemeDangerBrush", new SolidColorBrush(Color.Parse("#C42B1C"))),
+            FontSize = GetDouble("ThemeFontSizeSm", 12),
             TextWrapping = TextWrapping.Wrap
         };
         _errorBorder = new Border
         {
             IsVisible = false,
-            Background = new SolidColorBrush(Color.Parse("#20C42B1C")),
+            Background = GetBrush("ThemeDangerMutedBrush", new SolidColorBrush(Color.Parse("#20C42B1C"))),
             CornerRadius = new CornerRadius(4),
             Padding = new Thickness(12, 8),
             Margin = new Thickness(0, 4, 0, 0),
@@ -795,6 +795,23 @@ public sealed class TableGrid : Border
             () => DataSource,
             Rebuild,
             () => this);
+    }
+
+    private static IBrush GetBrush(string key, IBrush fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app is null) return fallback;
+        if (app.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+            return b;
+        return fallback;
+    }
+
+    private static double GetDouble(string key, double fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app?.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) == true && v is double d)
+            return d;
+        return fallback;
     }
 
     private void ShowError(string message)

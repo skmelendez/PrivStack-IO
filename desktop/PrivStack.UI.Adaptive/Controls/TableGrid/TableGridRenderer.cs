@@ -26,6 +26,23 @@ internal sealed record TableGridRenderResult
 
 internal static class TableGridRenderer
 {
+    private static IBrush GetBrush(string key, IBrush fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app is null) return fallback;
+        if (app.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+            return b;
+        return fallback;
+    }
+
+    private static double GetDouble(string key, double fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app?.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) == true && v is double d)
+            return d;
+        return fallback;
+    }
+
     public static TableGridRenderResult RenderGrid(
         Grid grid, TableGridData data, TablePagingInfo paging,
         TableGridSortState sortState, bool supportsSorting,
@@ -146,7 +163,7 @@ internal static class TableGridRenderer
             var descBlock = new TextBlock
             {
                 Text = data.Description,
-                FontSize = 12,
+                FontSize = GetDouble("ThemeFontSizeSm", 12),
                 Opacity = 0.7,
                 Margin = new Thickness(4, 8, 4, 4),
             };
@@ -294,7 +311,7 @@ internal static class TableGridRenderer
                     && cell is Border freezeBorder)
                 {
                     freezeBorder.BorderBrush =
-                        new SolidColorBrush(Color.Parse("#4090CAF9"));
+                        GetBrush("ThemeFreezeBorderBrush", new SolidColorBrush(Color.Parse("#4090CAF9")));
                     freezeBorder.BorderThickness = new Thickness(
                         freezeBorder.BorderThickness.Left,
                         freezeBorder.BorderThickness.Top,
@@ -379,7 +396,7 @@ internal static class TableGridRenderer
                     && cell is Border freezeDataBorder)
                 {
                     freezeDataBorder.BorderBrush =
-                        new SolidColorBrush(Color.Parse("#4090CAF9"));
+                        GetBrush("ThemeFreezeBorderBrush", new SolidColorBrush(Color.Parse("#4090CAF9")));
                     freezeDataBorder.BorderThickness = new Thickness(
                         freezeDataBorder.BorderThickness.Left,
                         freezeDataBorder.BorderThickness.Top,
@@ -518,7 +535,7 @@ internal static class TableGridRenderer
         var freezeLine = new Border
         {
             Height = 2,
-            Background = new SolidColorBrush(Color.Parse("#4090CAF9")),
+            Background = GetBrush("ThemeFreezeBorderBrush", new SolidColorBrush(Color.Parse("#4090CAF9"))),
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
             IsHitTestVisible = false
         };

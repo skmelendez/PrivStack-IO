@@ -668,7 +668,7 @@ public sealed class NeuronGraphControl : Control
             IBrush edgeBrush;
             double thickness;
 
-            const double edgeActiveOpacity = 0.75;
+            const double edgeActiveOpacity = 0.35;
             const double edgeDimOpacity = 0.15;
             var blendedColor = BlendColors(GetNodeColor(src.NodeType), GetNodeColor(tgt.NodeType));
 
@@ -730,14 +730,14 @@ public sealed class NeuronGraphControl : Control
 
                 if (node.Id == _centerId)
                 {
-                    var ringPen = new Pen(Brushes.White, 2.0);
+                    var ringPen = new Pen(GetBrush("ThemeTextPrimaryBrush", Brushes.White), 2.0);
                     ctx.DrawEllipse(null, ringPen, pos, radius + 3, radius + 3);
                 }
             }
 
             if (drawHighlightRing)
             {
-                var ringPen = new Pen(Brushes.White, 2.5);
+                var ringPen = new Pen(GetBrush("ThemeTextPrimaryBrush", Brushes.White), 2.5);
                 ctx.DrawEllipse(null, ringPen, pos, radius + 4, radius + 4);
             }
 
@@ -1318,16 +1318,16 @@ public sealed class NeuronGraphControl : Control
         "contact"              => GetBrush("ThemeWarningBrush", Brushes.Orange),
         "event" or "calendar"  => GetBrush("ThemePrimaryBrush", Brushes.DodgerBlue),
         "journal"              => GetBrush("ThemeDangerBrush", Brushes.IndianRed),
-        "tag"                  => new SolidColorBrush(Color.Parse("#9CA3AF")),
-        "company"              => new SolidColorBrush(Color.Parse("#F97316")),
-        "contact_group"        => new SolidColorBrush(Color.Parse("#A855F7")),
-        "snippet"              => new SolidColorBrush(Color.Parse("#06B6D4")),
-        "rss"                  => new SolidColorBrush(Color.Parse("#FB923C")),
-        "project"              => new SolidColorBrush(Color.Parse("#84CC16")),
-        "deal"                 => new SolidColorBrush(Color.Parse("#EAB308")),
-        "transaction"          => new SolidColorBrush(Color.Parse("#EC4899")),
-        "credential"           => new SolidColorBrush(Color.Parse("#EF4444")),
-        "file"                 => new SolidColorBrush(Color.Parse("#64748B")),
+        "tag"                  => GetBrush("ThemeNodeTagBrush", new SolidColorBrush(Color.Parse("#9CA3AF"))),
+        "company"              => GetBrush("ThemeNodeCompanyBrush", new SolidColorBrush(Color.Parse("#F97316"))),
+        "contact_group"        => GetBrush("ThemeNodeContactGroupBrush", new SolidColorBrush(Color.Parse("#A855F7"))),
+        "snippet"              => GetBrush("ThemeNodeSnippetBrush", new SolidColorBrush(Color.Parse("#06B6D4"))),
+        "rss"                  => GetBrush("ThemeNodeRssBrush", new SolidColorBrush(Color.Parse("#FB923C"))),
+        "project"              => GetBrush("ThemeNodeProjectBrush", new SolidColorBrush(Color.Parse("#84CC16"))),
+        "deal"                 => GetBrush("ThemeNodeDealBrush", new SolidColorBrush(Color.Parse("#EAB308"))),
+        "transaction"          => GetBrush("ThemeNodeTransactionBrush", new SolidColorBrush(Color.Parse("#EC4899"))),
+        "credential"           => GetBrush("ThemeNodeCredentialBrush", new SolidColorBrush(Color.Parse("#EF4444"))),
+        "file"                 => GetBrush("ThemeNodeFileBrush", new SolidColorBrush(Color.Parse("#64748B"))),
         _                      => GetBrush("ThemeTextMutedBrush", Brushes.Gray),
     };
 }

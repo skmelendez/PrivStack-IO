@@ -20,11 +20,13 @@ public sealed partial class InfiniteCanvasControl
     private static readonly Color DefaultPageRefColor = Color.FromRgb(220, 235, 255);
     private static readonly Color DefaultEntityRefColor = Color.FromRgb(240, 240, 245);
 
-    private static void DrawDropShadow(DrawingContext ctx, Rect rect, double cornerRadius = 4)
+    private void DrawDropShadow(DrawingContext ctx, Rect rect, double cornerRadius = 4)
     {
         var shadowOffset = 2.0;
         var shadowRect = new Rect(rect.X + shadowOffset, rect.Y + shadowOffset, rect.Width, rect.Height);
-        var shadowBrush = new SolidColorBrush(Colors.Black, 0.15);
+        var shadowColor = GetBrush("ThemeShadowBrush", Brushes.Black) is ISolidColorBrush scbShadow
+            ? scbShadow.Color : Colors.Black;
+        var shadowBrush = new SolidColorBrush(shadowColor, 0.15);
         ctx.DrawRectangle(shadowBrush, null, shadowRect, cornerRadius, cornerRadius);
     }
 
@@ -34,7 +36,9 @@ public sealed partial class InfiniteCanvasControl
         DrawDropShadow(ctx, rect, 8);
         var color = ParseColor(element.Color, DefaultNoteColor);
         var brush = new SolidColorBrush(color, 0.9);
-        var borderPen = new Pen(new SolidColorBrush(Colors.Black, 0.15), 1);
+        var noteStrokeColor = GetBrush("ThemeShadowBrush", Brushes.Black) is ISolidColorBrush scbNoteStroke
+            ? scbNoteStroke.Color : Colors.Black;
+        var borderPen = new Pen(new SolidColorBrush(noteStrokeColor, 0.15), 1);
         ctx.DrawRectangle(brush, borderPen, rect, 8, 8);
 
         if (string.IsNullOrEmpty(element.Text)) return;
@@ -43,7 +47,9 @@ public sealed partial class InfiniteCanvasControl
         {
             var pad = 10 * Zoom;
             var fontSize = Math.Max(8, element.FontSize * Zoom);
-            var textBrush = new SolidColorBrush(Colors.Black, 0.85);
+            var noteTextColor = GetBrush("ThemeShadowBrush", Brushes.Black) is ISolidColorBrush scbNoteText
+                ? scbNoteText.Color : Colors.Black;
+            var textBrush = new SolidColorBrush(noteTextColor, 0.85);
             var ft = new FormattedText(
                 element.Text, CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight,
@@ -155,7 +161,7 @@ public sealed partial class InfiniteCanvasControl
             badgeLetter, CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             GetSansTypeface(FontWeight.Bold),
-            letterFontSize, Brushes.White);
+            letterFontSize, GetBrush("ThemeTextPrimaryBrush", Brushes.White));
         ctx.DrawText(letterFt, new Point(
             badgeCenterX - letterFt.Width / 2,
             badgeCenterY - letterFt.Height / 2));
@@ -218,8 +224,10 @@ public sealed partial class InfiniteCanvasControl
     private void DrawImagePlaceholder(DrawingContext ctx, CanvasElement element)
     {
         var rect = ElementToScreenRect(element);
-        var brush = new SolidColorBrush(Colors.Gray, 0.2);
-        var pen = new Pen(new SolidColorBrush(Colors.Gray, 0.4), 1);
+        var imgPlaceholderColor = GetBrush("ThemeTextMutedBrush", Brushes.Gray) is ISolidColorBrush scbImg
+            ? scbImg.Color : Colors.Gray;
+        var brush = new SolidColorBrush(imgPlaceholderColor, 0.2);
+        var pen = new Pen(new SolidColorBrush(imgPlaceholderColor, 0.4), 1);
         ctx.DrawRectangle(brush, pen, rect, 4, 4);
 
         // Placeholder text

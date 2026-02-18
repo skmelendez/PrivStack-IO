@@ -138,13 +138,13 @@ public sealed partial class InfiniteCanvasControl
 
     internal void DrawSelectionOverlays(DrawingContext ctx, CanvasData data)
     {
-        var selectionPen = new Pen(Brushes.CornflowerBlue, 2)
+        var selectionPen = new Pen(GetBrush("ThemePrimaryBrush", Brushes.CornflowerBlue), 2)
         {
             DashStyle = DashStyle.Dash,
         };
 
-        var handleBrush = Brushes.White;
-        var handlePen = new Pen(Brushes.CornflowerBlue, 1.5);
+        var handleBrush = GetBrush("ThemeTextPrimaryBrush", Brushes.White);
+        var handlePen = new Pen(GetBrush("ThemePrimaryBrush", Brushes.CornflowerBlue), 1.5);
 
         foreach (var id in _selectedElementIds)
         {
@@ -174,8 +174,10 @@ public sealed partial class InfiniteCanvasControl
     {
         if (_selectionMarquee == null) return;
 
-        var brush = new SolidColorBrush(Colors.CornflowerBlue, 0.15);
-        var pen = new Pen(Brushes.CornflowerBlue, 1) { DashStyle = DashStyle.Dash };
+        var primaryBrush = GetBrush("ThemePrimaryBrush", Brushes.CornflowerBlue);
+        var primaryColor = primaryBrush is ISolidColorBrush scb ? scb.Color : Colors.CornflowerBlue;
+        var brush = new SolidColorBrush(primaryColor, 0.15);
+        var pen = new Pen(primaryBrush, 1) { DashStyle = DashStyle.Dash };
         ctx.DrawRectangle(brush, pen, _selectionMarquee.Value);
     }
 
@@ -195,7 +197,7 @@ public sealed partial class InfiniteCanvasControl
         var start = GetAnchorScreenPoint(source, srcAnchor);
         var end = GetAnchorScreenPoint(target, tgtAnchor);
 
-        var highlightPen = new Pen(Brushes.CornflowerBlue, 4 * Zoom) { DashStyle = DashStyle.Dash };
+        var highlightPen = new Pen(GetBrush("ThemePrimaryBrush", Brushes.CornflowerBlue), 4 * Zoom) { DashStyle = DashStyle.Dash };
 
         switch (connector.Style)
         {

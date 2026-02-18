@@ -175,6 +175,15 @@ public class AsyncImage : Control
         return imageSize;
     }
 
+    private static IBrush GetBrush(string key, IBrush fallback)
+    {
+        var app = Avalonia.Application.Current;
+        if (app is null) return fallback;
+        if (app.Resources.TryGetResource(key, app.ActualThemeVariant, out var v) && v is IBrush b)
+            return b;
+        return fallback;
+    }
+
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -184,10 +193,10 @@ public class AsyncImage : Control
         if (_isLoading)
         {
             // Draw loading state
-            var loadingBrush = new SolidColorBrush(Color.FromArgb(30, 128, 128, 128));
+            var loadingBrush = GetBrush("ThemeHoverBrush", new SolidColorBrush(Color.FromArgb(30, 128, 128, 128)));
             context.DrawRectangle(loadingBrush, null, bounds, 4, 4);
 
-            var textBrush = new SolidColorBrush(Color.FromArgb(128, 128, 128, 128));
+            var textBrush = GetBrush("ThemeTextMutedBrush", new SolidColorBrush(Color.FromArgb(128, 128, 128, 128)));
             var formattedText = new FormattedText(
                 "Loading...",
                 System.Globalization.CultureInfo.CurrentCulture,
@@ -204,10 +213,10 @@ public class AsyncImage : Control
         else if (_hasError)
         {
             // Draw error state
-            var errorBrush = new SolidColorBrush(Color.FromArgb(30, 200, 50, 50));
+            var errorBrush = GetBrush("ThemeDangerMutedBrush", new SolidColorBrush(Color.FromArgb(30, 200, 50, 50)));
             context.DrawRectangle(errorBrush, null, bounds, 4, 4);
 
-            var textBrush = new SolidColorBrush(Color.FromArgb(180, 200, 50, 50));
+            var textBrush = GetBrush("ThemeDangerBrush", new SolidColorBrush(Color.FromArgb(180, 200, 50, 50)));
             var formattedText = new FormattedText(
                 "Failed to load image",
                 System.Globalization.CultureInfo.CurrentCulture,
@@ -229,10 +238,10 @@ public class AsyncImage : Control
         else if (!string.IsNullOrEmpty(Source))
         {
             // No URL - draw placeholder
-            var placeholderBrush = new SolidColorBrush(Color.FromArgb(20, 128, 128, 128));
+            var placeholderBrush = GetBrush("ThemeHoverSubtleBrush", new SolidColorBrush(Color.FromArgb(20, 128, 128, 128)));
             context.DrawRectangle(placeholderBrush, null, bounds, 4, 4);
 
-            var textBrush = new SolidColorBrush(Color.FromArgb(100, 128, 128, 128));
+            var textBrush = GetBrush("ThemeTextMutedBrush", new SolidColorBrush(Color.FromArgb(100, 128, 128, 128)));
             var formattedText = new FormattedText(
                 "Enter image URL",
                 System.Globalization.CultureInfo.CurrentCulture,

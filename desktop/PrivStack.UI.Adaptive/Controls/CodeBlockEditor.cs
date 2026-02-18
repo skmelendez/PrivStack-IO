@@ -155,7 +155,7 @@ public sealed class CodeBlockEditor : Border
                 };
                 border.PointerEntered += (s, _) =>
                 {
-                    if (s is Border b) b.Background = new SolidColorBrush(Color.FromArgb(30, 128, 128, 128));
+                    if (s is Border b) b.Background = GetBrush("ThemeHoverBrush", new SolidColorBrush(Color.FromArgb(30, 128, 128, 128)));
                 };
                 border.PointerExited += (s, _) =>
                 {
