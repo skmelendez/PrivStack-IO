@@ -222,6 +222,32 @@ public sealed class PrivStackApiClient
     }
 
     /// <summary>
+    /// Lists cloud workspaces for the authenticated user (direct HTTP — no FFI required).
+    /// Returns an empty list on HTTP error (user may not have cloud access).
+    /// </summary>
+    public async Task<List<CloudWorkspaceInfo>> ListCloudWorkspacesAsync(
+        string accessToken, CancellationToken ct = default)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/api/cloud/workspaces");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            using var response = await Http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+                return [];
+
+            var body = await response.Content.ReadAsStringAsync(ct);
+            var wrapper = JsonSerializer.Deserialize<CloudWorkspacesResponse>(body, JsonOptions);
+            return wrapper?.Workspaces ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
     /// Validates a license key against the server.
     /// Returns the validation response; on network/HTTP errors returns Valid = false with error detail.
     /// </summary>
@@ -386,6 +412,12 @@ public record OfficialPluginsResponse
     public List<Models.PluginRegistry.OfficialPluginInfo>? Plugins { get; init; }
 }
 
+public record CloudWorkspacesResponse
+{
+    [JsonPropertyName("workspaces")]
+    public List<CloudWorkspaceInfo>? Workspaces { get; init; }
+}
+
 public record TrialResponse
 {
     [JsonPropertyName("success")]
@@ -411,4 +443,16 @@ public record TrialResponse
 
     [JsonPropertyName("url")]
     public string? Url { get; init; }
+
+    [JsonPropertyName("access_token")]
+    public string? AccessToken { get; init; }
+
+    [JsonPropertyName("refresh_token")]
+    public string? RefreshToken { get; init; }
+
+    [JsonPropertyName("user_id")]
+    public long? UserId { get; init; }
+
+    [JsonPropertyName("cloud_config")]
+    public OAuthCloudConfig? CloudConfig { get; init; }
 }

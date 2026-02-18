@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Net.Http;
+using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
@@ -20,9 +21,10 @@ namespace PrivStack.Desktop.ViewModels;
 public enum SetupStep
 {
     Welcome,
-    Workspace,   // Collects workspace name, display name, theme, and accessibility
-    DataDirectory,
-    License,
+    License,           // Auth first — trial email verify or browser OAuth
+    Workspace,         // Collects workspace name, display name, theme, and accessibility
+    DataDirectory,     // Storage location — includes PrivStack Cloud when authenticated
+    CloudWorkspaces,   // Pick existing cloud workspace or create new
     Password,
     EmergencyKit,
     Complete
@@ -42,6 +44,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     private readonly IWorkspaceService _workspaceService;
     private readonly PrivStackApiClient _apiClient;
     private readonly OAuthLoginService _oauthService;
+    private readonly ICloudSyncService _cloudSync;
     private CancellationTokenSource? _oauthCts;
     private string? _setupWorkspaceId;
 
@@ -50,6 +53,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsDataDirectoryStep))]
     [NotifyPropertyChangedFor(nameof(IsWorkspaceStep))]
     [NotifyPropertyChangedFor(nameof(IsLicenseStep))]
+    [NotifyPropertyChangedFor(nameof(IsCloudWorkspacesStep))]
     [NotifyPropertyChangedFor(nameof(IsPasswordStep))]
     [NotifyPropertyChangedFor(nameof(IsEmergencyKitStep))]
     [NotifyPropertyChangedFor(nameof(IsCompleteStep))]
@@ -57,6 +61,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(NextButtonText))]
     [NotifyPropertyChangedFor(nameof(StepNumber))]
+    [NotifyPropertyChangedFor(nameof(TotalSteps))]
     [NotifyPropertyChangedFor(nameof(ProgressWidth))]
     private SetupStep _currentStep = SetupStep.Welcome;
 
@@ -65,6 +70,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     public bool IsDataDirectoryStep => CurrentStep == SetupStep.DataDirectory;
     public bool IsWorkspaceStep => CurrentStep == SetupStep.Workspace;
     public bool IsLicenseStep => CurrentStep == SetupStep.License;
+    public bool IsCloudWorkspacesStep => CurrentStep == SetupStep.CloudWorkspaces;
     public bool IsPasswordStep => CurrentStep == SetupStep.Password;
     public bool IsEmergencyKitStep => CurrentStep == SetupStep.EmergencyKit;
     public bool IsCompleteStep => CurrentStep == SetupStep.Complete;
@@ -139,6 +145,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(DataDirectoryDisplay))]
     [NotifyPropertyChangedFor(nameof(IsCustomDirectorySelected))]
+    [NotifyPropertyChangedFor(nameof(IsDefaultSelected))]
     private DataDirectoryType _selectedDirectoryType = DataDirectoryType.Default;
 
     [ObservableProperty]
@@ -148,6 +155,33 @@ public partial class SetupWizardViewModel : ViewModelBase
     public bool IsGoogleDriveAvailable => !string.IsNullOrEmpty(GetGoogleDrivePath());
     public bool IsICloudAvailable => !string.IsNullOrEmpty(GetICloudPath());
     public bool IsCustomDirectorySelected => SelectedDirectoryType == DataDirectoryType.Custom;
+    public bool IsDefaultSelected => SelectedDirectoryType == DataDirectoryType.Default && !IsPrivStackCloudSelected;
+
+    // Cloud sync workspace selection
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    private bool _isCloudSyncAvailable;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDefaultSelected))]
+    private bool _isPrivStackCloudSelected;
+
+    [ObservableProperty]
+    private bool _isLoadingCloudWorkspaces;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCloudWorkspaces))]
+    private ObservableCollection<CloudWorkspaceInfo> _cloudWorkspaces = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    private CloudWorkspaceInfo? _selectedCloudWorkspace;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    private bool _isCreateNewCloudWorkspace = true;
+
+    public bool HasCloudWorkspaces => CloudWorkspaces.Count > 0;
 
     public string DataDirectoryDisplay => SelectedDirectoryType switch
     {
@@ -264,10 +298,11 @@ public partial class SetupWizardViewModel : ViewModelBase
     public bool CanGoNext => CurrentStep switch
     {
         SetupStep.Welcome => false, // Welcome uses ChooseTrial/ChooseSignIn commands
+        SetupStep.License => IsLicenseValid,
+        SetupStep.Workspace => !string.IsNullOrWhiteSpace(WorkspaceName) && !string.IsNullOrWhiteSpace(DisplayName) && SelectedTheme != null,
         SetupStep.DataDirectory => SelectedDirectoryType != DataDirectoryType.Custom ||
                                    !string.IsNullOrWhiteSpace(CustomDataDirectory),
-        SetupStep.Workspace => !string.IsNullOrWhiteSpace(WorkspaceName) && !string.IsNullOrWhiteSpace(DisplayName) && SelectedTheme != null,
-        SetupStep.License => IsLicenseValid,
+        SetupStep.CloudWorkspaces => SelectedCloudWorkspace != null || IsCreateNewCloudWorkspace,
         SetupStep.Password => IsExistingData
             ? !string.IsNullOrWhiteSpace(MasterPassword)
             : !string.IsNullOrWhiteSpace(MasterPassword) && MasterPassword.Length >= 8 && PasswordsMatch,
@@ -287,16 +322,18 @@ public partial class SetupWizardViewModel : ViewModelBase
     public int StepNumber => CurrentStep switch
     {
         SetupStep.Welcome => 1,
-        SetupStep.Workspace => 2,
-        SetupStep.DataDirectory => 3,
-        SetupStep.License => 4,
-        SetupStep.Password => 5,
-        SetupStep.EmergencyKit => 6,
-        SetupStep.Complete => 7,
+        SetupStep.License => 2,
+        SetupStep.Workspace => 3,
+        SetupStep.DataDirectory => 4,
+        SetupStep.CloudWorkspaces => 5,
+        SetupStep.Password => _showsCloudWorkspacesStep ? 6 : 5,
+        SetupStep.EmergencyKit => _showsCloudWorkspacesStep ? 7 : 6,
+        SetupStep.Complete => TotalSteps,
         _ => 0
     };
 
-    public int TotalSteps => 7;
+    private bool _showsCloudWorkspacesStep;
+    public int TotalSteps => _showsCloudWorkspacesStep ? 8 : 7;
 
     public double ProgressWidth => (StepNumber / (double)TotalSteps) * 160;
 
@@ -314,7 +351,8 @@ public partial class SetupWizardViewModel : ViewModelBase
         IFontScaleService fontScaleService,
         IWorkspaceService workspaceService,
         PrivStackApiClient apiClient,
-        OAuthLoginService oauthService)
+        OAuthLoginService oauthService,
+        ICloudSyncService cloudSync)
     {
         _runtime = runtime;
         _authService = authService;
@@ -325,6 +363,7 @@ public partial class SetupWizardViewModel : ViewModelBase
         _workspaceService = workspaceService;
         _apiClient = apiClient;
         _oauthService = oauthService;
+        _cloudSync = cloudSync;
         LoadDeviceInfo();
 
         SelectedTheme = AvailableThemes.FirstOrDefault(t => t.Theme == AppTheme.Dark);
@@ -358,25 +397,27 @@ public partial class SetupWizardViewModel : ViewModelBase
 
         CurrentStep = CurrentStep switch
         {
-            SetupStep.Workspace => SetupStep.Welcome,
+            SetupStep.License => SetupStep.Welcome,
+            SetupStep.Workspace => SetupStep.License,
             SetupStep.DataDirectory => SetupStep.Workspace,
-            SetupStep.License => SetupStep.DataDirectory,
-            SetupStep.Password => SetupStep.License,
+            SetupStep.CloudWorkspaces => SetupStep.DataDirectory,
+            SetupStep.Password => _showsCloudWorkspacesStep ? SetupStep.CloudWorkspaces : SetupStep.DataDirectory,
             _ => CurrentStep
         };
     }
 
     [RelayCommand]
-    private void GoNext()
+    private async void GoNext()
     {
         if (!CanGoNext) return;
 
         CurrentStep = CurrentStep switch
         {
-            SetupStep.Welcome => SetupStep.Workspace,
+            SetupStep.Welcome => SetupStep.License,
+            SetupStep.License => SetupStep.Workspace,
             SetupStep.Workspace => SetupStep.DataDirectory,
-            SetupStep.DataDirectory => InitializeServiceAndContinue(),
-            SetupStep.License => SetupStep.Password,
+            SetupStep.DataDirectory => await HandleDataDirectoryNext(),
+            SetupStep.CloudWorkspaces => InitializeServiceAndContinue(),
             SetupStep.Password => CompleteSetup(),
             SetupStep.EmergencyKit => CompleteEmergencyKitStep(),
             SetupStep.Complete => FinishSetup(),
@@ -450,6 +491,20 @@ public partial class SetupWizardViewModel : ViewModelBase
             _appSettings.SaveDebounced();
             Log.Information("[OAuth] Persisted access and refresh tokens");
 
+            // Capture cloud sync tokens (OAuth always returns cloud_config)
+            if (tokenResult.CloudConfig != null)
+            {
+                _appSettings.Settings.CloudSyncAccessToken = tokenResult.AccessToken;
+                _appSettings.Settings.CloudSyncRefreshToken = tokenResult.RefreshToken;
+                _appSettings.Settings.CloudSyncConfigJson = JsonSerializer.Serialize(tokenResult.CloudConfig);
+                // Extract user ID from JWT
+                var userId = CloudSyncSettingsViewModel.ExtractUserIdFromJwt(tokenResult.AccessToken);
+                _appSettings.Settings.CloudSyncUserId = userId;
+                _appSettings.SaveDebounced();
+                IsCloudSyncAvailable = true;
+                Log.Information("[OAuth] Cloud sync tokens captured (userId={UserId})", userId);
+            }
+
             // Got a valid license key — run standard validation
             Log.Information("[OAuth] License key received (length: {Length}), running local validation...",
                 licenseResult.License.Key.Length);
@@ -506,14 +561,14 @@ public partial class SetupWizardViewModel : ViewModelBase
     private void ChooseTrial()
     {
         IsTrialMode = true;
-        CurrentStep = SetupStep.Workspace;
+        CurrentStep = SetupStep.License;
     }
 
     [RelayCommand]
     private void ChooseSignIn()
     {
         IsTrialMode = false;
-        CurrentStep = SetupStep.Workspace;
+        CurrentStep = SetupStep.License;
     }
 
     [RelayCommand]
@@ -550,6 +605,10 @@ public partial class SetupWizardViewModel : ViewModelBase
                 if (!IsLicenseValid)
                 {
                     TrialError = "License validation failed. Please try again or contact support.";
+                }
+                else
+                {
+                    CaptureTrialCloudTokens(result);
                 }
             }
             else
@@ -604,6 +663,10 @@ public partial class SetupWizardViewModel : ViewModelBase
                 if (!IsLicenseValid)
                 {
                     TrialError = "License validation failed. Please try again or contact support.";
+                }
+                else
+                {
+                    CaptureTrialCloudTokens(result);
                 }
             }
             else
@@ -694,7 +757,7 @@ public partial class SetupWizardViewModel : ViewModelBase
         LicenseError = string.Empty;
         LoginError = string.Empty;
         TrialError = string.Empty;
-        CurrentStep = SetupStep.Password;
+        CurrentStep = SetupStep.Workspace;
     }
 
     private void ValidateLicense()
@@ -786,10 +849,93 @@ public partial class SetupWizardViewModel : ViewModelBase
         };
     }
 
+    private void CaptureTrialCloudTokens(TrialResponse result)
+    {
+        if (result.AccessToken == null || result.CloudConfig == null)
+            return;
+
+        _appSettings.Settings.AccessToken = result.AccessToken;
+        _appSettings.Settings.RefreshToken = result.RefreshToken;
+        _appSettings.Settings.CloudSyncAccessToken = result.AccessToken;
+        _appSettings.Settings.CloudSyncRefreshToken = result.RefreshToken;
+        _appSettings.Settings.CloudSyncConfigJson = JsonSerializer.Serialize(result.CloudConfig);
+        _appSettings.Settings.CloudSyncUserId = result.UserId;
+        _appSettings.SaveDebounced();
+        IsCloudSyncAvailable = true;
+        Log.Information("[Trial] Cloud sync tokens captured (userId={UserId})", result.UserId);
+    }
+
+    private async Task<SetupStep> HandleDataDirectoryNext()
+    {
+        if (IsPrivStackCloudSelected && IsCloudSyncAvailable)
+        {
+            // Fetch cloud workspaces via direct HTTP (no FFI needed)
+            IsLoadingCloudWorkspaces = true;
+            try
+            {
+                var accessToken = _appSettings.Settings.CloudSyncAccessToken;
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    var workspaces = await _apiClient.ListCloudWorkspacesAsync(accessToken);
+                    CloudWorkspaces = new ObservableCollection<CloudWorkspaceInfo>(workspaces);
+                    OnPropertyChanged(nameof(HasCloudWorkspaces));
+                    Log.Information("[Cloud] Fetched {Count} cloud workspaces", workspaces.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[Cloud] Failed to fetch cloud workspaces");
+            }
+            finally
+            {
+                IsLoadingCloudWorkspaces = false;
+            }
+
+            if (CloudWorkspaces.Count > 0)
+            {
+                _showsCloudWorkspacesStep = true;
+                OnPropertyChanged(nameof(TotalSteps));
+                return SetupStep.CloudWorkspaces;
+            }
+
+            // No existing workspaces — skip cloud workspace picker, proceed to create
+            SelectedCloudWorkspace = null;
+            IsCreateNewCloudWorkspace = true;
+        }
+
+        return InitializeServiceAndContinue();
+    }
+
+    [RelayCommand]
+    private void SelectCloudWorkspace(CloudWorkspaceInfo? workspace)
+    {
+        if (workspace != null)
+        {
+            SelectedCloudWorkspace = workspace;
+            IsCreateNewCloudWorkspace = false;
+        }
+        else
+        {
+            SelectedCloudWorkspace = null;
+            IsCreateNewCloudWorkspace = true;
+        }
+        OnPropertyChanged(nameof(CanGoNext));
+    }
+
     [RelayCommand]
     private void SelectDirectoryType(DataDirectoryType type)
     {
         SelectedDirectoryType = type;
+        IsPrivStackCloudSelected = false;
+        OnPropertyChanged(nameof(CanGoNext));
+    }
+
+    [RelayCommand]
+    private void SelectPrivStackCloud()
+    {
+        IsPrivStackCloudSelected = true;
+        // Reset file-based sync selection — PrivStack Cloud uses Default local path
+        SelectedDirectoryType = DataDirectoryType.Default;
         OnPropertyChanged(nameof(CanGoNext));
     }
 
@@ -897,7 +1043,21 @@ public partial class SetupWizardViewModel : ViewModelBase
             IsExistingData = _authService.IsAuthInitialized();
             Log.Information("Auth initialized (existing data): {IsExisting}", IsExistingData);
 
-            return SetupStep.License;
+            // 6. Connect PrivStack Cloud if selected (FFI is now available)
+            if (IsPrivStackCloudSelected && IsCloudSyncAvailable)
+            {
+                try
+                {
+                    ConnectCloudSync(workspace);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to connect cloud sync during setup");
+                    SetupError = $"Cloud sync setup failed: {ex.Message}. You can configure it later in Settings.";
+                }
+            }
+
+            return SetupStep.Password;
         }
         catch (DllNotFoundException dllEx)
         {
@@ -934,6 +1094,50 @@ public partial class SetupWizardViewModel : ViewModelBase
             }
             return SetupStep.DataDirectory;
         }
+    }
+
+    private void ConnectCloudSync(Workspace workspace)
+    {
+        var settings = _appSettings.Settings;
+
+        // Configure cloud sync engine
+        if (!string.IsNullOrEmpty(settings.CloudSyncConfigJson))
+        {
+            _cloudSync.Configure(settings.CloudSyncConfigJson);
+        }
+
+        // Authenticate with persisted tokens
+        _cloudSync.AuthenticateWithTokens(
+            settings.CloudSyncAccessToken!,
+            settings.CloudSyncRefreshToken ?? string.Empty,
+            settings.CloudSyncUserId!.Value);
+
+        string cloudWsId;
+        if (SelectedCloudWorkspace != null)
+        {
+            // Connect to existing cloud workspace — no RegisterWorkspace needed
+            cloudWsId = SelectedCloudWorkspace.WorkspaceId;
+            Log.Information("Connecting to existing cloud workspace: {Id} ({Name})",
+                cloudWsId, SelectedCloudWorkspace.WorkspaceName);
+        }
+        else
+        {
+            // Create new cloud workspace
+            cloudWsId = Guid.NewGuid().ToString();
+            _cloudSync.RegisterWorkspace(cloudWsId, workspace.Name);
+            Log.Information("Registered new cloud workspace: {Id}", cloudWsId);
+        }
+
+        // Persist cloud workspace ID + sync tier on the local workspace record
+        var updatedWorkspace = workspace with
+        {
+            CloudWorkspaceId = cloudWsId,
+            SyncTier = SyncTier.PrivStackCloud
+        };
+        _workspaceService.UpdateWorkspace(updatedWorkspace);
+        _appSettings.Save();
+
+        Log.Information("Cloud sync connected for workspace: {Id}", cloudWsId);
     }
 
     [RelayCommand]
