@@ -368,23 +368,31 @@ pub unsafe extern "C" fn privstack_cloudsync_setup_unified_recovery(
     };
 
     // 1. Generate single mnemonic
+    super::android_log("INFO", "[setup_unified_recovery] step 1: generate mnemonic");
     let mnemonic = match crypto_env::generate_recovery_mnemonic() {
         Ok(m) => m,
-        Err(_) => return PrivStackError::EnvelopeError,
+        Err(_) => {
+            super::android_log("ERROR", "[setup_unified_recovery] mnemonic generation failed");
+            return PrivStackError::EnvelopeError;
+        }
     };
 
     // 2. Re-encrypt vault recovery blob with this mnemonic
+    super::android_log("INFO", "[setup_unified_recovery] step 2: setup vault recovery");
     if let Err(e) = handle.vault_manager.setup_recovery_with_mnemonic("default", &mnemonic) {
-        eprintln!("[FFI] Failed to setup vault recovery with unified mnemonic: {e}");
+        super::android_log("ERROR", &format!("[setup_unified_recovery] vault recovery failed: {e}"));
         return PrivStackError::AuthError;
     }
 
     // 3. Generate cloud keypair
+    super::android_log("INFO", "[setup_unified_recovery] step 3: generate keypair");
     let keypair = crypto_env::generate_cloud_keypair();
     let public_bytes = keypair.public_bytes();
 
     // Upload public key to API
+    super::android_log("INFO", "[setup_unified_recovery] step 4: upload public key");
     if let Err(e) = handle.runtime.block_on(api.upload_public_key(&public_bytes)) {
+        super::android_log("ERROR", &format!("[setup_unified_recovery] upload public key failed: {e}"));
         return cloud_err(&e);
     }
 
@@ -402,6 +410,7 @@ pub unsafe extern "C" fn privstack_cloudsync_setup_unified_recovery(
         };
 
     // 4. Upload encrypted keys to S3
+    super::android_log("INFO", "[setup_unified_recovery] step 5: upload keys to S3");
     let result = handle.runtime.block_on(async {
         let workspaces = api.list_workspaces().await?;
         let ws = workspaces
@@ -432,7 +441,9 @@ pub unsafe extern "C" fn privstack_cloudsync_setup_unified_recovery(
         let protected_bytes = serde_json::to_vec(&protected)
             .map_err(|e| privstack_cloud::CloudError::S3(e.to_string()))?;
         let key_path = private_key_s3_key(user_id, &ws.workspace_id);
+        super::android_log("INFO", &format!("[setup_unified_recovery] uploading private key to {key_path}"));
         transport.upload(&creds, &key_path, protected_bytes).await?;
+        super::android_log("INFO", "[setup_unified_recovery] private key uploaded");
 
         // Upload mnemonic-encrypted recovery key
         let recovery_bytes = serde_json::to_vec(&recovery_encrypted)
@@ -441,13 +452,16 @@ pub unsafe extern "C" fn privstack_cloudsync_setup_unified_recovery(
         transport
             .upload(&creds, &recovery_path, recovery_bytes)
             .await?;
+        super::android_log("INFO", "[setup_unified_recovery] recovery key uploaded");
 
         Ok::<(), privstack_cloud::CloudError>(())
     });
 
     if let Err(e) = result {
+        super::android_log("ERROR", &format!("[setup_unified_recovery] S3 upload failed: {e}"));
         return cloud_err(&e);
     }
+    super::android_log("INFO", "[setup_unified_recovery] complete — keypair stored");
 
     // Set keypair in envelope manager
     if let Some(ref env_mgr) = handle.cloud_envelope_mgr {
