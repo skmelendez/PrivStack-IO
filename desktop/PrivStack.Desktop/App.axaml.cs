@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
+using Avalonia.Threading;
 using System.Linq;
 using Avalonia.Markup.Xaml;
 using AvaloniaWebView;
@@ -273,7 +274,8 @@ public partial class App : Application
 
             // IMPORTANT: Set the new MainWindow BEFORE closing setup window
             // Otherwise Avalonia shuts down when it sees MainWindow closed
-            ShowMainWindow(desktop, skipPluginInit: true);
+            await ShowMainWindow(desktop, skipPluginInit: true,
+                updateStatus: msg => setupVm.LoadingMessage = msg);
             setupWindow.Close();
         };
 
@@ -306,7 +308,8 @@ public partial class App : Application
             await Task.Delay(30);
 
             // The rest must happen on the UI thread (window creation)
-            ShowMainWindow(desktop, skipPluginInit: true);
+            await ShowMainWindow(desktop, skipPluginInit: true,
+                updateStatus: msg => unlockVm.LoadingMessage = msg);
             unlockWindow.Close();
         };
 
@@ -359,7 +362,7 @@ public partial class App : Application
             var pluginRegistry = Services.GetRequiredService<IPluginRegistry>();
             await Task.Run(() => pluginRegistry.DiscoverAndInitialize());
 
-            ShowMainWindow(desktop, skipPluginInit: true);
+            await ShowMainWindow(desktop, skipPluginInit: true);
             unlockWindow.Close();
         };
 
@@ -371,7 +374,10 @@ public partial class App : Application
         };
     }
 
-    private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop, bool skipPluginInit = false)
+    private async Task ShowMainWindow(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        bool skipPluginInit = false,
+        Action<string>? updateStatus = null)
     {
         if (!skipPluginInit)
         {
@@ -382,6 +388,9 @@ public partial class App : Application
             Log.Information("Plugin initialization complete");
         }
 
+        updateStatus?.Invoke("Initializing security...");
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+
         // Initialize sensitive lock service with saved settings (fast — just sets a property)
         Log.Information("Initializing sensitive lock service");
         var appSettings = Services.GetRequiredService<IAppSettingsService>();
@@ -390,9 +399,15 @@ public partial class App : Application
         sensitiveLock.LockoutMinutes = lockoutMinutes;
         Log.Information("Sensitive lock service initialized with {Minutes} minute lockout (locked)", lockoutMinutes);
 
+        updateStatus?.Invoke("Checking license...");
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+
         // Check license expiration state for read-only enforcement banner (sets banner visibility)
         var licensing = Services.GetRequiredService<ILicensingService>();
         Services.GetRequiredService<LicenseExpirationService>().CheckLicenseStatus(licensing);
+
+        updateStatus?.Invoke("Preparing workspace...");
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
 
         // Show window immediately — deferred services start afterward
         var mainWindow = new MainWindow
@@ -409,7 +424,7 @@ public partial class App : Application
             {
                 Log.Information("Starting deferred background services");
 
-                _ = Services.GetRequiredService<IBackupService>(); // Touch to trigger initialization
+                _ = Services.GetRequiredService<IBackupService>();
 
                 Services.GetRequiredService<IFileEventSyncService>().Start();
                 await Services.GetRequiredService<ISnapshotSyncService>().StartAsync();
