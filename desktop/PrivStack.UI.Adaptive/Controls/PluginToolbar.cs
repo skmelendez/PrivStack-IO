@@ -7,6 +7,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -295,7 +296,13 @@ public sealed class PluginToolbar : Border
             BorderThickness = new Thickness(1),
             Padding = new Thickness(4, 0, 4, 0),
             VerticalAlignment = VerticalAlignment.Center,
+            Cursor = new Cursor(StandardCursorType.Ibeam),
             Child = panel,
+        };
+        pill.PointerPressed += (_, e) =>
+        {
+            inner.Focus();
+            e.Handled = true;
         };
         pill.Bind(Border.BackgroundProperty,
             pill.GetResourceObservable("ThemeSurfaceElevatedBrush"));
