@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
@@ -9,6 +10,11 @@ using PrivStack.Sdk;
 using PrivStack.Sdk.Services;
 
 namespace PrivStack.Desktop.ViewModels;
+
+/// <summary>
+/// Broadcast when AI intent engine settings change (AiEnabled or AiIntentEnabled toggled).
+/// </summary>
+public sealed record IntentSettingsChangedMessage;
 
 /// <summary>
 /// Represents an AI provider option for the settings dropdown.
@@ -180,6 +186,7 @@ public partial class SettingsViewModel
     {
         _settingsService.Settings.AiEnabled = value;
         _settingsService.SaveDebounced();
+        WeakReferenceMessenger.Default.Send(new IntentSettingsChangedMessage());
     }
 
     partial void OnSelectedAiProviderChanged(AiProviderOption? value)
@@ -220,6 +227,7 @@ public partial class SettingsViewModel
     {
         _settingsService.Settings.AiIntentEnabled = value;
         _settingsService.SaveDebounced();
+        WeakReferenceMessenger.Default.Send(new IntentSettingsChangedMessage());
     }
 
     partial void OnAiIntentAutoAnalyzeChanged(bool value)
