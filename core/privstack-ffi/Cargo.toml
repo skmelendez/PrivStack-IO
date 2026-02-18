@@ -40,5 +40,8 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 hostname = "0.4"
 hex = "0.4"
 
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+
 [dev-dependencies]
 serial_test = "3.1"

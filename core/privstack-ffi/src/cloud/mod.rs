@@ -12,6 +12,13 @@ mod sharing;
 mod sync;
 mod workspaces;
 
+// Re-export all FFI functions so JNI wrappers can use `crate::cloud::privstack_cloudsync_*`.
+pub(crate) use auth::*;
+pub(crate) use devices::*;
+pub(crate) use sharing::*;
+pub(crate) use sync::*;
+pub(crate) use workspaces::*;
+
 use crate::PrivStackError;
 use privstack_cloud::CloudError;
 use std::ffi::{c_char, CStr, CString};

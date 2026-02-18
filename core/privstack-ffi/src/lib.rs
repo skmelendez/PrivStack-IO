@@ -10,6 +10,8 @@
 
 mod cloud;
 mod datasets;
+#[cfg(target_os = "android")]
+mod android_jni;
 
 use privstack_blobstore::BlobStore;
 use privstack_license::{
