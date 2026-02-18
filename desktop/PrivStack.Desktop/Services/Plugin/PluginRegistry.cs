@@ -176,6 +176,7 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
         {
             try
             {
+                EnsurePluginVaultsUnlocked(plugin);
                 var host = HostFactory.CreateHost(plugin.Metadata.Id);
                 RegisterEntitySchemas(plugin);
                 var success = plugin.InitializeAsync(host, CancellationToken.None).GetAwaiter().GetResult();
@@ -634,6 +635,7 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
                 _pluginById[plugin.Metadata.Id] = plugin;
 
                 // Initialize (schemas must be registered before init, matching startup order)
+                EnsurePluginVaultsUnlocked(plugin);
                 var host = HostFactory.CreateHost(plugin.Metadata.Id);
                 RegisterEntitySchemas(plugin);
                 var success = await plugin.InitializeAsync(host, ct);
@@ -1595,6 +1597,7 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
 
         try
         {
+            EnsurePluginVaultsUnlocked(plugin);
             var host = HostFactory.CreateHost(plugin.Metadata.Id);
             var success = await plugin.InitializeAsync(host, cancellationToken);
 
@@ -1621,6 +1624,52 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
         {
             _log.Error(ex, "Plugin initialization failed: {PluginId}", plugin.Metadata.Id);
             RaisePluginStateChanged(plugin, PluginState.Failed, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// If a plugin implements IVaultConsumer, ensures its declared vaults are
+    /// initialized and unlocked using the cached master password.
+    /// Called before InitializeAsync so credentials are available at plugin init.
+    /// </summary>
+    private static void EnsurePluginVaultsUnlocked(IAppPlugin plugin)
+    {
+        if (plugin is not IVaultConsumer vaultConsumer) return;
+
+        var passwordCache = App.Services.GetService<IMasterPasswordCache>();
+        var cachedPassword = passwordCache?.Get();
+        if (string.IsNullOrEmpty(cachedPassword)) return;
+
+        foreach (var vaultId in vaultConsumer.VaultIds)
+        {
+            try
+            {
+                if (!NativeLib.VaultIsInitialized(vaultId))
+                {
+                    NativeLib.VaultCreate(vaultId);
+                    var initResult = NativeLib.VaultInitialize(vaultId, cachedPassword);
+                    if (initResult != Native.PrivStackError.Ok && initResult != Native.PrivStackError.VaultAlreadyInitialized)
+                    {
+                        _log.Warning("Failed to initialize plugin vault {VaultId} for {PluginId}: {Result}",
+                            vaultId, plugin.Metadata.Id, initResult);
+                        continue;
+                    }
+                }
+
+                if (!NativeLib.VaultIsUnlocked(vaultId))
+                {
+                    var unlockResult = NativeLib.VaultUnlock(vaultId, cachedPassword);
+                    if (unlockResult != Native.PrivStackError.Ok)
+                        _log.Warning("Failed to unlock plugin vault {VaultId} for {PluginId}: {Result}",
+                            vaultId, plugin.Metadata.Id, unlockResult);
+                    else
+                        _log.Debug("Auto-unlocked plugin vault {VaultId} for {PluginId}", vaultId, plugin.Metadata.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "Failed to ensure plugin vault {VaultId} for {PluginId}", vaultId, plugin.Metadata.Id);
+            }
         }
     }
 
