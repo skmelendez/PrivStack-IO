@@ -11,11 +11,10 @@
              x:Class="PrivStack.Desktop.Views.NavigationSidebar"
              x:DataType="vm:MainWindowViewModel">
 
-    <!-- Minimal nav button template.
-         Border owns Background (TemplateBinding), ContentPresenter owns Foreground (TemplateBinding).
-         No FluentTheme pseudo-class ContentPresenter overrides — BrushTransitions on
-         Button.Background and Button.Foreground flow cleanly through TemplateBindings,
-         giving smooth fade-in AND fade-out on every state change. -->
+    <!-- Clean nav button template — replaces FluentTheme's Button ControlTheme for nav items.
+         Border owns Background (TemplateBinding) with a BrushTransition so every state change
+         (hover-in, hover-out, active) animates smoothly with zero ContentPresenter interference.
+         No pseudo-class ContentPresenter overrides anywhere. -->
     <UserControl.Resources>
         <ControlTheme x:Key="NavButtonTheme" TargetType="Button">
             <Setter Property="Template">
@@ -23,6 +22,11 @@
                     <Border Background="{TemplateBinding Background}"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Padding="{TemplateBinding Padding}">
+                        <Border.Transitions>
+                            <Transitions>
+                                <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                            </Transitions>
+                        </Border.Transitions>
                         <ContentPresenter Name="PART_ContentPresenter"
                                           Content="{TemplateBinding Content}"
                                           ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -47,6 +51,7 @@
 
         <!-- ── Workspace card button ──────────────────────────────── -->
         <Style Selector="Button.workspace-btn">
+            <Setter Property="Theme" Value="{StaticResource NavButtonTheme}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -57,18 +62,10 @@
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="Button.workspace-btn Border.nav-bg">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.workspace-btn:pointerover Border.nav-bg">
+        <Style Selector="Button.workspace-btn:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
-        <Style Selector="Button.workspace-btn:pressed Border.nav-bg">
+        <Style Selector="Button.workspace-btn:pressed">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
         </Style>
 
@@ -93,10 +90,12 @@
         </Style>
 
         <!-- ── Nav item button ────────────────────────────────────── -->
-        <!-- Background lives on Border.nav-bg (child), not the Button.
-             This bypasses FluentTheme's ContentPresenter overrides entirely.
+        <!-- NavButtonTheme replaces FluentTheme's ControlTheme entirely — the template Border
+             owns the Background + BrushTransition, so hover-in and hover-out both animate
+             smoothly with zero ContentPresenter interference.
              TextBlock.nav-label Foreground is set directly for smooth text animation. -->
         <Style Selector="Button.nav-item">
+            <Setter Property="Theme" Value="{StaticResource NavButtonTheme}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -107,18 +106,11 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="Button.nav-item Border.nav-bg">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.nav-item:pointerover Border.nav-bg">
+        <Style Selector="Button.nav-item:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
-        <Style Selector="Button.nav-item.active Border.nav-bg">
+        <!-- Active declared after hover so it wins when both classes apply -->
+        <Style Selector="Button.nav-item.active">
             <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
         </Style>
         <Style Selector="Button.nav-item.locked">
@@ -181,6 +173,7 @@
 
         <!-- ── Collapsed nav items (icons only) ───────────────────── -->
         <Style Selector="Button.nav-item-collapsed">
+            <Setter Property="Theme" Value="{StaticResource NavButtonTheme}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextBrush}"/>
             <Setter Property="Padding" Value="0"/>
@@ -191,21 +184,13 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         </Style>
-        <Style Selector="Button.nav-item-collapsed Border.nav-bg">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.nav-item-collapsed:pointerover Border.nav-bg">
+        <Style Selector="Button.nav-item-collapsed:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
-        <Style Selector="Button.nav-item-collapsed:pressed Border.nav-bg">
+        <Style Selector="Button.nav-item-collapsed:pressed">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
         </Style>
-        <Style Selector="Button.nav-item-collapsed.active Border.nav-bg">
+        <Style Selector="Button.nav-item-collapsed.active">
             <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
         </Style>
         <Style Selector="Button.nav-item-collapsed.locked">
@@ -249,6 +234,7 @@
 
         <!-- ── Footer items ───────────────────────────────────────── -->
         <Style Selector="Button.nav-footer-item">
+            <Setter Property="Theme" Value="{StaticResource NavButtonTheme}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -259,15 +245,7 @@
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="Button.nav-footer-item Border.nav-bg">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.nav-footer-item:pointerover Border.nav-bg">
+        <Style Selector="Button.nav-footer-item:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
         <!-- Footer TextBlock Foreground — direct target bypasses ContentPresenter -->
@@ -295,6 +273,7 @@
         </Style>
 
         <Style Selector="Button.nav-footer-item-collapsed">
+            <Setter Property="Theme" Value="{StaticResource NavButtonTheme}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -305,15 +284,7 @@
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="Button.nav-footer-item-collapsed Border.nav-bg">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.nav-footer-item-collapsed:pointerover Border.nav-bg">
+        <Style Selector="Button.nav-footer-item-collapsed:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
         <Style Selector="Button.nav-footer-item-collapsed controls|IconControl">
