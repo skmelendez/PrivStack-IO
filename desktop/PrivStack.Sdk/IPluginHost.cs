@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
+using PrivStack.Sdk.Services;
 
 namespace PrivStack.Sdk;
 
@@ -76,6 +77,12 @@ public interface IPluginHost
     /// Toast notification service for transient in-app messages.
     /// </summary>
     IToastService Toast { get; }
+
+    /// <summary>
+    /// AI completion service for intelligent content features (summarization, transformation, etc.).
+    /// Nullable for backward compatibility with hosts that don't have AI configured.
+    /// </summary>
+    IAiService? AI { get; }
 
     /// <summary>
     /// The active workspace data directory.
