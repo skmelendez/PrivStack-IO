@@ -229,15 +229,8 @@ public partial class SettingsViewModel
         {
             var sdk = App.Services.GetRequiredService<IPrivStackSdk>();
 
-            // Ensure vault exists and is unlocked
-            var isInit = await sdk.VaultIsInitialized("ai-vault");
-            if (!isInit)
-            {
-                var unlocked = await sdk.RequestVaultUnlockAsync("ai-vault");
-                if (!unlocked) { AiApiKeyStatus = "Vault unlock required"; return; }
-                await sdk.VaultInitialize("ai-vault", "ai-vault");
-            }
-
+            // Ensure vault exists and is unlocked.
+            // RequestVaultUnlockAsync handles both initialization (if needed) and unlock.
             var isUnlocked = await sdk.VaultIsUnlocked("ai-vault");
             if (!isUnlocked)
             {
