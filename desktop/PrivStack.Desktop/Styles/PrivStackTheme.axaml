@@ -229,8 +229,19 @@
         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
     </Style>
 
-    <Style Selector="ScrollBar">
+    <!-- Overlay scrollbars: hidden by default, fade in on hover -->
+    <Style Selector="ScrollViewer ScrollBar">
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="ScrollViewer:pointerover ScrollBar">
+        <Setter Property="Opacity" Value="1"/>
     </Style>
 
     <Style Selector="ScrollBar /template/ Thumb">
