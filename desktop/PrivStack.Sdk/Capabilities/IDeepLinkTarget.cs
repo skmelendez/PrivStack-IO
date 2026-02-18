@@ -30,4 +30,11 @@ public interface IDeepLinkTarget
     /// Default implementation delegates to <see cref="NavigateToItemAsync(string)"/>.
     /// </summary>
     Task NavigateToItemAsync(string linkType, string itemId) => NavigateToItemAsync(itemId);
+
+    /// <summary>
+    /// Navigates to the specified item with the original search query context.
+    /// Plugins can use this to pre-filter their view to match what the user searched for.
+    /// Default implementation delegates to <see cref="NavigateToItemAsync(string)"/>.
+    /// </summary>
+    Task NavigateToSearchedItemAsync(string itemId, string? searchQuery) => NavigateToItemAsync(itemId);
 }

@@ -508,7 +508,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return results;
         };
 
-        palette.LinkableItemNavigator = async (pluginId, itemId) =>
+        palette.LinkableItemNavigator = async (pluginId, itemId, searchQuery) =>
         {
             var plugin = _pluginRegistry.ActivePlugins
                 .FirstOrDefault(p => p.Metadata.Id == pluginId);
@@ -519,7 +519,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 var navId = plugin.NavigationItem?.Id;
                 if (navId != null && navId != SelectedTab)
                     await SelectTabForEntityNavigation(navId);
-                await deepLink.NavigateToItemAsync(itemId);
+                await deepLink.NavigateToSearchedItemAsync(itemId, searchQuery);
                 return;
             }
 

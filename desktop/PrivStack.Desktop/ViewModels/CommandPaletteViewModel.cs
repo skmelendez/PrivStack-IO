@@ -40,9 +40,9 @@ public partial class CommandPaletteViewModel : ViewModelBase
 
     /// <summary>
     /// Delegate to navigate to a linkable item within a plugin.
-    /// Args: (pluginId, itemId).
+    /// Args: (pluginId, itemId, searchQuery).
     /// </summary>
-    public Func<string, string, Task>? LinkableItemNavigator { get; set; }
+    public Func<string, string, string?, Task>? LinkableItemNavigator { get; set; }
 
     [ObservableProperty]
     private bool _isOpen;
@@ -581,10 +581,11 @@ public partial class CommandPaletteViewModel : ViewModelBase
             return false;
         }
 
-        // Linkable item result — navigate via delegate
+        // Linkable item result — navigate via delegate (pass search query for pre-filtering)
         if (command.PluginId is not null && command.ItemId is not null && LinkableItemNavigator is not null)
         {
-            _ = LinkableItemNavigator(command.PluginId, command.ItemId);
+            var query = SearchQuery?.Trim();
+            _ = LinkableItemNavigator(command.PluginId, command.ItemId, string.IsNullOrEmpty(query) ? null : query);
             return true;
         }
 
