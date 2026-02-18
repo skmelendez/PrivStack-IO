@@ -387,13 +387,19 @@ impl DatasetStore {
         let conn = self.lock_conn();
 
         if dry_run {
-            conn.execute_batch("BEGIN TRANSACTION")?;
+            // Clear any stale implicit transaction before starting ours.
+            // DuckDB errors with "cannot start a transaction within a transaction"
+            // if an implicit auto-commit transaction is still active.
+            if conn.execute_batch("BEGIN TRANSACTION").is_err() {
+                let _ = conn.execute_batch("ROLLBACK");
+                conn.execute_batch("BEGIN TRANSACTION")?;
+            }
 
             let execute_result = conn.execute(sql, []);
             match execute_result {
                 Ok(affected) => {
                     let preview = self.query_mutation_preview(&conn, sql, &stmt_type);
-                    conn.execute_batch("ROLLBACK")?;
+                    let _ = conn.execute_batch("ROLLBACK");
 
                     Ok(MutationResult {
                         affected_rows: affected as i64,
