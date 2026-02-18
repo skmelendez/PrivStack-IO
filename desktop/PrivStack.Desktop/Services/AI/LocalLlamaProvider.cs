@@ -140,7 +140,7 @@ internal sealed class LocalLlamaProvider : IAiProvider
             var modelParams = new LLama.Common.ModelParams(modelPath)
             {
                 ContextSize = 4096,
-                GpuLayerCount = 0, // CPU only
+                GpuLayerCount = -1, // Offload all layers to GPU (Metal on macOS)
                 Threads = Math.Min(Environment.ProcessorCount, 4)
             };
 
@@ -158,7 +158,8 @@ internal sealed class LocalLlamaProvider : IAiProvider
         if (modelName.StartsWith("llama", StringComparison.OrdinalIgnoreCase))
         {
             // Llama 3.x Instruct chat template
-            var prompt = $"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{systemPrompt}<|eot_id|>" +
+            // Note: StatelessExecutor auto-prepends BOS (<|begin_of_text|>), so we omit it here
+            var prompt = $"<|start_header_id|>system<|end_header_id|>\n\n{systemPrompt}<|eot_id|>" +
                          $"<|start_header_id|>user<|end_header_id|>\n\n{userPrompt}<|eot_id|>" +
                          "<|start_header_id|>assistant<|end_header_id|>\n\n";
             return (prompt, ["<|eot_id|>", "<|end_of_text|>"]);
