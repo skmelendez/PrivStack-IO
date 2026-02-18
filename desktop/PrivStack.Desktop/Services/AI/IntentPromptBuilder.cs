@@ -6,58 +6,35 @@ namespace PrivStack.Desktop.Services.AI;
 /// <summary>
 /// Builds the AI system/user prompts for intent classification.
 /// Dynamically constructed from the available intent descriptors.
+/// Optimized for small local models (1B–3B) with concise prompts.
 /// </summary>
 internal static class IntentPromptBuilder
 {
     /// <summary>
-    /// Builds the system prompt that describes all available intents and their slots.
+    /// Builds a compact system prompt listing available intents.
+    /// Keeps token count low for small local models.
     /// </summary>
     public static string BuildSystemPrompt(IReadOnlyList<IntentDescriptor> intents, DateTimeOffset now)
     {
-        var sb = new StringBuilder(2048);
+        var sb = new StringBuilder(1024);
 
-        sb.AppendLine("You are an intent classification engine for a productivity application.");
-        sb.AppendLine("Given user content, identify actionable intents from the available actions below.");
-        sb.AppendLine("Return JSON only — no explanations, no markdown fences.");
+        sb.AppendLine("Classify the user's text into actions. Pick ONLY actions clearly stated in the text. Output JSON.");
         sb.AppendLine();
-        sb.AppendLine("Available actions:");
+        sb.AppendLine("Actions:");
 
-        for (var i = 0; i < intents.Count; i++)
+        foreach (var intent in intents)
         {
-            var intent = intents[i];
-            sb.AppendLine($"{i + 1}. {intent.IntentId} — {intent.Description}");
-
-            var required = intent.Slots.Where(s => s.Required).ToList();
-            var optional = intent.Slots.Where(s => !s.Required).ToList();
-
-            if (required.Count > 0)
-                sb.AppendLine($"   Required: {string.Join(", ", required.Select(s => $"{s.Name} ({SlotTypeName(s.Type)})"))}");
-            if (optional.Count > 0)
-                sb.AppendLine($"   Optional: {string.Join(", ", optional.Select(s => $"{s.Name} ({SlotTypeName(s.Type)})"))}");
+            var requiredSlots = intent.Slots.Where(s => s.Required).Select(s => s.Name);
+            sb.AppendLine($"- {intent.IntentId}: {intent.Description} (needs: {string.Join(", ", requiredSlots)})");
         }
 
         sb.AppendLine();
-        sb.AppendLine($"Current date/time: {now:yyyy-MM-ddTHH:mm:sszzz}");
+        sb.AppendLine($"Today: {now:yyyy-MM-dd dddd}");
         sb.AppendLine();
-        sb.AppendLine("Rules:");
-        sb.AppendLine("- Only suggest intents that are clearly implied by the content.");
-        sb.AppendLine("- For datetime slots, use ISO 8601 format.");
-        sb.AppendLine("- Confidence must be between 0.0 and 1.0.");
-        sb.AppendLine("- Return at most 3 intents per analysis.");
+        sb.AppendLine("Output format:");
+        sb.AppendLine("{\"intents\":[{\"intent_id\":\"<id>\",\"confidence\":0.9,\"summary\":\"<what to do>\",\"slots\":{\"<name>\":\"<value>\"}}]}");
         sb.AppendLine();
-        sb.AppendLine("Respond with exactly this JSON structure:");
-        sb.AppendLine("{");
-        sb.AppendLine("  \"intents\": [");
-        sb.AppendLine("    {");
-        sb.AppendLine("      \"intent_id\": \"<intent_id>\",");
-        sb.AppendLine("      \"confidence\": 0.92,");
-        sb.AppendLine("      \"summary\": \"<human readable summary of the action>\",");
-        sb.AppendLine("      \"slots\": { \"<slot_name>\": \"<value>\", ... }");
-        sb.AppendLine("    }");
-        sb.AppendLine("  ]");
-        sb.AppendLine("}");
-        sb.AppendLine();
-        sb.AppendLine("If no actionable intents found, respond: { \"intents\": [] }");
+        sb.AppendLine("If nothing actionable: {\"intents\":[]}");
 
         return sb.ToString();
     }
@@ -67,42 +44,17 @@ internal static class IntentPromptBuilder
     /// </summary>
     public static string BuildUserPrompt(string content, string? entityType, string? entityTitle)
     {
-        var sb = new StringBuilder(content.Length + 128);
+        var sb = new StringBuilder(content.Length + 64);
 
-        if (!string.IsNullOrEmpty(entityType) || !string.IsNullOrEmpty(entityTitle))
-        {
-            sb.Append("Context: ");
-            if (!string.IsNullOrEmpty(entityType))
-                sb.Append($"[{entityType}] ");
-            if (!string.IsNullOrEmpty(entityTitle))
-                sb.Append($"\"{entityTitle}\" ");
-            sb.AppendLine();
-            sb.AppendLine();
-        }
+        if (!string.IsNullOrEmpty(entityTitle))
+            sb.AppendLine($"From \"{entityTitle}\":");
 
-        sb.AppendLine("Content to analyze:");
         // Truncate content to avoid excessive token usage
-        const int maxContentLength = 4000;
+        const int maxContentLength = 3000;
         sb.Append(content.Length > maxContentLength
             ? content[..maxContentLength] + "..."
             : content);
 
         return sb.ToString();
     }
-
-    private static string SlotTypeName(IntentSlotType type) => type switch
-    {
-        IntentSlotType.String => "string",
-        IntentSlotType.Text => "text",
-        IntentSlotType.DateTime => "datetime",
-        IntentSlotType.Date => "date",
-        IntentSlotType.Time => "time",
-        IntentSlotType.Duration => "duration",
-        IntentSlotType.Integer => "integer",
-        IntentSlotType.Boolean => "boolean",
-        IntentSlotType.Email => "email",
-        IntentSlotType.Url => "url",
-        IntentSlotType.EntityReference => "entity_reference",
-        _ => type.ToString().ToLowerInvariant(),
-    };
 }
