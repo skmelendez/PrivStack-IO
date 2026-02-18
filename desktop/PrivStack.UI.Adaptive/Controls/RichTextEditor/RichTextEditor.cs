@@ -463,7 +463,7 @@ public sealed class RichTextEditor : Control
 
         // 2. Text runs
         var linkBrush = GetBrush("ThemeLinkBrush", new SolidColorBrush(Color.Parse("#0B6E99")));
-        var internalLinkBgBrush = new SolidColorBrush(Color.FromArgb(35, 100, 150, 255));
+        var internalLinkBgBrush = GetBrush("ThemeLinkBackgroundBrush", new SolidColorBrush(Color.FromArgb(35, 100, 150, 255)));
 
         // Pre-pass: draw internal link pill backgrounds grouped per-link (avoids per-word overlap)
         foreach (var line in _layout.Lines)

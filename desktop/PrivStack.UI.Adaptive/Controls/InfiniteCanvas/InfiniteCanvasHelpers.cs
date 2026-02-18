@@ -333,4 +333,10 @@ public sealed partial class InfiniteCanvasControl
             return b;
         return fallback;
     }
+
+    internal static Color GetColor(string key, Color fallback)
+    {
+        var brush = GetBrush(key, new SolidColorBrush(fallback));
+        return (brush as SolidColorBrush)?.Color ?? fallback;
+    }
 }

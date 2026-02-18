@@ -61,7 +61,7 @@
                                     Command="{Binding DeleteCommand}"
                                     IsVisible="{Binding CanDelete}"
                                     Background="{DynamicResource ThemeDangerBrush}"
-                                    Foreground="White"
+                                    Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                     Padding="10,6"
                                     FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
                             <Button Content="Cancel"

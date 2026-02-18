@@ -111,7 +111,7 @@
                     <Border Background="{DynamicResource ThemeDangerBrush}" CornerRadius="6" Padding="10"
                             Opacity="0.9"
                             IsVisible="{Binding SetupError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding SetupError}" Foreground="White" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SetupError}" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
                     </Border>
 
                     <StackPanel Spacing="6" Margin="0,4,0,0">
@@ -184,7 +184,7 @@
                                 <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="8" VerticalAlignment="Center">
                                     <PathIcon Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
                                              Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                             Foreground="White"/>
+                                             Foreground="{DynamicResource ThemeTextOnAccentBrush}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
                                     <TextBlock Text="Local Only (Recommended)" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
@@ -263,7 +263,7 @@
                                 <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemeWarningBrush}" CornerRadius="8" VerticalAlignment="Center">
                                     <PathIcon Data="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"
                                              Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                             Foreground="White"/>
+                                             Foreground="{DynamicResource ThemeTextOnAccentBrush}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
                                     <TextBlock Text="Custom Sync Folder" FontWeight="SemiBold" FontSize="{DynamicResource ThemeFontSizeSmMd}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
@@ -340,7 +340,7 @@
                             <!-- Trial Error -->
                             <Border Background="{DynamicResource ThemeDangerBrush}" CornerRadius="6" Padding="10" Opacity="0.9"
                                     IsVisible="{Binding TrialError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                <TextBlock Text="{Binding TrialError}" Foreground="White" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding TrialError}" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
                             </Border>
 
                             <!-- Phase 1: Email input (before verification) -->
@@ -573,7 +573,7 @@
                     <Border Background="{DynamicResource ThemeDangerBrush}" CornerRadius="6" Padding="10"
                             Opacity="0.9"
                             IsVisible="{Binding SetupError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding SetupError}" Foreground="White" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SetupError}" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontSize="{DynamicResource ThemeFontSizeXsSm}" TextWrapping="Wrap"/>
                     </Border>
 
                     <StackPanel Spacing="10" Margin="0,4,0,0">

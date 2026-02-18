@@ -305,7 +305,8 @@ public sealed partial class InfiniteCanvasControl
         if (source == null) return;
 
         var start = GetAnchorScreenPoint(source, _connectorSourceAnchor);
-        var pen = new Pen(Brushes.CornflowerBlue, 2 * Zoom)
+        var connectorBrush = GetBrush("ThemePrimaryBrush", Brushes.CornflowerBlue);
+        var pen = new Pen(connectorBrush, 2 * Zoom)
         {
             DashStyle = DashStyle.Dash,
         };
@@ -313,7 +314,7 @@ public sealed partial class InfiniteCanvasControl
         ctx.DrawLine(pen, start, _pendingConnectorEnd);
         DrawArrowHeadAtPoint(ctx, _pendingConnectorEnd,
             new Point(_pendingConnectorEnd.X - start.X, _pendingConnectorEnd.Y - start.Y),
-            Brushes.CornflowerBlue);
+            connectorBrush);
     }
 
     // ================================================================

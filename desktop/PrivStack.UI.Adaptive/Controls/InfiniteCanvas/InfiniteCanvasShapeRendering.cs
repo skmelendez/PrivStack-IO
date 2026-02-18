@@ -14,12 +14,12 @@ namespace PrivStack.UI.Adaptive.Controls.InfiniteCanvas;
 
 public sealed partial class InfiniteCanvasControl
 {
-    private static readonly Color DefaultDiamondColor = Color.Parse("#FFDCB4");
-    private static readonly Color DefaultParallelogramColor = Color.Parse("#B4D2FF");
-    private static readonly Color DefaultCylinderColor = Color.Parse("#C8DCF0");
-    private static readonly Color DefaultHexagonColor = Color.Parse("#DCC8F0");
-    private static readonly Color DefaultRoundedRectColor = Color.Parse("#B4E6C8");
-    private static readonly Color DefaultTriangleColor = Color.Parse("#FFC8C8");
+    private static Color DefaultDiamondColor => GetColor("ThemeShapeDiamondColor", Color.Parse("#FFDCB4"));
+    private static Color DefaultParallelogramColor => GetColor("ThemeShapeParallelogramColor", Color.Parse("#B4D2FF"));
+    private static Color DefaultCylinderColor => GetColor("ThemeShapeCylinderColor", Color.Parse("#C8DCF0"));
+    private static Color DefaultHexagonColor => GetColor("ThemeShapeHexagonColor", Color.Parse("#DCC8F0"));
+    private static Color DefaultRoundedRectColor => GetColor("ThemeShapeRoundedRectColor", Color.Parse("#B4E6C8"));
+    private static Color DefaultTriangleColor => GetColor("ThemeShapeTriangleColor", Color.Parse("#FFC8C8"));
 
     // ================================================================
     // Diamond (decision shape)
