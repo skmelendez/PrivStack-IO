@@ -2,126 +2,126 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- PrivStack Dark Theme -->
-    <!-- Based on prerelease website design system -->
+    <!-- Modern indigo-based design system -->
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- BACKGROUND COLORS                                                        -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Primary background - deepest layer -->
-    <Color x:Key="ThemeBackground">#0A0A10</Color>
+    <Color x:Key="ThemeBackground">#0F0F14</Color>
 
     <!-- Surface - panels, cards, sidebars -->
-    <Color x:Key="ThemeSurface">#141420</Color>
+    <Color x:Key="ThemeSurface">#16161E</Color>
 
     <!-- Elevated surface - modals, dropdowns, popovers -->
-    <Color x:Key="ThemeSurfaceElevated">#1E1E2C</Color>
+    <Color x:Key="ThemeSurfaceElevated">#21212C</Color>
 
     <!-- Glass surface - semi-transparent overlay panels -->
-    <Color x:Key="ThemeSurfaceGlass">#D9121218</Color>
+    <Color x:Key="ThemeSurfaceGlass">#CC16161E</Color>
 
     <!-- Recessed surface — inset areas, code blocks, sidebar backgrounds -->
-    <Color x:Key="ThemeSurfaceRecessed">#06060A</Color>
+    <Color x:Key="ThemeSurfaceRecessed">#09090D</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- BORDER COLORS                                                            -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Primary border - dividers, outlines -->
-    <Color x:Key="ThemeBorder">#282840</Color>
+    <Color x:Key="ThemeBorder">#2A2A38</Color>
 
     <!-- Subtle border - low-contrast separators -->
-    <Color x:Key="ThemeBorderSubtle">#1C1C30</Color>
+    <Color x:Key="ThemeBorderSubtle">#1D1D28</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- TEXT COLORS                                                              -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Primary text - headings, body -->
-    <Color x:Key="ThemeTextPrimary">#FFFFFF</Color>
+    <Color x:Key="ThemeTextPrimary">#EBEBF0</Color>
 
     <!-- Secondary text - descriptions, labels (high contrast) -->
-    <Color x:Key="ThemeTextSecondary">#B8B8C8</Color>
+    <Color x:Key="ThemeTextSecondary">#9494A8</Color>
 
     <!-- Muted text - placeholders, hints (readable contrast) -->
-    <Color x:Key="ThemeTextMuted">#9090A0</Color>
+    <Color x:Key="ThemeTextMuted">#63638A</Color>
     <Color x:Key="ThemeTextOnAccent">#FFFFFF</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- PRIMARY ACCENT (CYAN)                                                    -->
+    <!-- PRIMARY ACCENT (INDIGO)                                                  -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Primary accent - buttons, links, focus states -->
-    <Color x:Key="ThemePrimary">#00D4FF</Color>
+    <Color x:Key="ThemePrimary">#6366F1</Color>
 
     <!-- Primary hover - darker for hover states -->
-    <Color x:Key="ThemePrimaryHover">#00A8CC</Color>
+    <Color x:Key="ThemePrimaryHover">#5254CC</Color>
 
-    <!-- Primary muted - backgrounds, focus rings (40% opacity for visibility) -->
-    <Color x:Key="ThemePrimaryMuted">#6600D4FF</Color>
+    <!-- Primary muted - backgrounds, focus rings, active nav pill -->
+    <Color x:Key="ThemePrimaryMuted">#336366F1</Color>
 
-    <!-- Primary glow - box shadows (50% opacity) -->
-    <Color x:Key="ThemePrimaryGlow">#8000D4FF</Color>
+    <!-- Primary glow - box shadows (30% opacity) -->
+    <Color x:Key="ThemePrimaryGlow">#4D6366F1</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- SECONDARY ACCENT (PURPLE)                                                -->
+    <!-- SECONDARY ACCENT (VIOLET)                                                -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Secondary accent - secondary buttons, tags -->
-    <Color x:Key="ThemeSecondary">#8B5CF6</Color>
+    <Color x:Key="ThemeSecondary">#A78BFA</Color>
 
     <!-- Secondary hover - darker for hover states -->
-    <Color x:Key="ThemeSecondaryHover">#7C3AED</Color>
+    <Color x:Key="ThemeSecondaryHover">#8F6EF5</Color>
 
-    <!-- Secondary muted - backgrounds (40% opacity for visibility) -->
-    <Color x:Key="ThemeSecondaryMuted">#668B5CF6</Color>
+    <!-- Secondary muted - backgrounds (20% opacity) -->
+    <Color x:Key="ThemeSecondaryMuted">#33A78BFA</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- SEMANTIC COLORS                                                          -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Success - confirmations, positive actions -->
-    <Color x:Key="ThemeSuccess">#10B981</Color>
-    <Color x:Key="ThemeSuccessMuted">#4D10B981</Color>
+    <Color x:Key="ThemeSuccess">#34D399</Color>
+    <Color x:Key="ThemeSuccessMuted">#3334D399</Color>
 
     <!-- Warning - alerts, cautions -->
-    <Color x:Key="ThemeWarning">#FFB800</Color>
-    <Color x:Key="ThemeWarningMuted">#4DFFB800</Color>
+    <Color x:Key="ThemeWarning">#FBB32F</Color>
+    <Color x:Key="ThemeWarningMuted">#33FBB32F</Color>
 
     <!-- Info - informational messages -->
-    <Color x:Key="ThemeInfo">#3B82F6</Color>
-    <Color x:Key="ThemeInfoMuted">#4D3B82F6</Color>
+    <Color x:Key="ThemeInfo">#60A5FA</Color>
+    <Color x:Key="ThemeInfoMuted">#3360A5FA</Color>
 
     <!-- Danger - errors, destructive actions -->
-    <Color x:Key="ThemeDanger">#EF4444</Color>
-    <Color x:Key="ThemeDangerMuted">#4DEF4444</Color>
+    <Color x:Key="ThemeDanger">#F87171</Color>
+    <Color x:Key="ThemeDangerMuted">#33F87171</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- INTERACTION STATES                                                       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Hover - list items, buttons -->
-    <Color x:Key="ThemeHover">#262635</Color>
+    <Color x:Key="ThemeHover">#1D1D2C</Color>
 
-    <!-- Selected - active items, selections (with cyan tint) -->
-    <Color x:Key="ThemeSelected">#1A2A35</Color>
+    <!-- Selected - active items, selections (with indigo tint) -->
+    <Color x:Key="ThemeSelected">#201E3A</Color>
 
     <!-- Pressed - pressed state -->
-    <Color x:Key="ThemePressed">#303045</Color>
+    <Color x:Key="ThemePressed">#181826</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- SPECIAL COLORS                                                           -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Selection highlight (text selection) -->
-    <Color x:Key="ThemeSelection">#4D00D4FF</Color>
+    <Color x:Key="ThemeSelection">#4D6366F1</Color>
 
     <!-- Scrollbar track -->
-    <Color x:Key="ThemeScrollTrack">#08080C</Color>
+    <Color x:Key="ThemeScrollTrack">#0A0A0F</Color>
 
     <!-- Scrollbar thumb -->
-    <Color x:Key="ThemeScrollThumb">#3A3A4A</Color>
-    <Color x:Key="ThemeScrollThumbHover">#5A5A6A</Color>
+    <Color x:Key="ThemeScrollThumb">#35354A</Color>
+    <Color x:Key="ThemeScrollThumbHover">#55557A</Color>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- BRUSH RESOURCES                                                          -->
@@ -171,14 +171,22 @@
     <SolidColorBrush x:Key="ThemeSelectedBrush" Color="{StaticResource ThemeSelected}"/>
     <SolidColorBrush x:Key="ThemePressedBrush" Color="{StaticResource ThemePressed}"/>
 
-    <!-- Navigation Sidebar Brushes (default: alias standard theme colors) -->
-    <SolidColorBrush x:Key="ThemeNavBackgroundBrush" Color="{StaticResource ThemeSurface}"/>
-    <SolidColorBrush x:Key="ThemeNavBorderBrush" Color="{StaticResource ThemeBorder}"/>
-    <SolidColorBrush x:Key="ThemeNavBorderSubtleBrush" Color="{StaticResource ThemeBorderSubtle}"/>
-    <SolidColorBrush x:Key="ThemeNavTextBrush" Color="{StaticResource ThemeTextMuted}"/>
-    <SolidColorBrush x:Key="ThemeNavTextHoverBrush" Color="{StaticResource ThemeTextPrimary}"/>
-    <SolidColorBrush x:Key="ThemeNavHoverBrush" Color="{StaticResource ThemeHover}"/>
-    <SolidColorBrush x:Key="ThemeNavSelectedBrush" Color="{StaticResource ThemeSelected}"/>
+    <!-- Navigation Sidebar Brushes (darker than content surface for visual hierarchy) -->
+    <Color x:Key="ThemeNavBackground">#0E0E16</Color>
+    <Color x:Key="ThemeNavBorder">#252535</Color>
+    <Color x:Key="ThemeNavBorderSubtle">#1A1A28</Color>
+    <Color x:Key="ThemeNavText">#636380</Color>
+    <Color x:Key="ThemeNavTextHover">#EBEBF0</Color>
+    <Color x:Key="ThemeNavHover">#1A1A2A</Color>
+    <Color x:Key="ThemeNavSelected">#1E1C38</Color>
+
+    <SolidColorBrush x:Key="ThemeNavBackgroundBrush" Color="{StaticResource ThemeNavBackground}"/>
+    <SolidColorBrush x:Key="ThemeNavBorderBrush" Color="{StaticResource ThemeNavBorder}"/>
+    <SolidColorBrush x:Key="ThemeNavBorderSubtleBrush" Color="{StaticResource ThemeNavBorderSubtle}"/>
+    <SolidColorBrush x:Key="ThemeNavTextBrush" Color="{StaticResource ThemeNavText}"/>
+    <SolidColorBrush x:Key="ThemeNavTextHoverBrush" Color="{StaticResource ThemeNavTextHover}"/>
+    <SolidColorBrush x:Key="ThemeNavHoverBrush" Color="{StaticResource ThemeNavHover}"/>
+    <SolidColorBrush x:Key="ThemeNavSelectedBrush" Color="{StaticResource ThemeNavSelected}"/>
 
     <!-- Table Header Brush -->
     <SolidColorBrush x:Key="ThemeTableHeaderBrush" Color="{StaticResource ThemeHover}"/>

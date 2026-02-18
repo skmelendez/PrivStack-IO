@@ -38,9 +38,9 @@
     <!-- Primary/Accent button -->
     <Style Selector="Button.accent">
         <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource ThemeBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextOnAccentBrush}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusSm}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
     </Style>
 
     <Style Selector="Button.accent:pointerover">
@@ -54,8 +54,8 @@
     <!-- Danger button -->
     <Style Selector="Button.danger">
         <Setter Property="Background" Value="{DynamicResource ThemeDangerBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource ThemeBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusSm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextOnAccentBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
     </Style>
 
     <Style Selector="Button.danger:pointerover">
@@ -65,8 +65,8 @@
     <!-- Success button -->
     <Style Selector="Button.success">
         <Setter Property="Background" Value="{DynamicResource ThemeSuccessBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource ThemeBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusSm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextOnAccentBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
     </Style>
 
     <Style Selector="Button.success:pointerover">
@@ -319,8 +319,8 @@
 
     <Style Selector="Border.badge">
         <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
-        <Setter Property="CornerRadius" Value="10"/>
-        <Setter Property="Padding" Value="8,2"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusFull}"/>
+        <Setter Property="Padding" Value="8,3"/>
     </Style>
 
     <Style Selector="Border.badge-success">
@@ -551,8 +551,8 @@
     <Style Selector="ProgressBar">
         <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryBrush}"/>
-        <Setter Property="MinHeight" Value="4"/>
-        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="MinHeight" Value="6"/>
+        <Setter Property="CornerRadius" Value="3"/>
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
