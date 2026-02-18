@@ -74,13 +74,15 @@ internal sealed class LocalLlamaProvider : IAiProvider
                 };
             }
 
-            var prompt = $"<|system|>\n{request.SystemPrompt}<|end|>\n<|user|>\n{request.UserPrompt}<|end|>\n<|assistant|>\n";
+            var (prompt, antiPrompts) = FormatPrompt(modelName, request.SystemPrompt, request.UserPrompt);
+            _log.Debug("Local inference using model {Model}, prompt length {Len}, anti-prompts: [{Anti}]",
+                modelName, prompt.Length, string.Join(", ", antiPrompts));
 
             var executor = new LLama.StatelessExecutor(_weights!, _context.Params);
             var inferParams = new LLama.Common.InferenceParams
             {
                 MaxTokens = request.MaxTokens,
-                AntiPrompts = ["<|end|>", "<|user|>", "</s>"],
+                AntiPrompts = antiPrompts,
                 SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
                 {
                     Temperature = (float)request.Temperature
@@ -148,6 +150,32 @@ internal sealed class LocalLlamaProvider : IAiProvider
 
         _loadedModelPath = modelPath;
         _log.Information("Local LLM model loaded: {Path}", modelPath);
+    }
+
+    private static (string Prompt, List<string> AntiPrompts) FormatPrompt(
+        string modelName, string systemPrompt, string userPrompt)
+    {
+        if (modelName.StartsWith("llama", StringComparison.OrdinalIgnoreCase))
+        {
+            // Llama 3.x Instruct chat template
+            var prompt = $"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{systemPrompt}<|eot_id|>" +
+                         $"<|start_header_id|>user<|end_header_id|>\n\n{userPrompt}<|eot_id|>" +
+                         "<|start_header_id|>assistant<|end_header_id|>\n\n";
+            return (prompt, ["<|eot_id|>", "<|end_of_text|>"]);
+        }
+
+        if (modelName.StartsWith("mistral", StringComparison.OrdinalIgnoreCase))
+        {
+            // Mistral Instruct v0.2 chat template
+            var prompt = $"[INST] {systemPrompt}\n\n{userPrompt} [/INST]";
+            return (prompt, ["</s>", "[INST]"]);
+        }
+
+        // Phi-3 chat template (default)
+        {
+            var prompt = $"<|system|>\n{systemPrompt}<|end|>\n<|user|>\n{userPrompt}<|end|>\n<|assistant|>\n";
+            return (prompt, ["<|end|>", "<|user|>"]);
+        }
     }
 
     private string? GetDefaultModelName()
