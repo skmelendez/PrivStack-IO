@@ -170,4 +170,13 @@ public sealed partial class DatasetService
             Log.Warning("RenameColumnAsync returned {Error}", result);
         return Task.CompletedTask;
     }
+
+    public Task AlterColumnTypeAsync(string datasetId, string columnName, string newType, CancellationToken ct)
+    {
+        var request = new { dataset_id = datasetId, column_name = columnName, column_type = newType };
+        var result = DatasetNative.AlterColumnType(JsonSerializer.Serialize(request, JsonOptions));
+        if (result != Native.PrivStackError.Ok)
+            Log.Warning("AlterColumnTypeAsync returned {Error}", result);
+        return Task.CompletedTask;
+    }
 }

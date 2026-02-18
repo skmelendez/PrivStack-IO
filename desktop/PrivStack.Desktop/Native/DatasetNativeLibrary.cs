@@ -125,4 +125,7 @@ internal static partial class DatasetNativeLibrary
 
     [LibraryImport(LibraryName, EntryPoint = "privstack_dataset_rename_column", StringMarshalling = StringMarshalling.Utf8)]
     public static partial PrivStackError RenameColumn(string requestJson);
+
+    [LibraryImport(LibraryName, EntryPoint = "privstack_dataset_alter_column_type", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial PrivStackError AlterColumnType(string requestJson);
 }

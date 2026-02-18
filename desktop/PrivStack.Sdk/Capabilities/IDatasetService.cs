@@ -104,6 +104,9 @@ public interface IDatasetService
     /// <summary>Rename a column in a dataset.</summary>
     Task RenameColumnAsync(string datasetId, string oldName, string newName, CancellationToken ct = default);
 
+    /// <summary>Change a column's data type.</summary>
+    Task AlterColumnTypeAsync(string datasetId, string columnName, string newType, CancellationToken ct = default);
+
     // ── Saved Queries (persisted) ───────────────────────────────────────
 
     /// <summary>Create a saved query (or view when <paramref name="isView"/> is true).</summary>

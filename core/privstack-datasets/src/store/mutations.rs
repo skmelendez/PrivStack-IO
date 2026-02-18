@@ -310,6 +310,43 @@ impl DatasetStore {
         Ok(())
     }
 
+    /// Change a column's data type.
+    pub fn alter_column_type(
+        &self,
+        id: &DatasetId,
+        column: &str,
+        new_type: &str,
+    ) -> DatasetResult<()> {
+        const VALID_TYPES: &[&str] = &[
+            "VARCHAR", "INTEGER", "BIGINT", "DOUBLE", "FLOAT", "BOOLEAN",
+            "DATE", "TIMESTAMP", "HUGEINT", "SMALLINT", "TINYINT",
+        ];
+        let dtype = new_type.to_uppercase();
+        if !VALID_TYPES.contains(&dtype.as_str()) {
+            return Err(DatasetError::InvalidQuery(
+                format!("Unsupported column type: {new_type}"),
+            ));
+        }
+
+        let table = dataset_table_name(id);
+        let now = now_millis();
+        let col = sanitize_identifier(column);
+
+        let sql = format!("ALTER TABLE {table} ALTER COLUMN \"{col}\" SET DATA TYPE {dtype}");
+
+        let conn = self.lock_conn();
+        conn.execute_batch(&sql)?;
+
+        let columns = introspect_columns(&conn, &table)?;
+        let columns_json = serde_json::to_string(&columns)?;
+        conn.execute(
+            "UPDATE _datasets_meta SET columns_json = ?, modified_at = ? WHERE id = ?",
+            params![columns_json, now, id.to_string()],
+        )?;
+
+        Ok(())
+    }
+
     /// Rename a column in a dataset.
     pub fn rename_column(
         &self,

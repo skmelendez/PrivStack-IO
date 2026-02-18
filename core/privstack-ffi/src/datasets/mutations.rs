@@ -251,6 +251,57 @@ pub unsafe extern "C" fn privstack_dataset_drop_column(
     }
 }
 
+/// Alter a column's data type.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_dataset_alter_column_type(
+    request_json: *const c_char,
+) -> PrivStackError {
+    unsafe {
+        if request_json.is_null() {
+            return PrivStackError::NullPointer;
+        }
+        let json_str = match CStr::from_ptr(request_json).to_str() {
+            Ok(s) => s,
+            Err(_) => return PrivStackError::InvalidUtf8,
+        };
+        let req: ColumnModifyRequest = match serde_json::from_str(json_str) {
+            Ok(r) => r,
+            Err(_) => return PrivStackError::JsonError,
+        };
+
+        let new_type = match req.column_type.as_deref() {
+            Some(t) => t,
+            None => return PrivStackError::InvalidArgument,
+        };
+
+        let handle = crate::lock_handle();
+        let handle = match handle.as_ref() {
+            Some(h) => h,
+            None => return PrivStackError::NotInitialized,
+        };
+        if let Err(e) = crate::check_license_writable(handle) {
+            return e;
+        }
+        let store = match handle.dataset_store.as_ref() {
+            Some(s) => s,
+            None => return PrivStackError::StorageError,
+        };
+
+        let dataset_id = match uuid::Uuid::parse_str(&req.dataset_id) {
+            Ok(u) => privstack_datasets::DatasetId(u),
+            Err(_) => return PrivStackError::InvalidArgument,
+        };
+
+        match store.alter_column_type(&dataset_id, &req.column_name, new_type) {
+            Ok(()) => PrivStackError::Ok,
+            Err(e) => {
+                eprintln!("[FFI DATASET] alter_column_type failed: {e:?}");
+                PrivStackError::StorageError
+            }
+        }
+    }
+}
+
 /// Rename a column in a dataset.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn privstack_dataset_rename_column(
