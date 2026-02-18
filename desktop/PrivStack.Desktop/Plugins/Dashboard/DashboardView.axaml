@@ -222,74 +222,83 @@
                     <TextBlock Text="System Overview" Classes="section-heading"/>
                     <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <!-- App Shell -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                Classes="shadow-sm">
-                            <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <controls:IconControl Icon="Box" Size="16" StrokeThickness="1.5"
-                                                          Stroke="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        <Border Classes="stat-card" Margin="0,0,12,12" MinWidth="180">
+                            <StackPanel Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="10"
+                                        Background="{DynamicResource ThemeInfoMutedBrush}">
+                                    <controls:IconControl Icon="Box" Size="18"
+                                                          Stroke="{DynamicResource ThemeInfoBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding AppShellSize}" Classes="hero-number"/>
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="App Shell" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontWeight="Medium"/>
+                                    <TextBlock Text="Core application" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding AppShellSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock Text="Core application" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
                         </Border>
                         <!-- Plugins (binaries) -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                Classes="shadow-sm">
-                            <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <controls:IconControl Icon="Package" Size="16" StrokeThickness="1.5"
-                                                          Stroke="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        <Border Classes="stat-card" Margin="0,0,12,12" MinWidth="180">
+                            <StackPanel Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="10"
+                                        Background="{DynamicResource ThemeWarningMutedBrush}">
+                                    <controls:IconControl Icon="Package" Size="18"
+                                                          Stroke="{DynamicResource ThemeWarningBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding PluginBinariesTotal}" Classes="hero-number"/>
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="Plugins" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontWeight="Medium"/>
+                                    <TextBlock Text="Installed binaries" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding PluginBinariesTotal}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock Text="Installed binaries" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
                         </Border>
                         <!-- Data Storage -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                Classes="shadow-sm">
-                            <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <controls:IconControl Icon="Database" Size="16" StrokeThickness="1.5"
-                                                          Stroke="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        <Border Classes="stat-card" Margin="0,0,12,12" MinWidth="180">
+                            <StackPanel Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="10"
+                                        Background="{DynamicResource ThemeSuccessMutedBrush}">
+                                    <controls:IconControl Icon="Database" Size="18"
+                                                          Stroke="{DynamicResource ThemeSuccessBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding DataStorageTotal}" Classes="hero-number"/>
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="Data Storage" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontWeight="Medium"/>
+                                    <TextBlock Text="All plugin data" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding DataStorageTotal}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock Text="All plugin data" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
                         </Border>
                         <!-- Memory -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
-                                Background="{DynamicResource ThemePrimaryMutedBrush}"
-                                Classes="shadow-sm">
-                            <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <controls:IconControl Icon="Cpu" Size="16" StrokeThickness="1.5"
-                                                          Stroke="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        <Border Classes="stat-card" Margin="0,0,12,12" MinWidth="180"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <StackPanel Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="10"
+                                        Background="{DynamicResource ThemePrimaryMutedBrush}">
+                                    <controls:IconControl Icon="Cpu" Size="18"
+                                                          Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding MemoryUsage}" Classes="hero-number"/>
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="Memory" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontWeight="Medium"/>
+                                    <TextBlock FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}">
+                                        <Run Text="{Binding MemoryGcHeap}"/>
+                                        <Run Text=" GC heap"/>
+                                    </TextBlock>
                                 </StackPanel>
-                                <TextBlock Text="{Binding MemoryUsage}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}">
-                                    <Run Text="{Binding MemoryGcHeap}"/>
-                                    <Run Text=" GC heap"/>
-                                </TextBlock>
                             </StackPanel>
                         </Border>
                     </WrapPanel>
@@ -592,83 +601,92 @@
                     <TextBlock Text="Storage Overview" Classes="section-heading"/>
                     <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <!-- Database -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                Classes="shadow-sm">
-                            <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <PathIcon Data="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"
-                                              Width="14" Height="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <Border Classes="stat-card" Margin="0,0,12,12" MinWidth="180">
+                            <StackPanel Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="10"
+                                        Background="{DynamicResource ThemeInfoMutedBrush}">
+                                    <controls:IconControl Icon="Database" Size="18"
+                                                          Stroke="{DynamicResource ThemeInfoBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding TotalDatabaseSize}" Classes="hero-number"/>
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="Database" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding TotalDatabaseEstimate}"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               IsVisible="{Binding TotalDatabaseEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    <TextBlock Text="Entity storage" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding TotalDatabaseSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock Text="{Binding TotalDatabaseEstimate}"
-                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           IsVisible="{Binding TotalDatabaseEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                <TextBlock Text="Entity storage" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
                         </Border>
                         <!-- Files -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                Classes="shadow-sm">
-                            <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <PathIcon Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
-                                              Width="14" Height="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <Border Classes="stat-card" Margin="0,0,12,12" MinWidth="180">
+                            <StackPanel Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="10"
+                                        Background="{DynamicResource ThemeWarningMutedBrush}">
+                                    <controls:IconControl Icon="Folder" Size="18"
+                                                          Stroke="{DynamicResource ThemeWarningBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding TotalFilesSize}" Classes="hero-number"/>
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="Files" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontWeight="Medium"/>
+                                    <TextBlock Text="Media library" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding TotalFilesSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock Text="Media library" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
                         </Border>
                         <!-- Vault -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
-                                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                Classes="shadow-sm">
-                            <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <PathIcon Data="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"
-                                              Width="14" Height="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <Border Classes="stat-card" Margin="0,0,12,12" MinWidth="180">
+                            <StackPanel Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="10"
+                                        Background="{DynamicResource ThemeSuccessMutedBrush}">
+                                    <controls:IconControl Icon="Lock" Size="18"
+                                                          Stroke="{DynamicResource ThemeSuccessBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding TotalVaultSize}" Classes="hero-number"/>
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="Vault" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding TotalVaultEstimate}"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               IsVisible="{Binding TotalVaultEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    <TextBlock Text="Encrypted blobs" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding TotalVaultSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock Text="{Binding TotalVaultEstimate}"
-                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           IsVisible="{Binding TotalVaultEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                <TextBlock Text="Encrypted blobs" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
                         </Border>
                         <!-- Total -->
-                        <Border Padding="20" Margin="0,0,12,12" CornerRadius="12" MinWidth="180"
-                                Background="{DynamicResource ThemePrimaryMutedBrush}"
-                                Classes="shadow-sm">
-                            <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <PathIcon Data="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"
-                                              Width="14" Height="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <Border Classes="stat-card" Margin="0,0,12,12" MinWidth="180"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <StackPanel Spacing="12">
+                                <Border Width="40" Height="40" CornerRadius="10"
+                                        Background="{DynamicResource ThemePrimaryMutedBrush}">
+                                    <controls:IconControl Icon="Database" Size="18"
+                                                          Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding TotalStorageSize}" Classes="hero-number"/>
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="Total" FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding TotalStorageEstimate}"
+                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               IsVisible="{Binding TotalStorageEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    <TextBlock Text="All storage" FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding TotalStorageSize}" FontSize="{DynamicResource ThemeFontSizeXl}" FontWeight="Bold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock Text="{Binding TotalStorageEstimate}"
-                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           IsVisible="{Binding TotalStorageEstimate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                <TextBlock Text="All storage" FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                             </StackPanel>
                         </Border>
                     </WrapPanel>

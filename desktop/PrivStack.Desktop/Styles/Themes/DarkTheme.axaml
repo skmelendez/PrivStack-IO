@@ -1,6 +1,10 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://PrivStack.Desktop/Styles/Themes/SharedTokens.axaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
     <!-- PrivStack Dark Theme -->
     <!-- Modern indigo-based design system -->
 
@@ -226,174 +230,26 @@
     <SolidColorBrush x:Key="ThemeNodeFileBrush" Color="#64748B"/>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- LAYOUT CONSTANTS                                                         -->
+    <!-- GRADIENT BRUSHES (design system v1.38.0)                                 -->
+    <!-- Layout constants are in SharedTokens.axaml (via MergedDictionaries).     -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
-    <!-- Corner Radius -->
-    <CornerRadius x:Key="ThemeRadiusXs">4</CornerRadius>
-    <CornerRadius x:Key="ThemeRadiusSm">6</CornerRadius>
-    <CornerRadius x:Key="ThemeRadiusMd">8</CornerRadius>
-    <CornerRadius x:Key="ThemeRadiusLg">12</CornerRadius>
-    <CornerRadius x:Key="ThemeRadiusXl">16</CornerRadius>
-    <CornerRadius x:Key="ThemeRadiusFull">9999</CornerRadius>
+    <!-- Sidebar gradient: subtle top→bottom depth on nav panel -->
+    <LinearGradientBrush x:Key="ThemeNavGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource ThemeNavBackground}" Offset="0"/>
+        <GradientStop Color="#12121C" Offset="1"/>
+    </LinearGradientBrush>
 
-    <!-- Standard Padding/Margins -->
-    <Thickness x:Key="ThemePaddingXs">4</Thickness>
-    <Thickness x:Key="ThemePaddingSm">8</Thickness>
-    <Thickness x:Key="ThemePaddingMd">12</Thickness>
-    <Thickness x:Key="ThemePaddingLg">16</Thickness>
-    <Thickness x:Key="ThemePaddingXl">24</Thickness>
-    <Thickness x:Key="ThemePadding2Xl">32</Thickness>
+    <!-- Active nav left accent bar: primary → secondary vertical gradient -->
+    <LinearGradientBrush x:Key="ThemeNavAccentBarBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource ThemePrimary}" Offset="0"/>
+        <GradientStop Color="{StaticResource ThemeSecondary}" Offset="1"/>
+    </LinearGradientBrush>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- PANEL WIDTHS                                                             -->
-    <!-- Use these for consistent sidebar/panel sizing across all views           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-
-    <!-- Primary sidebar (left navigation list in most views) -->
-    <x:Double x:Key="ThemeSidebarWidth">260</x:Double>
-
-    <!-- Secondary/detail panel (middle column, e.g., contact details) -->
-    <x:Double x:Key="ThemeDetailPanelWidth">320</x:Double>
-
-    <!-- Info panel (right sidebar for supplementary info) -->
-    <x:Double x:Key="ThemeInfoPanelWidth">280</x:Double>
-
-    <!-- Popup/flyout panels -->
-    <x:Double x:Key="ThemePopupPanelWidth">320</x:Double>
-
-    <!-- Narrow sidebar (for compact views like passwords) -->
-    <x:Double x:Key="ThemeSidebarNarrowWidth">200</x:Double>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- LIST ITEM SIZING                                                         -->
-    <!-- Consistent sizing for list items across all sidebars                     -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-
-    <!-- List item padding (internal spacing) -->
-    <Thickness x:Key="ThemeListItemPadding">12,10</Thickness>
-    <Thickness x:Key="ThemeListItemPaddingCompact">8,6</Thickness>
-
-    <!-- List item minimum height -->
-    <x:Double x:Key="ThemeListItemMinHeight">44</x:Double>
-    <x:Double x:Key="ThemeListItemMinHeightCompact">36</x:Double>
-
-    <!-- Spacing between list items -->
-    <x:Double x:Key="ThemeListItemSpacing">2</x:Double>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- AVATAR/ICON SIZING                                                       -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-
-    <!-- Small avatar (list items, compact views) -->
-    <x:Double x:Key="ThemeAvatarSizeSm">32</x:Double>
-
-    <!-- Medium avatar (standard list items) -->
-    <x:Double x:Key="ThemeAvatarSizeMd">40</x:Double>
-
-    <!-- Large avatar (detail views, headers) -->
-    <x:Double x:Key="ThemeAvatarSizeLg">64</x:Double>
-
-    <!-- Extra large avatar (profile views) -->
-    <x:Double x:Key="ThemeAvatarSizeXl">80</x:Double>
-
-    <!-- Icon sizes -->
-    <x:Double x:Key="ThemeIconSizeXs">12</x:Double>
-    <x:Double x:Key="ThemeIconSizeSm">16</x:Double>
-    <x:Double x:Key="ThemeIconSizeMd">20</x:Double>
-    <x:Double x:Key="ThemeIconSizeLg">24</x:Double>
-    <x:Double x:Key="ThemeIconSizeXl">32</x:Double>
-
-    <!-- Status indicator dot -->
-    <x:Double x:Key="ThemeStatusDotSize">8</x:Double>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- SPACING                                                                  -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-
-    <!-- Standard spacing values -->
-    <x:Double x:Key="ThemeSpacingXs">4</x:Double>
-    <x:Double x:Key="ThemeSpacingSm">8</x:Double>
-    <x:Double x:Key="ThemeSpacingMd">12</x:Double>
-    <x:Double x:Key="ThemeSpacingLg">16</x:Double>
-    <x:Double x:Key="ThemeSpacingXl">24</x:Double>
-    <x:Double x:Key="ThemeSpacing2Xl">32</x:Double>
-    <x:Double x:Key="ThemePageMaxWidth">1000</x:Double>
-    <x:Double x:Key="ThemeContentMaxWidth">800</x:Double>
-    <x:Double x:Key="ThemeContentWideMinWidth">600</x:Double>
-    <x:Double x:Key="ThemeContentWideMaxWidth">960</x:Double>
-
-    <!-- Section spacing (between major sections) -->
-    <x:Double x:Key="ThemeSectionSpacing">24</x:Double>
-
-    <!-- Semantic spacing aliases -->
-    <Thickness x:Key="ThemeSectionGap">32</Thickness>
-    <Thickness x:Key="ThemeCardInternalPadding">20</Thickness>
-    <Thickness x:Key="ThemeClusterGap">16</Thickness>
-    <Thickness x:Key="ThemeInlineGap">8</Thickness>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- BUTTON SIZING                                                            -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-
-    <Thickness x:Key="ThemeButtonPaddingSm">8,4</Thickness>
-    <Thickness x:Key="ThemeButtonPaddingMd">12,6</Thickness>
-    <Thickness x:Key="ThemeButtonPaddingLg">16,10</Thickness>
-
-    <x:Double x:Key="ThemeButtonMinHeight">32</x:Double>
-    <x:Double x:Key="ThemeButtonMinHeightLg">40</x:Double>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- INPUT SIZING                                                             -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-
-    <Thickness x:Key="ThemeInputPadding">12,8</Thickness>
-    <x:Double x:Key="ThemeInputMinHeight">36</x:Double>
-
-    <!-- Search box -->
-    <x:Double x:Key="ThemeSearchBoxHeight">36</x:Double>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- TYPOGRAPHY                                                               -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-
-    <FontFamily x:Key="ThemeFontSans">avares://PrivStack.Desktop/Assets/Fonts#IBM Plex Sans, Segoe UI, -apple-system, Noto Sans, sans-serif, Segoe UI Emoji, Noto Color Emoji</FontFamily>
-    <FontFamily x:Key="ThemeFontMono">avares://PrivStack.Desktop/Assets/Fonts#JetBrains Mono, Consolas, Menlo, monospace</FontFamily>
-
-    <x:Double x:Key="ThemeFontSize2Xs">10</x:Double>
-    <x:Double x:Key="ThemeFontSizeXs">11</x:Double>
-    <x:Double x:Key="ThemeFontSizeXsSm">12</x:Double>
-    <x:Double x:Key="ThemeFontSizeSm">13</x:Double>
-    <x:Double x:Key="ThemeFontSizeSmMd">14</x:Double>
-    <x:Double x:Key="ThemeFontSizeMd">15</x:Double>
-    <x:Double x:Key="ThemeFontSizeLg">17</x:Double>
-    <x:Double x:Key="ThemeFontSizeLgXl">20</x:Double>
-    <x:Double x:Key="ThemeFontSizeXl">22</x:Double>
-    <x:Double x:Key="ThemeFontSize2Xl">26</x:Double>
-    <x:Double x:Key="ThemeFontSize3Xl">34</x:Double>
-    <x:Double x:Key="ThemeFontSize4Xl">48</x:Double>
-
-    <!-- Semantic type scale -->
-    <x:Double x:Key="ThemeFontSizeCaption">11</x:Double>
-    <x:Double x:Key="ThemeFontSizeBody">14</x:Double>
-    <x:Double x:Key="ThemeFontSizeBodyLg">15</x:Double>
-    <x:Double x:Key="ThemeFontSizeSubheading">13</x:Double>
-    <x:Double x:Key="ThemeFontSizeHeading3">17</x:Double>
-    <x:Double x:Key="ThemeFontSizeHeading2">22</x:Double>
-    <x:Double x:Key="ThemeFontSizeHeading1">28</x:Double>
-    <x:Double x:Key="ThemeFontSizeDisplay">36</x:Double>
-
-    <!-- Line Heights -->
-    <x:Double x:Key="ThemeLineHeightXs">14</x:Double>
-    <x:Double x:Key="ThemeLineHeightSm">22</x:Double>
-    <x:Double x:Key="ThemeLineHeightMd">24</x:Double>
-    <x:Double x:Key="ThemeLineHeightBase">26</x:Double>
-    <x:Double x:Key="ThemeLineHeightLg">30</x:Double>
-    <x:Double x:Key="ThemeLineHeightXl">44</x:Double>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- ANIMATION DURATIONS (Reference values - use directly in styles)          -->
-    <!-- Fast: 0:0:0.1, Normal: 0:0:0.15, Slow: 0:0:0.3                           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Accent button gradient: adds tactile top-light depth -->
+    <LinearGradientBrush x:Key="ThemePrimaryGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource ThemePrimary}" Offset="0"/>
+        <GradientStop Color="{StaticResource ThemePrimaryHover}" Offset="1"/>
+    </LinearGradientBrush>
 
 </ResourceDictionary>
