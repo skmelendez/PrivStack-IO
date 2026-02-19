@@ -156,17 +156,17 @@
                                                         <!-- Status Badges -->
                                                         <Border CornerRadius="4" Padding="6,2"
                                                                 IsVisible="{Binding IsAlpha}"
-                                                                Background="#E53935">
+                                                                Background="{DynamicResource ThemeAlphaBadgeBrush}">
                                                             <TextBlock Text="Alpha"
                                                                        FontSize="{DynamicResource ThemeFontSize2Xs}"
-                                                                       Foreground="White"/>
+                                                                       Foreground="{DynamicResource ThemeTextOnAccentBrush}"/>
                                                         </Border>
                                                         <Border CornerRadius="4" Padding="6,2"
                                                                 IsVisible="{Binding IsBeta}"
-                                                                Background="#FB8C00">
+                                                                Background="{DynamicResource ThemeBetaBadgeBrush}">
                                                             <TextBlock Text="Beta"
                                                                        FontSize="{DynamicResource ThemeFontSize2Xs}"
-                                                                       Foreground="White"/>
+                                                                       Foreground="{DynamicResource ThemeTextOnAccentBrush}"/>
                                                         </Border>
                                                         <Border CornerRadius="4" Padding="6,2"
                                                                 IsVisible="{Binding IsHardLocked}"

@@ -184,9 +184,9 @@
                             <TextBlock Grid.Column="1" Text="AI" Classes="cat-label"
                                        Margin="10,0,0,0" FontSize="{DynamicResource ThemeFontSizeSm}"
                                        VerticalAlignment="Center"/>
-                            <Border Grid.Column="2" CornerRadius="4" Padding="4,1" Background="#FB8C00"
+                            <Border Grid.Column="2" CornerRadius="4" Padding="4,1" Background="{DynamicResource ThemeBetaBadgeBrush}"
                                     VerticalAlignment="Center" Margin="4,0,0,0">
-                                <TextBlock Text="B" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                <TextBlock Text="B" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                             </Border>
                         </Grid>
                     </ListBoxItem>
@@ -227,9 +227,9 @@
                             <TextBlock Grid.Column="1" Text="Cloud Sync" Classes="cat-label"
                                        Margin="10,0,0,0" FontSize="{DynamicResource ThemeFontSizeSm}"
                                        VerticalAlignment="Center"/>
-                            <Border Grid.Column="2" CornerRadius="4" Padding="4,1" Background="#FB8C00"
+                            <Border Grid.Column="2" CornerRadius="4" Padding="4,1" Background="{DynamicResource ThemeBetaBadgeBrush}"
                                     VerticalAlignment="Center" Margin="4,0,0,0">
-                                <TextBlock Text="B" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                <TextBlock Text="B" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                             </Border>
                         </Grid>
                     </ListBoxItem>
@@ -703,8 +703,8 @@
                         <StackPanel Spacing="4">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock Text="AI" Classes="settings-section-title"/>
-                                <Border CornerRadius="4" Padding="6,2" Background="#FB8C00" VerticalAlignment="Center">
-                                    <TextBlock Text="Beta" FontSize="10" Foreground="White" FontWeight="Bold"/>
+                                <Border CornerRadius="4" Padding="6,2" Background="{DynamicResource ThemeBetaBadgeBrush}" VerticalAlignment="Center">
+                                    <TextBlock Text="Beta" FontSize="10" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                                 </Border>
                             </StackPanel>
                             <TextBlock Text="Configure AI providers for intelligent content features" Classes="settings-section-subtitle"/>
@@ -850,8 +850,8 @@
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <TextBlock Text="AI Intent Engine"
                                                    FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Medium"/>
-                                        <Border CornerRadius="4" Padding="4,1" Background="#E53935" VerticalAlignment="Center">
-                                            <TextBlock Text="Alpha" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                        <Border CornerRadius="4" Padding="4,1" Background="{DynamicResource ThemeAlphaBadgeBrush}" VerticalAlignment="Center">
+                                            <TextBlock Text="Alpha" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                                         </Border>
                                     </StackPanel>
                                     <TextBlock Text="Detect actionable intents in your content and suggest cross-plugin actions"
@@ -925,7 +925,7 @@
                                         HorizontalContentAlignment="Stretch"
                                         Padding="12,8" CornerRadius="8">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <TextBlock Grid.Column="0" Text="G" FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Bold" Foreground="#4285F4" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="0" Text="G" FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Bold" Foreground="{DynamicResource ThemeGoogleBrandBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="Google Drive" FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
                                             <TextBlock Text="Not found" FontSize="{DynamicResource ThemeFontSize2Xs}" Foreground="{DynamicResource ThemeTextMutedBrush}"
@@ -1219,8 +1219,8 @@
                         <StackPanel Spacing="4">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock Text="Cloud Sync" Classes="settings-section-title"/>
-                                <Border CornerRadius="4" Padding="6,2" Background="#FB8C00" VerticalAlignment="Center">
-                                    <TextBlock Text="Beta" FontSize="10" Foreground="White" FontWeight="Bold"/>
+                                <Border CornerRadius="4" Padding="6,2" Background="{DynamicResource ThemeBetaBadgeBrush}" VerticalAlignment="Center">
+                                    <TextBlock Text="Beta" FontSize="10" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                                 </Border>
                             </StackPanel>
                             <TextBlock Text="Sync your data across devices" Classes="settings-section-subtitle"/>

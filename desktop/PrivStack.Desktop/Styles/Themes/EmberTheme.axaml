@@ -166,6 +166,48 @@
     <SolidColorBrush x:Key="ThemeNodeFileBrush" Color="#64748B"/>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- BADGE, OVERLAY & SPECIAL PURPOSE COLORS                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Stage badges -->
+    <Color x:Key="ThemeAlphaBadge">#E53935</Color>
+    <Color x:Key="ThemeBetaBadge">#FB8C00</Color>
+    <SolidColorBrush x:Key="ThemeAlphaBadgeBrush" Color="{StaticResource ThemeAlphaBadge}"/>
+    <SolidColorBrush x:Key="ThemeBetaBadgeBrush" Color="{StaticResource ThemeBetaBadge}"/>
+
+    <!-- Modal backdrops -->
+    <Color x:Key="ThemeModalBackdrop">#80000000</Color>
+    <Color x:Key="ThemeModalBackdropHeavy">#CC000000</Color>
+    <SolidColorBrush x:Key="ThemeModalBackdropBrush" Color="{StaticResource ThemeModalBackdrop}"/>
+    <SolidColorBrush x:Key="ThemeModalBackdropHeavyBrush" Color="{StaticResource ThemeModalBackdropHeavy}"/>
+
+    <!-- Brand colors -->
+    <Color x:Key="ThemeGoogleBrand">#4285F4</Color>
+    <Color x:Key="ThemeICloudBrand">#3693F3</Color>
+    <SolidColorBrush x:Key="ThemeGoogleBrandBrush" Color="{StaticResource ThemeGoogleBrand}"/>
+    <SolidColorBrush x:Key="ThemeICloudBrandBrush" Color="{StaticResource ThemeICloudBrand}"/>
+
+    <!-- Note highlight colors -->
+    <Color x:Key="ThemeHighlightYellow">#FFF293</Color>
+    <Color x:Key="ThemeHighlightBlue">#99CCFF</Color>
+    <Color x:Key="ThemeHighlightGreen">#99E6B3</Color>
+    <Color x:Key="ThemeHighlightPink">#FFB3CC</Color>
+    <Color x:Key="ThemeHighlightPurple">#CCB3FF</Color>
+    <Color x:Key="ThemeHighlightOrange">#FFCC99</Color>
+    <SolidColorBrush x:Key="ThemeHighlightYellowBrush" Color="{StaticResource ThemeHighlightYellow}"/>
+    <SolidColorBrush x:Key="ThemeHighlightBlueBrush" Color="{StaticResource ThemeHighlightBlue}"/>
+    <SolidColorBrush x:Key="ThemeHighlightGreenBrush" Color="{StaticResource ThemeHighlightGreen}"/>
+    <SolidColorBrush x:Key="ThemeHighlightPinkBrush" Color="{StaticResource ThemeHighlightPink}"/>
+    <SolidColorBrush x:Key="ThemeHighlightPurpleBrush" Color="{StaticResource ThemeHighlightPurple}"/>
+    <SolidColorBrush x:Key="ThemeHighlightOrangeBrush" Color="{StaticResource ThemeHighlightOrange}"/>
+
+    <!-- Calendar event colors -->
+    <Color x:Key="ThemeCalendarEvent">#89B4FA</Color>
+    <Color x:Key="ThemeCalendarEventMuted">#8089B4FA</Color>
+    <SolidColorBrush x:Key="ThemeCalendarEventBrush" Color="{StaticResource ThemeCalendarEvent}"/>
+    <SolidColorBrush x:Key="ThemeCalendarEventMutedBrush" Color="{StaticResource ThemeCalendarEventMuted}"/>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- GRADIENT BRUSHES (design system v1.38.0)                                 -->
     <!-- Layout constants are in SharedTokens.axaml (via MergedDictionaries).     -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

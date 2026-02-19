@@ -192,13 +192,13 @@
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <Border CornerRadius="4" Padding="4,1"
                                                             IsVisible="{Binding IsAlpha}"
-                                                            Background="#E53935" VerticalAlignment="Center">
-                                                        <TextBlock Text="Alpha" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                            Background="{DynamicResource ThemeAlphaBadgeBrush}" VerticalAlignment="Center">
+                                                        <TextBlock Text="Alpha" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                                                     </Border>
                                                     <Border CornerRadius="4" Padding="4,1"
                                                             IsVisible="{Binding IsBeta}"
-                                                            Background="#FB8C00" VerticalAlignment="Center">
-                                                        <TextBlock Text="Beta" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                            Background="{DynamicResource ThemeBetaBadgeBrush}" VerticalAlignment="Center">
+                                                        <TextBlock Text="Beta" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                                                     </Border>
                                                 </StackPanel>
                                                 <TextBlock Text="{Binding Description}"
@@ -496,17 +496,17 @@
                                                         </Border>
                                                         <Border CornerRadius="4" Padding="5,1"
                                                                 IsVisible="{Binding IsAlpha}"
-                                                                Background="#E53935">
+                                                                Background="{DynamicResource ThemeAlphaBadgeBrush}">
                                                             <TextBlock Text="Alpha"
                                                                        FontSize="{DynamicResource ThemeFontSize2Xs}"
-                                                                       Foreground="White"/>
+                                                                       Foreground="{DynamicResource ThemeTextOnAccentBrush}"/>
                                                         </Border>
                                                         <Border CornerRadius="4" Padding="5,1"
                                                                 IsVisible="{Binding IsBeta}"
-                                                                Background="#FB8C00">
+                                                                Background="{DynamicResource ThemeBetaBadgeBrush}">
                                                             <TextBlock Text="Beta"
                                                                        FontSize="{DynamicResource ThemeFontSize2Xs}"
-                                                                       Foreground="White"/>
+                                                                       Foreground="{DynamicResource ThemeTextOnAccentBrush}"/>
                                                         </Border>
                                                         <Border CornerRadius="4" Padding="5,1"
                                                                 IsVisible="{Binding HasUpdate}"

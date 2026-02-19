@@ -86,6 +86,28 @@ public static class ThemeColorKeys
             new("ThemeScrollThumb", "Scroll Thumb"),
             new("ThemeScrollThumbHover", "Scroll Thumb Hover"),
         ]),
+        new("Badges & Overlays", [
+            new("ThemeAlphaBadge", "Alpha Badge"),
+            new("ThemeBetaBadge", "Beta Badge"),
+            new("ThemeModalBackdrop", "Modal Backdrop"),
+            new("ThemeModalBackdropHeavy", "Modal Backdrop Heavy"),
+        ]),
+        new("Brand", [
+            new("ThemeGoogleBrand", "Google"),
+            new("ThemeICloudBrand", "iCloud"),
+        ]),
+        new("Highlights", [
+            new("ThemeHighlightYellow", "Yellow"),
+            new("ThemeHighlightBlue", "Blue"),
+            new("ThemeHighlightGreen", "Green"),
+            new("ThemeHighlightPink", "Pink"),
+            new("ThemeHighlightPurple", "Purple"),
+            new("ThemeHighlightOrange", "Orange"),
+        ]),
+        new("Calendar", [
+            new("ThemeCalendarEvent", "Event"),
+            new("ThemeCalendarEventMuted", "Event Muted"),
+        ]),
     ];
 
     /// <summary>

@@ -419,11 +419,11 @@
                                                            Classes="nav-label"/>
                                                 <!-- Release stage badges -->
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
-                                                    <Border CornerRadius="4" Padding="4,1" IsVisible="{Binding IsAlpha}" Background="#E53935">
-                                                        <TextBlock Text="A" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                    <Border CornerRadius="4" Padding="4,1" IsVisible="{Binding IsAlpha}" Background="{DynamicResource ThemeAlphaBadgeBrush}">
+                                                        <TextBlock Text="A" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                                                     </Border>
-                                                    <Border CornerRadius="4" Padding="4,1" IsVisible="{Binding IsBeta}" Background="#FB8C00">
-                                                        <TextBlock Text="B" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                    <Border CornerRadius="4" Padding="4,1" IsVisible="{Binding IsBeta}" Background="{DynamicResource ThemeBetaBadgeBrush}">
+                                                        <TextBlock Text="B" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
                                                     </Border>
                                                 </StackPanel>
                                             </Grid>
