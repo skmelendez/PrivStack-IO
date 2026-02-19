@@ -40,6 +40,11 @@ public interface IPrivStackSdk
     /// </summary>
     Task RunDatabaseMaintenance(CancellationToken ct = default);
 
+    /// <summary>
+    /// Returns per-table database diagnostics as JSON (row counts, estimated sizes).
+    /// </summary>
+    string GetDatabaseDiagnostics();
+
     // =========================================================================
     // Vault (Encrypted Blob Storage)
     // =========================================================================

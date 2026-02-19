@@ -153,6 +153,20 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private string? _validationStatus;
 
+    [ObservableProperty]
+    private bool _isLoadingDiagnostics;
+
+    [ObservableProperty]
+    private string? _diagnosticsJson;
+
+    public ObservableCollection<DbTableDiagnostic> DiagnosticsTables { get; } = [];
+
+    [ObservableProperty]
+    private string _diagnosticsDatabaseSize = "—";
+
+    [ObservableProperty]
+    private string _diagnosticsWalSize = "—";
+
     public ObservableCollection<PluginDataInfo> PluginDataItems { get; } = [];
 
     // --- Workspace Plugins ---
@@ -641,6 +655,52 @@ public partial class DashboardViewModel : ViewModelBase
         finally
         {
             IsValidatingMetadata = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RunDatabaseDiagnosticsAsync()
+    {
+        try
+        {
+            IsLoadingDiagnostics = true;
+            DiagnosticsTables.Clear();
+
+            var json = await Task.Run(() => _sdk.GetDatabaseDiagnostics());
+            DiagnosticsJson = json;
+
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("database", out var db))
+            {
+                DiagnosticsDatabaseSize = db.TryGetProperty("database_size", out var ds)
+                    ? ds.GetString() ?? "—" : "—";
+                DiagnosticsWalSize = db.TryGetProperty("wal_size", out var ws)
+                    ? ws.GetString() ?? "—" : "—";
+            }
+
+            if (doc.RootElement.TryGetProperty("tables", out var tables))
+            {
+                foreach (var table in tables.EnumerateArray())
+                {
+                    var name = table.GetProperty("table").GetString() ?? "unknown";
+                    var rowCount = table.GetProperty("row_count").GetInt64();
+                    var estimatedSize = table.GetProperty("estimated_size").GetInt64();
+                    var columnCount = table.GetProperty("column_count").GetInt64();
+
+                    DiagnosticsTables.Add(new DbTableDiagnostic(
+                        name, rowCount, estimatedSize, columnCount));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "Database diagnostics failed");
+            ValidationStatus = $"Diagnostics failed: {ex.Message}";
+        }
+        finally
+        {
+            IsLoadingDiagnostics = false;
         }
     }
 

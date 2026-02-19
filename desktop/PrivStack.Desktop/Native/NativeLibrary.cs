@@ -149,6 +149,12 @@ internal static partial class NativeLibrary
     [LibraryImport(LibraryName, EntryPoint = "privstack_db_maintenance")]
     public static partial PrivStackError DbMaintenance();
 
+    /// <summary>
+    /// Returns per-table diagnostics as JSON. Caller must free with FreeString.
+    /// </summary>
+    [LibraryImport(LibraryName, EntryPoint = "privstack_db_diagnostics")]
+    public static partial nint DbDiagnostics();
+
     // ============================================================
     // Vault Management Functions
     // ============================================================

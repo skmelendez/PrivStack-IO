@@ -5541,6 +5541,19 @@ pub extern "C" fn privstack_db_maintenance() -> PrivStackError {
     }
 }
 
+/// Returns per-table diagnostics as JSON string. Caller must free with `privstack_free_string`.
+#[unsafe(no_mangle)]
+pub extern "C" fn privstack_db_diagnostics() -> *mut c_char {
+    let handle = HANDLE.lock().unwrap();
+    match handle.as_ref() {
+        Some(h) => match h.entity_store.db_diagnostics() {
+            Ok(json) => to_c_string(&json),
+            Err(_) => to_c_string("{}"),
+        },
+        None => to_c_string("{}"),
+    }
+}
+
 /// Helper: allocate a C string from a Rust &str. Caller must free with `privstack_free_string`.
 fn to_c_string(s: &str) -> *mut c_char {
     CString::new(s).unwrap_or_default().into_raw()
