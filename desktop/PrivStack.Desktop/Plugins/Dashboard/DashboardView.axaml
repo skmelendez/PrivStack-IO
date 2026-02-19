@@ -887,6 +887,97 @@
                                FontSize="{DynamicResource ThemeFontSizeXs}"
                                Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
 
+                    <!-- Database Diagnostics -->
+                    <Border Background="{DynamicResource ThemeCardBrush}"
+                            CornerRadius="8" Padding="16" Margin="0,8,0,0">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock Text="Database Internals"
+                                           FontSize="{DynamicResource ThemeFontSizeMd}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                                <Button Command="{Binding RunDatabaseDiagnosticsCommand}"
+                                        IsEnabled="{Binding !IsLoadingDiagnostics}"
+                                        Background="{DynamicResource ThemeHoverBrush}"
+                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                        Padding="12,6" CornerRadius="6"
+                                        FontSize="{DynamicResource ThemeFontSizeXs}"
+                                        ToolTip.Tip="Query DuckDB internal table stats to see what's consuming space">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Scan Tables" VerticalAlignment="Center"
+                                                   IsVisible="{Binding !IsLoadingDiagnostics}"/>
+                                        <TextBlock Text="Scanning..." VerticalAlignment="Center"
+                                                   IsVisible="{Binding IsLoadingDiagnostics}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+
+                            <!-- DB size overview -->
+                            <StackPanel Orientation="Horizontal" Spacing="16"
+                                        IsVisible="{Binding DiagnosticsTables.Count}">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Database Size"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                    <TextBlock Text="{Binding DiagnosticsDatabaseSize}"
+                                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                </StackPanel>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="WAL Size"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                    <TextBlock Text="{Binding DiagnosticsWalSize}"
+                                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Per-table breakdown -->
+                            <ItemsControl ItemsSource="{Binding DiagnosticsTables}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:DbTableDiagnostic">
+                                        <Border Padding="8,6" Margin="0,1"
+                                                Background="{DynamicResource ThemeHoverBrush}"
+                                                CornerRadius="4">
+                                            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding TableName}"
+                                                           FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                           FontFamily="Cascadia Code,Consolas,monospace"
+                                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding FormattedRowCount, StringFormat='{}{0} rows'}"
+                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="16,0"/>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding ColumnCount, StringFormat='{}{0} cols'}"
+                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,16,0"/>
+                                                <TextBlock Grid.Column="3"
+                                                           Text="{Binding FormattedSize}"
+                                                           FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ThemeAccentBrush}"
+                                                           VerticalAlignment="Center"
+                                                           MinWidth="70"
+                                                           TextAlignment="Right"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Loading indicator -->
                     <TextBlock Text="Loading data metrics..."
                                IsVisible="{Binding IsLoading}"

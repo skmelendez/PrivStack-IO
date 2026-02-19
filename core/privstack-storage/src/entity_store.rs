@@ -826,6 +826,70 @@ impl EntityStore {
         )?;
         Ok(())
     }
+
+    /// Returns per-table diagnostics as JSON: row counts and estimated sizes.
+    pub fn db_diagnostics(&self) -> StorageResult<String> {
+        let conn = self.conn.lock().unwrap();
+
+        let mut stmt = conn.prepare(
+            "SELECT table_name, estimated_size, column_count
+             FROM duckdb_tables()
+             WHERE schema_name = 'main'"
+        )?;
+
+        let table_info: Vec<(String, i64, i64)> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i64>(2)?,
+                ))
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let mut tables = Vec::new();
+        for (name, estimated_size, column_count) in &table_info {
+            let mut count_stmt = conn.prepare(&format!(
+                "SELECT COUNT(*) FROM \"{}\"", name
+            ))?;
+            let row_count: i64 = count_stmt
+                .query_row([], |row| row.get(0))
+                .unwrap_or(0);
+
+            tables.push(serde_json::json!({
+                "table": name,
+                "row_count": row_count,
+                "estimated_size": estimated_size,
+                "column_count": column_count,
+            }));
+        }
+
+        // Also get the WAL size info
+        let db_size_info = conn
+            .prepare("SELECT * FROM pragma_database_size()")
+            .and_then(|mut s| {
+                s.query_row([], |row| {
+                    Ok(serde_json::json!({
+                        "database_name": row.get::<_, String>(0).unwrap_or_default(),
+                        "database_size": row.get::<_, String>(1).unwrap_or_default(),
+                        "block_size": row.get::<_, i64>(2).unwrap_or(0),
+                        "total_blocks": row.get::<_, i64>(3).unwrap_or(0),
+                        "used_blocks": row.get::<_, i64>(4).unwrap_or(0),
+                        "free_blocks": row.get::<_, i64>(5).unwrap_or(0),
+                        "wal_size": row.get::<_, String>(6).unwrap_or_default(),
+                    }))
+                })
+            })
+            .unwrap_or(serde_json::json!({}));
+
+        let result = serde_json::json!({
+            "tables": tables,
+            "database": db_size_info,
+        });
+
+        Ok(result.to_string())
+    }
 }
 
 // -- Field extraction helpers --
