@@ -34,7 +34,7 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 # Pairing / sync codes
 sha2 = "0.10"
 hex = "0.4"
-rand = "0.8"
+rand = "0.9"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "process"] }
