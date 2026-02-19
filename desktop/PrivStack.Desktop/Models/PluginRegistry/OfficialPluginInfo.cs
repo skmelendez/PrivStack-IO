@@ -52,4 +52,7 @@ public sealed record OfficialPluginInfo
 
     [JsonPropertyName("navigation_order")]
     public int NavigationOrder { get; init; } = 1000;
+
+    [JsonPropertyName("release_stage")]
+    public string? ReleaseStage { get; init; }
 }

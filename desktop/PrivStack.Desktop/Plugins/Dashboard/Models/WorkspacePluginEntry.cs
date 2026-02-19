@@ -14,6 +14,9 @@ public partial class WorkspacePluginEntry : ObservableObject
     public string Description { get; init; } = string.Empty;
     public string? Icon { get; init; }
     public PluginCategory Category { get; init; }
+    public ReleaseStage ReleaseStage { get; init; } = ReleaseStage.Release;
+    public bool IsAlpha => ReleaseStage == ReleaseStage.Alpha;
+    public bool IsBeta => ReleaseStage == ReleaseStage.Beta;
 
     [ObservableProperty]
     private bool _isActivated;

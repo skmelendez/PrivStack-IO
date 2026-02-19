@@ -56,6 +56,12 @@ public partial class DashboardPluginItem : ObservableObject
     [ObservableProperty]
     private long? _diskSizeBytes;
 
+    [ObservableProperty]
+    private string _releaseStage = "release";
+
+    public bool IsAlpha => string.Equals(ReleaseStage, "alpha", StringComparison.OrdinalIgnoreCase);
+    public bool IsBeta => string.Equals(ReleaseStage, "beta", StringComparison.OrdinalIgnoreCase);
+
     public bool IsOfficial => TrustTier == "Official";
     public bool IsNotInstalled => !IsInstalled;
     public bool IsInstalledNoUpdate => IsInstalled && !HasUpdate;

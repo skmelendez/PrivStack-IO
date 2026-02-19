@@ -281,7 +281,8 @@ public partial class DashboardViewModel : ViewModelBase
                     IsInstalled = installed,
                     HasUpdate = hasUpdate,
                     TrustTier = "Official",
-                    PackageSizeBytes = sp.PackageSizeBytes
+                    PackageSizeBytes = sp.PackageSizeBytes,
+                    ReleaseStage = sp.ReleaseStage ?? "release"
                 });
             }
 
@@ -399,6 +400,7 @@ public partial class DashboardViewModel : ViewModelBase
                 Description = plugin.Metadata.Description,
                 Icon = plugin.Metadata.Icon,
                 Category = plugin.Metadata.Category,
+                ReleaseStage = plugin.Metadata.ReleaseStage,
                 IsActivated = _pluginRegistry.IsPluginEnabled(plugin.Metadata.Id),
             });
         }

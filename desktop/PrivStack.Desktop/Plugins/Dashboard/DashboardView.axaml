@@ -184,11 +184,23 @@
                                                                       VerticalAlignment="Center"/>
                                             </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontWeight="SemiBold"
+                                                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <Border CornerRadius="4" Padding="4,1"
+                                                            IsVisible="{Binding IsAlpha}"
+                                                            Background="#E53935" VerticalAlignment="Center">
+                                                        <TextBlock Text="Alpha" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                    </Border>
+                                                    <Border CornerRadius="4" Padding="4,1"
+                                                            IsVisible="{Binding IsBeta}"
+                                                            Background="#FB8C00" VerticalAlignment="Center">
+                                                        <TextBlock Text="Beta" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                    </Border>
+                                                </StackPanel>
                                                 <TextBlock Text="{Binding Description}"
                                                            FontSize="{DynamicResource ThemeFontSizeXs}"
                                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
@@ -481,6 +493,20 @@
                                                             <TextBlock Text="Official"
                                                                        FontSize="{DynamicResource ThemeFontSize2Xs}"
                                                                        Foreground="{DynamicResource ThemeTextOnAccentBrush}"/>
+                                                        </Border>
+                                                        <Border CornerRadius="4" Padding="5,1"
+                                                                IsVisible="{Binding IsAlpha}"
+                                                                Background="#E53935">
+                                                            <TextBlock Text="Alpha"
+                                                                       FontSize="{DynamicResource ThemeFontSize2Xs}"
+                                                                       Foreground="White"/>
+                                                        </Border>
+                                                        <Border CornerRadius="4" Padding="5,1"
+                                                                IsVisible="{Binding IsBeta}"
+                                                                Background="#FB8C00">
+                                                            <TextBlock Text="Beta"
+                                                                       FontSize="{DynamicResource ThemeFontSize2Xs}"
+                                                                       Foreground="White"/>
                                                         </Border>
                                                         <Border CornerRadius="4" Padding="5,1"
                                                                 IsVisible="{Binding HasUpdate}"
