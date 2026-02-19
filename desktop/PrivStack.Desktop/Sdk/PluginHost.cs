@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Sdk;
+using PrivStack.Sdk.Services;
 using Serilog;
 
 namespace PrivStack.Desktop.Sdk;
@@ -25,7 +26,8 @@ internal sealed class PluginHost : IPluginHost
         IFocusModeService focusModeService,
         IToastService toastService,
         IConnectionService? connectionService = null,
-        IPropertyService? propertyService = null)
+        IPropertyService? propertyService = null,
+        IAiService? aiService = null)
     {
         Sdk = sdk;
         Capabilities = capabilities;
@@ -38,6 +40,7 @@ internal sealed class PluginHost : IPluginHost
         Toast = toastService;
         Connections = connectionService;
         Properties = propertyService;
+        AI = aiService;
         Messenger = WeakReferenceMessenger.Default;
         AppVersion = typeof(PluginHost).Assembly.GetName().Version ?? new Version(1, 0, 0);
     }
@@ -53,6 +56,7 @@ internal sealed class PluginHost : IPluginHost
     public IToastService Toast { get; }
     public IConnectionService? Connections { get; }
     public IPropertyService? Properties { get; }
+    public IAiService? AI { get; }
     public IMessenger Messenger { get; }
     public Version AppVersion { get; }
 

@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PrivStack.Desktop.Native;
 using PrivStack.Desktop.Sdk;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.AI;
 using PrivStack.Desktop.Services.Connections;
 using PrivStack.Desktop.Services.FileSync;
 using PrivStack.Desktop.Services.Plugin;
@@ -10,6 +11,8 @@ using PrivStack.Desktop.Services.Update;
 using PrivStack.Desktop.ViewModels;
 using PrivStack.Sdk;
 using PrivStack.Sdk.Capabilities;
+using PrivStack.Sdk.Services;
+using IAiService = PrivStack.Sdk.Services.IAiService;
 using IToastService = PrivStack.Sdk.IToastService;
 
 namespace PrivStack.Desktop.Services;
@@ -80,6 +83,9 @@ public static class ServiceRegistration
         services.AddSingleton<CustomThemeStore>();
         services.AddSingleton<WhisperService>();
         services.AddSingleton<WhisperModelManager>();
+        services.AddSingleton<AiModelManager>();
+        services.AddSingleton<AiService>();
+        services.AddSingleton<IAiService>(sp => sp.GetRequiredService<AiService>());
         services.AddSingleton<ViewStatePrefetchService>();
         services.AddSingleton<LinkProviderCacheService>();
         services.AddSingleton<IDatasetService, DatasetService>();

@@ -1316,6 +1316,9 @@ public partial class SettingsViewModel : ViewModelBase
 
         // Emergency Kit status
         LoadEmergencyKitStatus();
+
+        // AI settings
+        LoadAiSettings();
     }
 
     partial void OnUserDisplayNameChanged(string value)

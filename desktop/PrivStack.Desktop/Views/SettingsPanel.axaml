@@ -174,6 +174,19 @@
                         </Grid>
                     </ListBoxItem>
 
+                    <!-- AI -->
+                    <ListBoxItem>
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Border Classes="cat-icon-bubble" VerticalAlignment="Center">
+                                <controls:IconControl Icon="BrainCircuit" Size="12"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="AI" Classes="cat-label"
+                                       Margin="10,0,0,0" FontSize="{DynamicResource ThemeFontSizeSm}"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </ListBoxItem>
+
                     <!-- Data & Backup -->
                     <ListBoxItem>
                         <Grid ColumnDefinitions="Auto,*">
@@ -676,7 +689,156 @@
                     </StackPanel>
                 </ScrollViewer>
 
-            <!-- ── 5: Data & Backup ───────────────────────────── -->
+            <!-- ── 5: AI ─────────────────────────────────────── -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="24" Margin="32,28,32,40" MaxWidth="520">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="AI" Classes="settings-section-title"/>
+                            <TextBlock Text="Configure AI providers for intelligent content features" Classes="settings-section-subtitle"/>
+                        </StackPanel>
+
+                        <!-- Enable toggle -->
+                        <Border Classes="card" Padding="16,14">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="Enable AI Features"
+                                               FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Medium"/>
+                                    <TextBlock Text="Use AI for content summarization, note generation, and more"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding AiEnabled}"
+                                              OnContent="" OffContent=""
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Provider selection -->
+                        <StackPanel Spacing="8" IsVisible="{Binding AiEnabled}">
+                            <TextBlock Text="Provider" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding AiProviderOptions}"
+                                      SelectedItem="{Binding SelectedAiProvider}"
+                                      HorizontalAlignment="Stretch"
+                                      Padding="12,8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayName}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- API Key (cloud providers) -->
+                        <StackPanel Spacing="8"
+                                    IsVisible="{Binding ShowAiApiKeyInput}">
+                            <TextBlock Text="API Key" Classes="field-label"/>
+                            <Grid ColumnDefinitions="*,8,Auto">
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding AiApiKey}"
+                                         PasswordChar="*"
+                                         Watermark="Enter API key"
+                                         Padding="12,10"/>
+                                <Button Grid.Column="2"
+                                        Content="{Binding AiApiKeySaveLabel}"
+                                        Command="{Binding SaveAiApiKeyCommand}"
+                                        Padding="14,8"
+                                        VerticalAlignment="Stretch"/>
+                            </Grid>
+                            <TextBlock Text="{Binding AiApiKeyStatus}"
+                                       IsVisible="{Binding AiApiKeyStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                        </StackPanel>
+
+                        <!-- Cloud model selection -->
+                        <StackPanel Spacing="8"
+                                    IsVisible="{Binding ShowAiCloudModelSelect}">
+                            <TextBlock Text="Model" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding AiCloudModels}"
+                                      SelectedItem="{Binding SelectedAiCloudModel}"
+                                      HorizontalAlignment="Stretch"
+                                      Padding="12,8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayName}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Local model (download + selection) -->
+                        <StackPanel Spacing="12"
+                                    IsVisible="{Binding ShowAiLocalModelSection}">
+                            <TextBlock Text="Local Model" Classes="field-label"/>
+                            <ComboBox ItemsSource="{Binding AiLocalModels}"
+                                      SelectedItem="{Binding SelectedAiLocalModel}"
+                                      HorizontalAlignment="Stretch"
+                                      Padding="12,8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding SizeText}"
+                                                       FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Text="(Downloaded)" IsVisible="{Binding IsDownloaded}"
+                                                       FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                       Foreground="{DynamicResource ThemeSuccessBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <!-- Download button and progress -->
+                            <StackPanel Spacing="8" IsVisible="{Binding CanDownloadAiLocalModel}">
+                                <Button Content="{Binding AiLocalModelDownloadLabel}"
+                                        Command="{Binding DownloadAiLocalModelCommand}"
+                                        Padding="14,8" HorizontalAlignment="Left"/>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4" IsVisible="{Binding IsAiLocalModelDownloading}">
+                                <ProgressBar Minimum="0" Maximum="100"
+                                             Value="{Binding AiLocalModelDownloadProgress}"
+                                             Height="6"/>
+                                <TextBlock Text="{Binding AiLocalModelDownloadStatus}"
+                                           FontSize="{DynamicResource ThemeFontSizeXs}"
+                                           Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Temperature -->
+                        <StackPanel Spacing="8" IsVisible="{Binding AiEnabled}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Text="Temperature" Classes="field-label"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding AiTemperature, StringFormat='{}{0:F1}'}"
+                                           FontSize="{DynamicResource ThemeFontSizeSm}"
+                                           Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                            </Grid>
+                            <Slider Minimum="0" Maximum="1"
+                                    Value="{Binding AiTemperature}"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    TickPlacement="BottomRight"/>
+                            <TextBlock Text="Lower values produce more focused output. Higher values increase creativity."
+                                       FontSize="{DynamicResource ThemeFontSizeXs}"
+                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <TextBlock Text="API keys are stored encrypted in your local vault. They never leave your device unencrypted."
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding AiEnabled}"/>
+                    </StackPanel>
+                </ScrollViewer>
+
+            <!-- ── 6: Data & Backup ───────────────────────────── -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="24" Margin="32,28,32,40" MaxWidth="520">
                         <StackPanel Spacing="4">

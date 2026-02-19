@@ -169,6 +169,25 @@ public class AppSettings
     [JsonPropertyName("whisper_beam_search")]
     public bool WhisperBeamSearch { get; set; }
 
+    // AI settings
+    [JsonPropertyName("ai_enabled")]
+    public bool AiEnabled { get; set; }
+
+    [JsonPropertyName("ai_provider")]
+    public string AiProvider { get; set; } = "none";
+
+    [JsonPropertyName("ai_model")]
+    public string? AiModel { get; set; }
+
+    [JsonPropertyName("ai_local_model")]
+    public string? AiLocalModel { get; set; }
+
+    [JsonPropertyName("ai_temperature")]
+    public double AiTemperature { get; set; } = 0.7;
+
+    [JsonPropertyName("ai_max_tokens")]
+    public int AiMaxTokens { get; set; } = 1024;
+
     // Sync settings
     [JsonPropertyName("sync_device_name")]
     public string? SyncDeviceName { get; set; }
