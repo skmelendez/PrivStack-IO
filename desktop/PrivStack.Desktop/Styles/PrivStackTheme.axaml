@@ -796,6 +796,23 @@
         <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
     </Style>
 
+    <!-- Expander header toggle: prevent Fluent hover flash -->
+    <Style Selector="Expander /template/ ToggleButton#PART_toggle">
+        <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}"/>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton#PART_toggle /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton#PART_toggle:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton#PART_toggle:checked /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton#PART_toggle:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+
     <!-- Settings section expander: card-like sections with consistent margin -->
     <Style Selector="Expander.settings-section">
         <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}"/>
