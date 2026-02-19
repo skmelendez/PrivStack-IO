@@ -11,7 +11,7 @@ wasmtime = { version = "33", features = ["component-model"] }
 wasmtime-wasi = "33"
 
 # WIT bindings generation
-wit-bindgen = { version = "0.38", default-features = false }
+wit-bindgen = { version = "0.51", default-features = false }
 
 # Internal crates
 privstack-types.workspace = true
