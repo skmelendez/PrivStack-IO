@@ -475,6 +475,15 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnInfoPanelBackdropPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm && vm.InfoPanelVM.IsOpen)
+        {
+            vm.InfoPanelVM.CloseCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private void OnOverlayPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         // Close user menu when clicking outside of it

@@ -181,6 +181,16 @@
                         </Button>
                         </Border>
 
+                        <!-- Click-outside backdrop: closes InfoPanel when clicking outside -->
+                        <Border x:Name="InfoPanelBackdrop"
+                                Background="Transparent"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                ZIndex="9"
+                                IsVisible="{Binding InfoPanelVM.IsOpen}"
+                                IsHitTestVisible="{Binding InfoPanelVM.IsOpen}"
+                                PointerPressed="OnInfoPanelBackdropPressed"/>
+
                         <!-- Info Panel: Slide Drawer (hidden on Graph/Nexus, animates in/out otherwise) -->
                         <StackPanel x:Name="InfoPanelDrawer"
                                     Orientation="Horizontal"
