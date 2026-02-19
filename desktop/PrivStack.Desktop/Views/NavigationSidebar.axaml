@@ -62,8 +62,17 @@
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+        <Style Selector="Button.workspace-btn /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.workspace-btn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.workspace-btn:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
+        </Style>
+        <Style Selector="Button.workspace-btn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="Button.workspace-btn:pressed">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
@@ -106,10 +115,22 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+        <!-- Keep ContentPresenter transparent so only the Border (with BrushTransition) handles background.
+             Without this, the global PrivStackTheme Button template fix sets a background on PART_ContentPresenter
+             which renders on top of the Border instantly, defeating the smooth transition. -->
+        <Style Selector="Button.nav-item /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.nav-item:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
         <!-- Active declared after hover so it wins when both classes apply -->
+        <Style Selector="Button.nav-item.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.nav-item.active">
             <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
         </Style>
@@ -184,11 +205,23 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         </Style>
+        <Style Selector="Button.nav-item-collapsed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.nav-item-collapsed:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.nav-item-collapsed:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
+        <Style Selector="Button.nav-item-collapsed:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.nav-item-collapsed:pressed">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
+        </Style>
+        <Style Selector="Button.nav-item-collapsed.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="Button.nav-item-collapsed.active">
             <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
@@ -245,6 +278,12 @@
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+        <Style Selector="Button.nav-footer-item /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.nav-footer-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.nav-footer-item:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
@@ -283,6 +322,12 @@
             <Setter Property="Margin" Value="8,1"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.nav-footer-item-collapsed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.nav-footer-item-collapsed:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="Button.nav-footer-item-collapsed:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
