@@ -248,6 +248,72 @@
                 </Border>
             </StackPanel>
 
+            <!-- ==================== CLOUD MANAGEMENT ==================== -->
+            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                    CornerRadius="6" Padding="12"
+                    IsVisible="{Binding IsWorkspaceCloudEnabled}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Cloud Management"
+                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                               FontWeight="SemiBold"/>
+
+                    <!-- Clean Cloud -->
+                    <StackPanel Spacing="4">
+                        <Button Command="{Binding CleanCloudCommand}"
+                                IsEnabled="{Binding !IsCleaningCloud}"
+                                Background="Transparent"
+                                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                                BorderThickness="1"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Padding="12,8" CornerRadius="6"
+                                Cursor="Hand">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Cleaning..."
+                                           IsVisible="{Binding IsCleaningCloud}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                                <TextBlock Text="Clean my Cloud"
+                                           IsVisible="{Binding !IsCleaningCloud}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="Remove sync events to free storage. Snapshots are preserved."
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   TextWrapping="Wrap"
+                                   Margin="2,0,0,0"/>
+                    </StackPanel>
+
+                    <!-- Purge Cloud -->
+                    <StackPanel Spacing="4">
+                        <Button Command="{Binding PurgeCloudCommand}"
+                                IsEnabled="{Binding !IsPurgingCloud}"
+                                Background="Transparent"
+                                BorderBrush="{DynamicResource ThemeDangerBrush}"
+                                BorderThickness="1"
+                                Foreground="{DynamicResource ThemeDangerBrush}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Padding="12,8" CornerRadius="6"
+                                Cursor="Hand">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Purging..."
+                                           IsVisible="{Binding IsPurgingCloud}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                                <TextBlock Text="Purge my Cloud"
+                                           IsVisible="{Binding !IsPurgingCloud}"
+                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="Permanently delete all cloud data including snapshots."
+                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                   TextWrapping="Wrap"
+                                   Margin="2,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- ==================== WORKSPACE RECOVERY (manual mnemonic entry) ==================== -->
             <StackPanel Spacing="12" IsVisible="{Binding ShowRecoveryForm}">
                 <TextBlock Text="Recover your cloud workspace encryption key using the 12 recovery words from your Cloud Recovery Kit PDF."

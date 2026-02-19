@@ -130,6 +130,16 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
     public ObservableCollection<CloudDeviceInfo> Devices { get; } = [];
 
     // ========================================
+    // Cloud Management State
+    // ========================================
+
+    [ObservableProperty]
+    private bool _isCleaningCloud;
+
+    [ObservableProperty]
+    private bool _isPurgingCloud;
+
+    // ========================================
     // Recovery Kit State (shown after first enable)
     // ========================================
 
@@ -533,6 +543,96 @@ public partial class CloudSyncSettingsViewModel : ViewModelBase
         {
             RecoveryError = $"Recovery failed: {ex.Message}";
             Log.Error(ex, "Cloud key recovery from mnemonic failed");
+        }
+    }
+
+    // ========================================
+    // Cloud Management Commands
+    // ========================================
+
+    [RelayCommand]
+    private async Task CleanCloudAsync()
+    {
+        if (IsCleaningCloud) return;
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Clean Cloud Storage",
+            "This will delete all sync event batches to free up storage. Snapshots are preserved so devices can still recover full state.\n\nSync will be temporarily paused during this operation.",
+            "Clean");
+        if (!confirmed) return;
+
+        IsCleaningCloud = true;
+        AuthError = null;
+
+        try
+        {
+            var workspace = _workspaceService.GetActiveWorkspace();
+            var token = _appSettings.Settings.CloudSyncAccessToken;
+            if (workspace?.CloudWorkspaceId == null || string.IsNullOrEmpty(token)) return;
+
+            if (_cloudSync.IsSyncing)
+                await Task.Run(() => _cloudSync.StopSync());
+
+            var result = await _apiClient.CleanCloudWorkspaceAsync(token, workspace.CloudWorkspaceId);
+            Log.Information("Cloud clean completed: {DeletedBatches} batches, {FreedBytes} bytes freed",
+                result.DeletedBatches, result.FreedBytes);
+
+            await RefreshStatusAsync();
+
+            if (workspace.SyncTier == SyncTier.PrivStackCloud)
+                await StartSyncForWorkspace(workspace);
+        }
+        catch (Exception ex)
+        {
+            AuthError = $"Clean failed: {ex.Message}";
+            Log.Error(ex, "Cloud clean failed");
+        }
+        finally
+        {
+            IsCleaningCloud = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task PurgeCloudAsync()
+    {
+        if (IsPurgingCloud) return;
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Purge All Cloud Data",
+            "This will permanently delete ALL cloud data for this workspace, including snapshots, blobs, and sync history.\n\nThis action cannot be undone. You will need to re-sync all data from this device.",
+            "Purge Everything");
+        if (!confirmed) return;
+
+        IsPurgingCloud = true;
+        AuthError = null;
+
+        try
+        {
+            var workspace = _workspaceService.GetActiveWorkspace();
+            var token = _appSettings.Settings.CloudSyncAccessToken;
+            if (workspace?.CloudWorkspaceId == null || string.IsNullOrEmpty(token)) return;
+
+            if (_cloudSync.IsSyncing)
+                await Task.Run(() => _cloudSync.StopSync());
+
+            var result = await _apiClient.PurgeCloudWorkspaceAsync(token, workspace.CloudWorkspaceId);
+            Log.Information("Cloud purge completed: {DeletedObjects} objects, {FreedBytes} bytes freed",
+                result.DeletedObjects, result.FreedBytes);
+
+            await RefreshStatusAsync();
+
+            if (workspace.SyncTier == SyncTier.PrivStackCloud)
+                await StartSyncForWorkspace(workspace);
+        }
+        catch (Exception ex)
+        {
+            AuthError = $"Purge failed: {ex.Message}";
+            Log.Error(ex, "Cloud purge failed");
+        }
+        finally
+        {
+            IsPurgingCloud = false;
         }
     }
 

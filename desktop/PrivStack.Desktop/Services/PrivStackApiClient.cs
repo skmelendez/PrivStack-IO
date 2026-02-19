@@ -222,6 +222,58 @@ public sealed class PrivStackApiClient
     }
 
     /// <summary>
+    /// Cleans cloud workspace: removes sync event batches but preserves snapshots.
+    /// </summary>
+    public async Task<CloudWorkspaceActionResponse> CleanCloudWorkspaceAsync(
+        string accessToken, string workspaceId, CancellationToken ct = default)
+    {
+        var payload = JsonSerializer.Serialize(new { workspace_id = workspaceId }, JsonOptions);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/api/cloud/workspace/clean")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await Http.SendAsync(request, ct);
+        var body = await response.Content.ReadAsStringAsync(ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = TryParseError(body);
+            throw new PrivStackApiException(error ?? $"Clean workspace failed (HTTP {(int)response.StatusCode})");
+        }
+
+        return JsonSerializer.Deserialize<CloudWorkspaceActionResponse>(body, JsonOptions)
+               ?? new CloudWorkspaceActionResponse();
+    }
+
+    /// <summary>
+    /// Purges all cloud data for a workspace: events, snapshots, blobs, cursors, locks.
+    /// </summary>
+    public async Task<CloudWorkspaceActionResponse> PurgeCloudWorkspaceAsync(
+        string accessToken, string workspaceId, CancellationToken ct = default)
+    {
+        var payload = JsonSerializer.Serialize(new { workspace_id = workspaceId }, JsonOptions);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/api/cloud/workspace/purge")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await Http.SendAsync(request, ct);
+        var body = await response.Content.ReadAsStringAsync(ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = TryParseError(body);
+            throw new PrivStackApiException(error ?? $"Purge workspace failed (HTTP {(int)response.StatusCode})");
+        }
+
+        return JsonSerializer.Deserialize<CloudWorkspaceActionResponse>(body, JsonOptions)
+               ?? new CloudWorkspaceActionResponse();
+    }
+
+    /// <summary>
     /// Lists cloud workspaces for the authenticated user (direct HTTP — no FFI required).
     /// Returns an empty list on HTTP error (user may not have cloud access).
     /// </summary>
@@ -416,6 +468,24 @@ public record CloudWorkspacesResponse
 {
     [JsonPropertyName("workspaces")]
     public List<CloudWorkspaceInfo>? Workspaces { get; init; }
+}
+
+public record CloudWorkspaceActionResponse
+{
+    [JsonPropertyName("cleaned")]
+    public bool Cleaned { get; init; }
+
+    [JsonPropertyName("purged")]
+    public bool Purged { get; init; }
+
+    [JsonPropertyName("deleted_batches")]
+    public int DeletedBatches { get; init; }
+
+    [JsonPropertyName("deleted_objects")]
+    public int DeletedObjects { get; init; }
+
+    [JsonPropertyName("freed_bytes")]
+    public long FreedBytes { get; init; }
 }
 
 public record TrialResponse
