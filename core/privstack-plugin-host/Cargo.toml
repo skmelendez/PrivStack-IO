@@ -44,7 +44,7 @@ hex = "0.4"
 # Utils
 uuid.workspace = true
 chrono = "0.4"
-toml = "0.8"
+toml = "1.0"
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -11,7 +11,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 # Package format
-toml = "0.8"
+toml = "1.0"
 zip = "2.2"
 sha2 = "0.10"
 hex = "0.4"
