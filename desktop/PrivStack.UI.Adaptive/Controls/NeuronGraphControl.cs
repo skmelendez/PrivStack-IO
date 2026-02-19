@@ -1313,7 +1313,7 @@ public sealed class NeuronGraphControl : Control
 
     private static IBrush GetNodeBrush(string nodeType) => nodeType switch
     {
-        "note" or "page"       => GetBrush("ThemeSecondaryBrush", Brushes.MediumPurple),
+        "note" or "page" or "sticky_note" => GetBrush("ThemeSecondaryBrush", Brushes.MediumPurple),
         "task"                 => GetBrush("ThemeSuccessBrush", Brushes.Green),
         "contact"              => GetBrush("ThemeWarningBrush", Brushes.Orange),
         "event" or "calendar"  => GetBrush("ThemePrimaryBrush", Brushes.DodgerBlue),

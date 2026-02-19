@@ -26,7 +26,9 @@ pub(crate) use workspaces::*;
 
 use crate::PrivStackError;
 use privstack_cloud::CloudError;
-use std::ffi::{c_char, c_int, CStr, CString};
+use std::ffi::{c_char, CStr, CString};
+#[cfg(target_os = "android")]
+use std::ffi::c_int;
 
 /// Android logcat log levels.
 #[cfg(target_os = "android")]
