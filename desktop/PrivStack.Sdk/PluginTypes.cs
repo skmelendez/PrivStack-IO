@@ -56,4 +56,8 @@ public sealed class NavigationItem : ObservableObject
     public bool IsExperimental { get; init; }
     public bool IsHardLocked { get; init; }
     public string? HardLockedReason { get; init; }
+
+    public ReleaseStage ReleaseStage { get; init; } = ReleaseStage.Release;
+    public bool IsAlpha => ReleaseStage == ReleaseStage.Alpha;
+    public bool IsBeta => ReleaseStage == ReleaseStage.Beta;
 }
