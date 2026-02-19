@@ -495,13 +495,18 @@ pub unsafe extern "C" fn privstack_cloudsync_enter_passphrase(
     };
 
     let result = handle.runtime.block_on(async {
-        let workspaces = api.list_workspaces().await?;
+        super::android_log("INFO", "[enter_passphrase] step 1: list_workspaces");
+        let workspaces = api.list_workspaces().await.map_err(|e| {
+            super::android_log("ERROR", &format!("[enter_passphrase] list_workspaces failed: {e}"));
+            e
+        })?;
         let ws = workspaces
             .first()
             .ok_or(privstack_cloud::CloudError::Config(
                 "no cloud workspace registered".to_string(),
             ))?;
 
+        super::android_log("INFO", "[enter_passphrase] step 2: user_id");
         let user_id = api
             .user_id()
             .await
@@ -513,17 +518,26 @@ pub unsafe extern "C" fn privstack_cloudsync_enter_passphrase(
             config.s3_endpoint_override.clone(),
         );
 
+        super::android_log("INFO", "[enter_passphrase] step 3: get_credentials");
         let cred_mgr = CredentialManager::new(
             api.clone(),
             ws.workspace_id.clone(),
             config.credential_refresh_margin_secs,
         );
-        let creds = cred_mgr.get_credentials().await?;
+        let creds = cred_mgr.get_credentials().await.map_err(|e| {
+            super::android_log("ERROR", &format!("[enter_passphrase] get_credentials failed: {e}"));
+            e
+        })?;
 
         // Download passphrase-encrypted key
         let key_path = private_key_s3_key(user_id, &ws.workspace_id);
-        let data = transport.download(&creds, &key_path).await?;
+        super::android_log("INFO", &format!("[enter_passphrase] step 4: download s3://{key_path}"));
+        let data = transport.download(&creds, &key_path).await.map_err(|e| {
+            super::android_log("ERROR", &format!("[enter_passphrase] download failed: {e}"));
+            e
+        })?;
 
+        super::android_log("INFO", &format!("[enter_passphrase] step 5: deserialize + decrypt ({} bytes)", data.len()));
         let protected: privstack_crypto::PassphraseProtectedKey =
             serde_json::from_slice(&data).map_err(|e| {
                 privstack_cloud::CloudError::Envelope(format!(
@@ -538,6 +552,7 @@ pub unsafe extern "C" fn privstack_cloudsync_enter_passphrase(
             })?;
 
         let keypair = crypto_env::CloudKeyPair::from_secret_bytes(secret_key.to_bytes());
+        super::android_log("INFO", "[enter_passphrase] success — keypair loaded");
         Ok::<crypto_env::CloudKeyPair, privstack_cloud::CloudError>(keypair)
     });
 

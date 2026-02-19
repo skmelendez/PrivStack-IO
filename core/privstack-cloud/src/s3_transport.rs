@@ -7,7 +7,14 @@ use crate::error::{CloudError, CloudResult};
 use crate::types::StsCredentials;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_s3::primitives::ByteStream;
+use aws_smithy_http_client::tls;
 use tracing::debug;
+
+/// Mozilla/macOS CA bundle embedded at compile time.
+/// Needed because Android doesn't store root CAs in standard Linux paths,
+/// so `rustls-native-certs` fails to find them → panic in debug, empty
+/// trust store in release.
+static CA_PEM_BUNDLE: &[u8] = include_bytes!("../data/cacert.pem");
 
 /// S3 transport for uploading/downloading encrypted data.
 pub struct S3Transport {
@@ -26,6 +33,10 @@ impl S3Transport {
     }
 
     /// Builds an S3 client from STS credentials.
+    ///
+    /// Uses a custom HTTP client with an embedded CA bundle instead of
+    /// `rustls-native-certs`, which crashes on Android where root CAs
+    /// live in `/system/etc/security/cacerts/` (non-standard path).
     async fn build_client(&self, creds: &StsCredentials) -> CloudResult<S3Client> {
         let credentials = aws_credential_types::Credentials::new(
             &creds.access_key_id,
@@ -35,9 +46,23 @@ impl S3Transport {
             "privstack-sts",
         );
 
+        let trust_store = tls::TrustStore::empty()
+            .with_pem_certificate(CA_PEM_BUNDLE);
+        let tls_ctx = tls::TlsContext::builder()
+            .with_trust_store(trust_store)
+            .build()
+            .map_err(|e| CloudError::S3(format!("TLS context build failed: {e}")))?;
+        let http_client = aws_smithy_http_client::Builder::new()
+            .tls_provider(tls::Provider::Rustls(
+                tls::rustls_provider::CryptoMode::Ring,
+            ))
+            .tls_context(tls_ctx)
+            .build_https();
+
         let mut config_builder = aws_sdk_s3::Config::builder()
             .region(aws_types::region::Region::new(self.region.clone()))
             .credentials_provider(credentials)
+            .http_client(http_client)
             .behavior_version_latest();
 
         if let Some(ref endpoint) = self.endpoint_override {
@@ -90,7 +115,7 @@ impl S3Transport {
             .key(key)
             .send()
             .await
-            .map_err(|e| CloudError::S3(format!("download failed for {key}: {e}")))?;
+            .map_err(|e| CloudError::S3(format!("download failed for {key}: {e:?}")))?;
 
         let body = resp
             .body

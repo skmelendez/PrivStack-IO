@@ -26,11 +26,36 @@ pub(crate) use workspaces::*;
 
 use crate::PrivStackError;
 use privstack_cloud::CloudError;
-use std::ffi::{c_char, CStr, CString};
+use std::ffi::{c_char, c_int, CStr, CString};
+
+/// Android logcat log levels.
+#[cfg(target_os = "android")]
+const ANDROID_LOG_INFO: c_int = 4;
+#[cfg(target_os = "android")]
+const ANDROID_LOG_ERROR: c_int = 6;
+
+#[cfg(target_os = "android")]
+unsafe extern "C" {
+    fn __android_log_write(prio: c_int, tag: *const c_char, text: *const c_char) -> c_int;
+}
+
+/// Log a message to Android logcat (or stderr on other platforms).
+#[allow(unused_variables)]
+pub(crate) fn android_log(level: &str, msg: &str) {
+    #[cfg(target_os = "android")]
+    {
+        let prio = if level == "ERROR" { ANDROID_LOG_ERROR } else { ANDROID_LOG_INFO };
+        let tag = CString::new("PrivStackRust").unwrap();
+        let text = CString::new(msg).unwrap_or_else(|_| CString::new("(invalid utf8)").unwrap());
+        unsafe { __android_log_write(prio, tag.as_ptr(), text.as_ptr()); }
+    }
+    #[cfg(not(target_os = "android"))]
+    eprintln!("[{level}] {msg}");
+}
 
 /// Converts a `CloudError` to the appropriate FFI error code.
 pub(crate) fn cloud_err(e: &CloudError) -> PrivStackError {
-    eprintln!("[FFI cloud_err] {e}");
+    android_log("ERROR", &format!("[cloud_err] {e}"));
     match e {
         CloudError::AuthRequired | CloudError::AuthFailed(_) => PrivStackError::CloudAuthError,
         CloudError::QuotaExceeded { .. } => PrivStackError::QuotaExceeded,
