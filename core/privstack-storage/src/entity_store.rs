@@ -1026,13 +1026,17 @@ impl EntityStore {
     }
 }
 
-/// Returns the name of the primary (non-temp, non-system) database on this connection.
+/// Returns the name of the primary database on this connection.
 /// In newer DuckDB the default database is named after the file stem (e.g. "data"),
-/// not necessarily "main".
+/// not necessarily "main". Uses pragma_database_size() which returns (database_name, ...).
 fn get_default_db_name(conn: &Connection) -> String {
-    conn.prepare("SELECT database_name FROM pragma_database_list() WHERE NOT internal ORDER BY database_oid LIMIT 1")
+    // pragma_database_size() returns the database name as the first column
+    let name = conn
+        .prepare("SELECT database_name FROM pragma_database_size() LIMIT 1")
         .and_then(|mut s| s.query_row([], |r| r.get::<_, String>(0)))
-        .unwrap_or_else(|_| "main".to_string())
+        .unwrap_or_else(|_| "main".to_string());
+    eprintln!("[compact] detected database name: \"{}\"", name);
+    name
 }
 
 fn format_bytes_log(bytes: u64) -> String {
