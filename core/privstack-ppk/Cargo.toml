@@ -12,7 +12,7 @@ thiserror.workspace = true
 
 # Package format
 toml = "0.8"
-zip = "2.2"
+zip = "6.0"
 sha2 = "0.10"
 hex = "0.4"
 
