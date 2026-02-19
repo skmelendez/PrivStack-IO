@@ -5,7 +5,7 @@
         mc:Ignorable="d"
         x:Class="PrivStack.Desktop.Views.Dialogs.ConfirmationWindow"
         Title="Confirm"
-        Width="420" Height="200"
+        Width="420" SizeToContent="Height"
         MinWidth="350" MinHeight="180"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
