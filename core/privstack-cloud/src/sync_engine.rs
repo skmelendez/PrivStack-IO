@@ -502,6 +502,11 @@ impl CloudSyncEngine {
                 match serde_json::from_slice::<Vec<Event>>(&plaintext) {
                     Ok(events) => {
                         for event in events {
+                            // Defense-in-depth: skip events originating from this device
+                            if event.peer_id.to_string() == self.device_id {
+                                debug!("skipping own event for entity {}", event.entity_id);
+                                continue;
+                            }
                             if let Err(e) = self.event_tx.send(event).await {
                                 error!("failed to send event to application: {e}");
                             }
@@ -514,6 +519,34 @@ impl CloudSyncEngine {
                         );
                     }
                 }
+            }
+
+            // Advance download cursor locally and acknowledge to server
+            self.cursors.insert(entity.entity_id.clone(), entity.latest_cursor);
+            if let Err(e) = self
+                .entity_store
+                .save_cloud_cursor(&entity.entity_id, entity.latest_cursor)
+            {
+                warn!(
+                    "failed to persist download cursor for {}: {e}",
+                    entity.entity_id
+                );
+            }
+
+            if let Err(e) = self
+                .api
+                .ack_download(
+                    &self.workspace_id,
+                    &self.device_id,
+                    &entity.entity_id,
+                    entity.latest_cursor,
+                )
+                .await
+            {
+                warn!(
+                    "failed to ack download cursor for {}: {e}",
+                    entity.entity_id
+                );
             }
         }
 
