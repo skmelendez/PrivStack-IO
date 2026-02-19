@@ -6,19 +6,22 @@
              xmlns:models="using:PrivStack.Desktop.Models"
              xmlns:svc="using:PrivStack.Desktop.Services"
              xmlns:views="using:PrivStack.Desktop.Views"
+             xmlns:controls="using:PrivStack.Desktop.Controls"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
              x:Class="PrivStack.Desktop.Views.SettingsPanel"
              x:DataType="vm:SettingsViewModel">
 
     <UserControl.Styles>
         <Style Selector="Expander.settings-section">
-            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource ThemeRadiusLg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
         </Style>
         <Style Selector="Expander.settings-section /template/ ToggleButton">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="16,14"/>
         </Style>
     </UserControl.Styles>
 
@@ -28,8 +31,18 @@
             <!-- Profile Section -->
             <Expander IsExpanded="True" Classes="settings-section">
                 <Expander.Header>
-                    <TextBlock Text="Profile" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="User" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Profile" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="12" Margin="16,0,16,16">
                     <!-- Profile Image -->
@@ -83,8 +96,18 @@
             <!-- Appearance Section -->
             <Expander IsExpanded="False" Classes="settings-section">
                 <Expander.Header>
-                    <TextBlock Text="Appearance" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="Settings" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Appearance" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="6" Margin="16,0,16,16">
                     <TextBlock Text="Theme" FontSize="{DynamicResource ThemeFontSizeSm}"
@@ -113,8 +136,18 @@
             <!-- Accessibility Section -->
             <Expander IsExpanded="False" Classes="settings-section">
                 <Expander.Header>
-                    <TextBlock Text="Accessibility" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="AlertCircle" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Accessibility" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="8" Margin="16,0,16,16">
                     <Grid ColumnDefinitions="*,Auto">
@@ -205,8 +238,18 @@
             <!-- Notifications Section -->
             <Expander IsExpanded="False" Classes="settings-section">
                 <Expander.Header>
-                    <TextBlock Text="Notifications" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="Mail" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Notifications" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="16" Margin="16,0,16,16">
                     <!-- Enable/Disable Toggle -->
@@ -265,8 +308,18 @@
             <!-- Speech-to-Text Section -->
             <Expander IsExpanded="False" Classes="settings-section">
                 <Expander.Header>
-                    <TextBlock Text="Speech-to-Text" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="MessageSquare" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Speech-to-Text" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="16" Margin="16,0,16,16">
                     <!-- Enable/Disable Toggle -->
@@ -445,8 +498,18 @@
             <!-- Data & Backup Section -->
             <Expander IsExpanded="False" Classes="settings-section">
                 <Expander.Header>
-                    <TextBlock Text="Data &amp; Backup" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="Database" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Data &amp; Backup" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="12" Margin="16,0,16,16">
                     <TextBlock Text="Configure data storage location and automatic backups."
@@ -675,8 +738,18 @@
             <Expander IsExpanded="False" Classes="settings-section"
                       x:DataType="vm:SettingsViewModel">
                 <Expander.Header>
-                    <TextBlock Text="Connections" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="Network" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Connections" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="12" Margin="16,0,16,16"
                             DataContext="{Binding Connections}"
@@ -799,8 +872,18 @@
             <Expander IsExpanded="False" Classes="settings-section"
                       x:DataType="vm:SettingsViewModel">
                 <Expander.Header>
-                    <TextBlock Text="Cloud Sync" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="Sync" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Cloud Sync" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <views:CloudSyncSettingsSection DataContext="{Binding CloudSync}"
                                                 Margin="16,0,16,16"/>
@@ -809,8 +892,18 @@
             <!-- Security Section -->
             <Expander IsExpanded="False" Classes="settings-section">
                 <Expander.Header>
-                    <TextBlock Text="Security" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="Lock" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Security" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="16" Margin="16,0,16,16">
                     <!-- Sensitive Data Lockout -->
@@ -1041,8 +1134,18 @@
             <Expander IsExpanded="False" Classes="settings-section"
                       IsVisible="{Binding IsPolicyActive}">
                 <Expander.Header>
-                    <TextBlock Text="Enterprise" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="Users" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Enterprise" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="12" Margin="16,0,16,16">
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
@@ -1066,8 +1169,18 @@
             <!-- About Section -->
             <Expander IsExpanded="False" Classes="settings-section">
                 <Expander.Header>
-                    <TextBlock Text="About" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemePrimaryMutedBrush}">
+                            <controls:IconControl Icon="Info" Size="14"
+                                                  Stroke="{DynamicResource ThemePrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="About" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="12" Margin="16,0,16,16">
                     <TextBlock Text="Local-first, privacy-focused productivity suite."
@@ -1123,9 +1236,19 @@
                       BorderBrush="{DynamicResource ThemeDangerBrush}"
                       BorderThickness="1">
                 <Expander.Header>
-                    <TextBlock Text="Danger Zone" FontWeight="SemiBold"
-                               FontSize="{DynamicResource ThemeFontSizeMd}"
-                               Foreground="{DynamicResource ThemeDangerBrush}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="28" Height="28" CornerRadius="6"
+                                Background="{DynamicResource ThemeDangerMutedBrush}">
+                            <controls:IconControl Icon="AlertCircle" Size="14"
+                                                  Stroke="{DynamicResource ThemeDangerBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Danger Zone" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   Foreground="{DynamicResource ThemeDangerBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Expander.Header>
                 <StackPanel Spacing="12" Margin="16,0,16,16">
                     <TextBlock Text="Reset all settings to their default values."

@@ -14,7 +14,7 @@
     <UserControl.Styles>
         <!-- Sidebar container -->
         <Style Selector="Border.sidebar-container">
-            <Setter Property="Background" Value="{DynamicResource ThemeNavBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeNavGradientBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeNavBorderBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,0"/>
             <Setter Property="BoxShadow" Value="2 0 8 0 #20000000"/>
