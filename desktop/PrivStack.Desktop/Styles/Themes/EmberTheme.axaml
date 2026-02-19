@@ -149,6 +149,18 @@
     <SolidColorBrush x:Key="ThemeScrollThumbBrush" Color="{StaticResource ThemeScrollThumb}"/>
     <SolidColorBrush x:Key="ThemeScrollThumbHoverBrush" Color="{StaticResource ThemeScrollThumbHover}"/>
 
+    <!-- Graph Node Type Brushes -->
+    <SolidColorBrush x:Key="ThemeNodeTagBrush" Color="#9CA3AF"/>
+    <SolidColorBrush x:Key="ThemeNodeCompanyBrush" Color="#F97316"/>
+    <SolidColorBrush x:Key="ThemeNodeContactGroupBrush" Color="#A855F7"/>
+    <SolidColorBrush x:Key="ThemeNodeSnippetBrush" Color="#06B6D4"/>
+    <SolidColorBrush x:Key="ThemeNodeRssBrush" Color="#FB923C"/>
+    <SolidColorBrush x:Key="ThemeNodeProjectBrush" Color="#84CC16"/>
+    <SolidColorBrush x:Key="ThemeNodeDealBrush" Color="#EAB308"/>
+    <SolidColorBrush x:Key="ThemeNodeTransactionBrush" Color="#EC4899"/>
+    <SolidColorBrush x:Key="ThemeNodeCredentialBrush" Color="#EF4444"/>
+    <SolidColorBrush x:Key="ThemeNodeFileBrush" Color="#64748B"/>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- LAYOUT CONSTANTS                                                         -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
