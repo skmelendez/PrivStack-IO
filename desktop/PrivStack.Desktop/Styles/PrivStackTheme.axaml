@@ -22,6 +22,17 @@
         </Setter>
     </Style>
 
+    <!-- Force Fluent theme Button template to respect our Background in all states -->
+    <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+
     <Style Selector="Button:pointerover">
         <Setter Property="Background" Value="{DynamicResource ThemeHoverBrush}"/>
     </Style>
@@ -236,6 +247,17 @@
                 <BrushTransition Property="Background" Duration="0:0:0.15"/>
             </Transitions>
         </Setter>
+    </Style>
+
+    <!-- Force Fluent theme ListBoxItem template to respect our Background in all states -->
+    <Style Selector="ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
     </Style>
 
     <Style Selector="ListBoxItem:selected">
@@ -993,6 +1015,20 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- TOGGLE BUTTON STYLES                                                      -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Force Fluent theme ToggleButton template to respect our Background in all states -->
+    <Style Selector="ToggleButton /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="ToggleButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
+    <Style Selector="ToggleButton:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+    </Style>
 
     <Style Selector="ToggleButton:checked">
         <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}"/>
