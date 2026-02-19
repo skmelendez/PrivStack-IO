@@ -13,10 +13,15 @@ mod sync;
 mod workspaces;
 
 // Re-export all FFI functions so JNI wrappers can use `crate::cloud::privstack_cloudsync_*`.
+#[cfg(target_os = "android")]
 pub(crate) use auth::*;
+#[cfg(target_os = "android")]
 pub(crate) use devices::*;
+#[cfg(target_os = "android")]
 pub(crate) use sharing::*;
+#[cfg(target_os = "android")]
 pub(crate) use sync::*;
+#[cfg(target_os = "android")]
 pub(crate) use workspaces::*;
 
 use crate::PrivStackError;

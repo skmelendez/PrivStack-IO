@@ -153,6 +153,11 @@ impl EntityRegistry {
     fn has_schema(&self, entity_type: &str) -> bool {
         self.schemas.contains_key(entity_type)
     }
+
+    /// Clone all registered schemas for use in background tasks (e.g., cloud sync inbound).
+    fn clone_schemas(&self) -> std::collections::HashMap<String, EntitySchema> {
+        self.schemas.clone()
+    }
 }
 
 /// Opaque handle to the PrivStack runtime.

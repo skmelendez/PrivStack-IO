@@ -9,10 +9,13 @@ use privstack_cloud::s3_transport::S3Transport;
 use privstack_cloud::sync_engine;
 use privstack_cloud::types::*;
 use privstack_crypto::{DerivedKey, KEY_SIZE};
+use privstack_model::{Entity, EntitySchema};
 use privstack_types::{EntityId, Event, EventPayload, HybridTimestamp};
+use std::collections::HashMap;
 use std::ffi::c_char;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::mpsc;
 
 /// Starts the cloud sync engine for a workspace.
 ///
@@ -91,7 +94,7 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
     }
 
     let active_ws_id = ws_id.clone();
-    let (event_tx, _event_rx) = tokio::sync::mpsc::channel(256);
+    let (event_tx, event_rx) = mpsc::channel(256);
 
     let (sync_handle, inbound_tx, mut engine) = sync_engine::create_cloud_sync_engine(
         api,
@@ -108,6 +111,13 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
 
     handle.runtime.spawn(async move {
         engine.run().await;
+    });
+
+    // Spawn inbound event consumer — applies events pulled from S3 to local DB.
+    let inbound_store = handle.entity_store.clone();
+    let inbound_schemas = handle.entity_registry.clone_schemas();
+    handle.runtime.spawn(async move {
+        consume_inbound_events(event_rx, inbound_store, inbound_schemas).await;
     });
 
     handle.cloud_sync_handle = Some(sync_handle);
@@ -385,4 +395,114 @@ pub unsafe extern "C" fn privstack_cloudsync_request_compaction(
         Ok(()) => PrivStackError::Ok,
         Err(e) => cloud_err(&e),
     }
+}
+
+// ── Inbound Event Consumer ──
+
+/// Reads events pulled from S3 by the sync engine and applies them to the
+/// local entity store.  Runs as a background tokio task for the lifetime of
+/// the sync engine.
+async fn consume_inbound_events(
+    mut rx: mpsc::Receiver<Event>,
+    store: Arc<privstack_storage::EntityStore>,
+    schemas: HashMap<String, EntitySchema>,
+) {
+    while let Some(event) = rx.recv().await {
+        let store = store.clone();
+        let schemas = schemas.clone();
+
+        // Entity store operations acquire a Mutex — run on a blocking thread.
+        let result = tokio::task::spawn_blocking(move || {
+            apply_inbound_event(&event, &store, &schemas)
+        })
+        .await;
+
+        match result {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                eprintln!("[cloud sync] failed to apply inbound event: {e}");
+            }
+            Err(e) => {
+                eprintln!("[cloud sync] inbound event task panicked: {e}");
+            }
+        }
+    }
+
+    eprintln!("[cloud sync] inbound event consumer stopped");
+}
+
+/// Apply a single inbound event to the local entity store.
+fn apply_inbound_event(
+    event: &Event,
+    store: &privstack_storage::EntityStore,
+    schemas: &HashMap<String, EntitySchema>,
+) -> Result<(), String> {
+    match &event.payload {
+        EventPayload::FullSnapshot {
+            entity_type,
+            json_data,
+        }
+        | EventPayload::EntityCreated {
+            entity_type,
+            json_data,
+        }
+        | EventPayload::EntityUpdated {
+            entity_type,
+            json_data,
+        } => {
+            let data: serde_json::Value =
+                serde_json::from_str(json_data).map_err(|e| format!("json parse: {e}"))?;
+
+            let entity = Entity {
+                id: event.entity_id.to_string(),
+                entity_type: entity_type.clone(),
+                data,
+                created_at: event.timestamp.wall_time() as i64,
+                modified_at: event.timestamp.wall_time() as i64,
+                created_by: event.peer_id.to_string(),
+            };
+
+            // Check for existing local entity — apply LWW at document level.
+            if let Ok(Some(local)) = store.get_entity(&entity.id) {
+                if local.modified_at > entity.modified_at {
+                    // Local is newer — skip remote event.
+                    return Ok(());
+                }
+            }
+
+            if let Some(schema) = schemas.get(entity_type) {
+                store
+                    .save_entity(&entity, schema)
+                    .map_err(|e| format!("save_entity: {e}"))?;
+            } else {
+                store
+                    .save_entity_raw(&entity)
+                    .map_err(|e| format!("save_entity_raw: {e}"))?;
+            }
+
+            eprintln!(
+                "[cloud sync] applied inbound {} entity {}",
+                entity_type, event.entity_id
+            );
+        }
+
+        EventPayload::EntityDeleted { entity_type } => {
+            // Mark entity as trashed (soft delete).
+            if let Ok(Some(mut existing)) = store.get_entity(&event.entity_id.to_string()) {
+                if let Some(obj) = existing.data.as_object_mut() {
+                    obj.insert("is_trashed".to_string(), serde_json::Value::Bool(true));
+                }
+                let _ = store.save_entity_raw(&existing);
+                eprintln!(
+                    "[cloud sync] trashed inbound {} entity {}",
+                    entity_type, event.entity_id
+                );
+            }
+        }
+
+        // ACL events — not handled yet.
+        _ => {}
+    }
+
+    Ok(())
 }
