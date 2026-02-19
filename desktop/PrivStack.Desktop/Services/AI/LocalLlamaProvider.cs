@@ -75,10 +75,14 @@ internal sealed class LocalLlamaProvider : IAiProvider
             }
 
             var (prompt, antiPrompts) = FormatPrompt(modelName, request.SystemPrompt, request.UserPrompt);
-            _log.Debug("Local inference using model {Model}, prompt length {Len}, anti-prompts: [{Anti}]",
-                modelName, prompt.Length, string.Join(", ", antiPrompts));
 
-            var executor = new LLama.StatelessExecutor(_weights!, _context.Params);
+            // Create a fresh context for this inference request to avoid stale state
+            using var inferContext = _weights!.CreateContext(_context!.Params);
+            var promptTokens = inferContext.Tokenize(prompt, addBos: true, special: true);
+            _log.Debug("Local inference using model {Model}, prompt tokens {Count}, anti-prompts: [{Anti}]",
+                modelName, promptTokens.Length, string.Join(", ", antiPrompts));
+
+            var executor = new LLama.InteractiveExecutor(inferContext);
             var inferParams = new LLama.Common.InferenceParams
             {
                 MaxTokens = request.MaxTokens,
@@ -90,10 +94,13 @@ internal sealed class LocalLlamaProvider : IAiProvider
             };
 
             var sb = new StringBuilder();
+            var tokenCount = 0;
             await foreach (var token in executor.InferAsync(prompt, inferParams, ct))
             {
                 sb.Append(token);
+                tokenCount++;
             }
+            _log.Debug("Generated {TokenCount} text chunks, output length {Length}", tokenCount, sb.Length);
 
             sw.Stop();
             return new AiResponse
@@ -102,6 +109,7 @@ internal sealed class LocalLlamaProvider : IAiProvider
                 Content = sb.ToString().Trim(),
                 ProviderUsed = Id,
                 ModelUsed = modelName,
+                TokensUsed = tokenCount,
                 Duration = sw.Elapsed
             };
         }
