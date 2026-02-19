@@ -279,7 +279,7 @@ public sealed class PluginSidebar : Border
 
     private void ApplyTheme()
     {
-        _mainBorder.Background = GetBrush("ThemeSurfaceRecessedBrush",
+        _mainBorder.Background = GetBrush("ThemeBackgroundBrush",
             GetBrush("ThemeSurfaceBrush", Brushes.Transparent));
         _mainBorder.BorderBrush = Brushes.Transparent;
     }
