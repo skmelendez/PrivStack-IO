@@ -313,6 +313,44 @@ internal sealed class SdkHost : IPrivStackSdk, IDisposable
         }
     }
 
+    public string FindOrphanEntities(string validTypesJson)
+    {
+        if (!_switchLock.TryEnterReadLock(TimeSpan.FromSeconds(5)))
+            throw new InvalidOperationException("Workspace switch in progress");
+
+        try
+        {
+            var ptr = NativeLib.FindOrphanEntities(validTypesJson);
+            if (ptr == nint.Zero) return "[]";
+            var json = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(ptr) ?? "[]";
+            NativeLib.FreeString(ptr);
+            return json;
+        }
+        finally
+        {
+            _switchLock.ExitReadLock();
+        }
+    }
+
+    public string DeleteOrphanEntities(string validTypesJson)
+    {
+        if (!_switchLock.TryEnterReadLock(TimeSpan.FromSeconds(5)))
+            throw new InvalidOperationException("Workspace switch in progress");
+
+        try
+        {
+            var ptr = NativeLib.DeleteOrphanEntities(validTypesJson);
+            if (ptr == nint.Zero) return "{\"deleted\":0}";
+            var json = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(ptr) ?? "{\"deleted\":0}";
+            NativeLib.FreeString(ptr);
+            return json;
+        }
+        finally
+        {
+            _switchLock.ExitReadLock();
+        }
+    }
+
     // =========================================================================
     // Vault (Encrypted Blob Storage)
     // =========================================================================

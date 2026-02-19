@@ -155,6 +155,20 @@ internal static partial class NativeLibrary
     [LibraryImport(LibraryName, EntryPoint = "privstack_db_diagnostics")]
     public static partial nint DbDiagnostics();
 
+    /// <summary>
+    /// Finds orphan entities not matching any known plugin schema.
+    /// Takes JSON array of {plugin_id, entity_type}. Returns JSON array of orphans.
+    /// </summary>
+    [LibraryImport(LibraryName, EntryPoint = "privstack_find_orphan_entities", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial nint FindOrphanEntities(string validTypesJson);
+
+    /// <summary>
+    /// Deletes orphan entities not matching any known plugin schema.
+    /// Returns JSON with deleted count. Caller must free with FreeString.
+    /// </summary>
+    [LibraryImport(LibraryName, EntryPoint = "privstack_delete_orphan_entities", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial nint DeleteOrphanEntities(string validTypesJson);
+
     // ============================================================
     // Vault Management Functions
     // ============================================================

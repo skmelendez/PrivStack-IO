@@ -45,6 +45,17 @@ public interface IPrivStackSdk
     /// </summary>
     string GetDatabaseDiagnostics();
 
+    /// <summary>
+    /// Finds orphan entities whose (plugin_id, entity_type) don't match any registered schema.
+    /// Takes JSON array of valid types, returns JSON array of orphan summaries.
+    /// </summary>
+    string FindOrphanEntities(string validTypesJson);
+
+    /// <summary>
+    /// Deletes orphan entities and cascades to auxiliary tables. Returns JSON with deleted count.
+    /// </summary>
+    string DeleteOrphanEntities(string validTypesJson);
+
     // =========================================================================
     // Vault (Encrypted Blob Storage)
     // =========================================================================

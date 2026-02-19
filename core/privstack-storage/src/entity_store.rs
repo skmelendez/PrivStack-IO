@@ -812,19 +812,120 @@ impl EntityStore {
         Ok(())
     }
 
-    /// Runs database maintenance: purge orphaned data, checkpoint WAL, then vacuum.
+    /// Runs database maintenance: purge orphaned/transient data, then checkpoint to reclaim space.
+    /// Only cleans auxiliary tables — never touches real entity data.
+    /// Note: DuckDB's VACUUM does NOT reclaim space. CHECKPOINT is the correct approach.
     pub fn run_maintenance(&self) -> StorageResult<()> {
         let conn = self.conn.lock().unwrap();
-        // Purge orphaned rows in auxiliary tables whose parent entity no longer exists
         conn.execute_batch(
-            "DELETE FROM entity_vectors WHERE entity_id NOT IN (SELECT id FROM entities);
+            "-- Orphaned rows in auxiliary tables (parent entity deleted but these weren't)
+             DELETE FROM entity_vectors WHERE entity_id NOT IN (SELECT id FROM entities);
              DELETE FROM sync_ledger WHERE entity_id NOT IN (SELECT id FROM entities);
              DELETE FROM entity_links WHERE source_id NOT IN (SELECT id FROM entities)
                 OR target_id NOT IN (SELECT id FROM entities);
-             CHECKPOINT;
-             VACUUM;"
+             -- Transient data that rebuilds automatically on next sync
+             DELETE FROM cloud_sync_cursors;
+             DELETE FROM plugin_fuel_history;
+             CHECKPOINT;"
         )?;
         Ok(())
+    }
+
+    /// Finds orphan entities whose (created_by, entity_type) don't match any known
+    /// plugin schema. Returns JSON array of orphan summaries.
+    /// `valid_types` is a list of (plugin_id, entity_type) pairs from registered plugins.
+    pub fn find_orphan_entities(
+        &self,
+        valid_types: &[(String, String)],
+    ) -> StorageResult<Vec<serde_json::Value>> {
+        let conn = self.conn.lock().unwrap();
+
+        // Get all distinct (created_by, entity_type) combos in the DB
+        let mut stmt = conn.prepare(
+            "SELECT created_by, entity_type, COUNT(*) as cnt
+             FROM entities
+             GROUP BY created_by, entity_type"
+        )?;
+
+        let db_types: Vec<(String, String, i64)> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?,
+                ))
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let mut orphans = Vec::new();
+        for (plugin_id, entity_type, count) in &db_types {
+            let is_known = valid_types.iter().any(|(pid, etype)| {
+                pid == plugin_id && etype == entity_type
+            });
+            if !is_known {
+                orphans.push(serde_json::json!({
+                    "plugin_id": plugin_id,
+                    "entity_type": entity_type,
+                    "count": count,
+                }));
+            }
+        }
+        Ok(orphans)
+    }
+
+    /// Deletes orphan entities whose (created_by, entity_type) don't match any known
+    /// plugin schema. Also cascades to auxiliary tables. Returns count of deleted entities.
+    pub fn delete_orphan_entities(
+        &self,
+        valid_types: &[(String, String)],
+    ) -> StorageResult<usize> {
+        let conn = self.conn.lock().unwrap();
+
+        // Build WHERE clause to exclude known types
+        if valid_types.is_empty() {
+            return Ok(0);
+        }
+
+        // Find orphan IDs first
+        let mut conditions = Vec::new();
+        for (pid, etype) in valid_types {
+            conditions.push(format!(
+                "(created_by = '{}' AND entity_type = '{}')",
+                pid.replace('\'', "''"),
+                etype.replace('\'', "''"),
+            ));
+        }
+        let where_known = conditions.join(" OR ");
+
+        let query = format!(
+            "SELECT id FROM entities WHERE NOT ({})",
+            where_known
+        );
+        let mut stmt = conn.prepare(&query)?;
+        let orphan_ids: Vec<String> = stmt
+            .query_map([], |row| row.get::<_, String>(0))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        if orphan_ids.is_empty() {
+            return Ok(0);
+        }
+
+        // Delete from auxiliary tables first, then entities
+        let id_list: Vec<String> = orphan_ids.iter().map(|id| {
+            format!("'{}'", id.replace('\'', "''"))
+        }).collect();
+        let in_clause = id_list.join(",");
+
+        conn.execute_batch(&format!(
+            "DELETE FROM entity_vectors WHERE entity_id IN ({in_clause});
+             DELETE FROM sync_ledger WHERE entity_id IN ({in_clause});
+             DELETE FROM entity_links WHERE source_id IN ({in_clause}) OR target_id IN ({in_clause});
+             DELETE FROM entities WHERE id IN ({in_clause});"
+        ))?;
+
+        Ok(orphan_ids.len())
     }
 
     /// Returns diagnostics for the entity store's own DuckDB connection.

@@ -5528,7 +5528,8 @@ pub unsafe extern "C" fn privstack_ppk_content_hash(
 // Database Maintenance
 // ========================================================================
 
-/// Runs database maintenance (checkpoint + vacuum) to reclaim space.
+/// Runs database maintenance (orphan cleanup + checkpoint) to reclaim space.
+/// Note: DuckDB VACUUM does NOT reclaim space — CHECKPOINT is the correct approach.
 #[unsafe(no_mangle)]
 pub extern "C" fn privstack_db_maintenance() -> PrivStackError {
     let handle = HANDLE.lock().unwrap();
@@ -5540,6 +5541,71 @@ pub extern "C" fn privstack_db_maintenance() -> PrivStackError {
         None => PrivStackError::NotInitialized,
     }
 }
+
+/// Finds orphan entities not matching any known (plugin_id, entity_type) pair.
+/// `valid_types_json` is a JSON array of {"plugin_id": "...", "entity_type": "..."} objects.
+/// Returns JSON array of orphan summaries. Caller must free with `privstack_free_string`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_find_orphan_entities(
+    valid_types_json: *const c_char,
+) -> *mut c_char { unsafe {
+    let json_str = match nullable_cstr_to_str(valid_types_json) {
+        Some(s) => s,
+        None => return to_c_string("[]"),
+    };
+
+    let valid_types: Vec<(String, String)> = match serde_json::from_str::<Vec<serde_json::Value>>(json_str) {
+        Ok(arr) => arr.iter().filter_map(|v| {
+            let pid = v.get("plugin_id")?.as_str()?.to_string();
+            let etype = v.get("entity_type")?.as_str()?.to_string();
+            Some((pid, etype))
+        }).collect(),
+        Err(_) => return to_c_string("[]"),
+    };
+
+    let handle = HANDLE.lock().unwrap();
+    match handle.as_ref() {
+        Some(h) => match h.entity_store.find_orphan_entities(&valid_types) {
+            Ok(orphans) => to_c_string(&serde_json::json!(orphans).to_string()),
+            Err(_) => to_c_string("[]"),
+        },
+        None => to_c_string("[]"),
+    }
+}}
+
+/// Deletes orphan entities not matching any known (plugin_id, entity_type) pair.
+/// Cascades to auxiliary tables. Returns deleted count as JSON. Caller must free.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_delete_orphan_entities(
+    valid_types_json: *const c_char,
+) -> *mut c_char { unsafe {
+    let json_str = match nullable_cstr_to_str(valid_types_json) {
+        Some(s) => s,
+        None => return to_c_string("{\"deleted\":0}"),
+    };
+
+    let valid_types: Vec<(String, String)> = match serde_json::from_str::<Vec<serde_json::Value>>(json_str) {
+        Ok(arr) => arr.iter().filter_map(|v| {
+            let pid = v.get("plugin_id")?.as_str()?.to_string();
+            let etype = v.get("entity_type")?.as_str()?.to_string();
+            Some((pid, etype))
+        }).collect(),
+        Err(_) => return to_c_string("{\"deleted\":0}"),
+    };
+
+    let handle = HANDLE.lock().unwrap();
+    match handle.as_ref() {
+        Some(h) => {
+            // Delete orphans then checkpoint to reclaim space
+            let count = h.entity_store.delete_orphan_entities(&valid_types).unwrap_or(0);
+            if count > 0 {
+                let _ = h.entity_store.run_maintenance();
+            }
+            to_c_string(&serde_json::json!({"deleted": count}).to_string())
+        }
+        None => to_c_string("{\"deleted\":0}"),
+    }
+}}
 
 /// Returns diagnostics for ALL DuckDB files as JSON. Caller must free with `privstack_free_string`.
 #[unsafe(no_mangle)]

@@ -562,57 +562,40 @@ public partial class DashboardViewModel : ViewModelBase
             var entityDb = dbDir != null ? Path.Combine(dbDir, "data.entities.duckdb") : null;
             var sizeBefore = entityDb != null && File.Exists(entityDb) ? new FileInfo(entityDb).Length : 0;
 
-            _log.Information("Maintenance: entity DB size before = {Size} bytes, path = {Path}",
-                sizeBefore, entityDb);
-
-            // 1. Run normal VACUUM via Rust FFI
-            StatusMessage = "Running vacuum...";
+            // 1. Clean orphaned auxiliary rows + transient data + CHECKPOINT
+            StatusMessage = "Cleaning orphaned data...";
             await _sdk.RunDatabaseMaintenance();
 
-            // 2. Check entity count via diagnostics (more reliable than plugin metrics)
-            var diagJson = await Task.Run(() => _sdk.GetDatabaseDiagnostics());
-            _log.Information("Maintenance diagnostics: {Json}", diagJson);
+            // 2. Detect and delete orphan entities (types not matching any registered plugin)
+            StatusMessage = "Checking for orphan entities...";
+            var validTypesJson = BuildValidEntityTypesJson();
+            _log.Information("Valid entity types: {Json}", validTypesJson);
 
-            long totalRows = 0;
-            try
+            var orphansJson = await Task.Run(() => _sdk.FindOrphanEntities(validTypesJson));
+            _log.Information("Orphan entities found: {Json}", orphansJson);
+
+            int orphansDeleted = 0;
+            var orphanDoc = System.Text.Json.JsonDocument.Parse(orphansJson);
+            if (orphanDoc.RootElement.GetArrayLength() > 0)
             {
-                var doc = System.Text.Json.JsonDocument.Parse(diagJson);
-                if (doc.RootElement.TryGetProperty("tables", out var tables))
-                {
-                    foreach (var table in tables.EnumerateArray())
-                    {
-                        var name = table.GetProperty("table").GetString() ?? "";
-                        var rows = table.GetProperty("row_count").GetInt64();
-                        _log.Information("  Table {Name}: {Rows} rows", name, rows);
-                        totalRows += rows;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _log.Warning(ex, "Failed to parse diagnostics JSON");
+                _log.Information("Deleting {Count} orphan entity type(s)", orphanDoc.RootElement.GetArrayLength());
+                StatusMessage = "Deleting orphan entities...";
+                var deleteResultJson = await Task.Run(() => _sdk.DeleteOrphanEntities(validTypesJson));
+                var deleteDoc = System.Text.Json.JsonDocument.Parse(deleteResultJson);
+                if (deleteDoc.RootElement.TryGetProperty("deleted", out var del))
+                    orphansDeleted = del.GetInt32();
+                _log.Information("Deleted {Count} orphan entities", orphansDeleted);
             }
 
-            _log.Information("Maintenance: total rows across all tables = {TotalRows}", totalRows);
-
-            // 3. Force-recreate if all tables are empty but file is bloated
-            if (totalRows == 0 && dbDir != null && sizeBefore > 1_048_576)
-            {
-                StatusMessage = "Recreating empty database...";
-                _log.Information("Force-recreating empty entity DB ({Size} bytes, 0 rows)", sizeBefore);
-                await ForceRecreateDatabase(dbDir);
-
-                var sizeAfter = entityDb != null && File.Exists(entityDb) ? new FileInfo(entityDb).Length : 0;
-                _log.Information("Maintenance: entity DB size after recreate = {Size} bytes", sizeAfter);
-                StatusMessage = $"Database recreated. {FormatBytes(sizeBefore)} → {FormatBytes(sizeAfter)}";
-            }
-            else
-            {
-                var sizeAfter = entityDb != null && File.Exists(entityDb) ? new FileInfo(entityDb).Length : 0;
-                StatusMessage = totalRows == 0
-                    ? $"Database is empty ({FormatBytes(sizeAfter)}). Vacuum complete."
-                    : $"Vacuum complete. {totalRows:N0} rows across all tables.";
-            }
+            // 3. Report results
+            var sizeAfter = entityDb != null && File.Exists(entityDb) ? new FileInfo(entityDb).Length : 0;
+            var parts = new List<string>();
+            if (orphansDeleted > 0)
+                parts.Add($"removed {orphansDeleted} orphan entit{(orphansDeleted == 1 ? "y" : "ies")}");
+            parts.Add("cleaned auxiliary tables");
+            parts.Add($"checkpoint complete ({FormatBytes(sizeBefore)} → {FormatBytes(sizeAfter)})");
+            var msg = string.Join(", ", parts);
+            StatusMessage = msg.Length > 0 ? char.ToUpper(msg[0]) + msg[1..] : msg;
 
             await LoadDataMetricsAsync();
         }
@@ -627,48 +610,30 @@ public partial class DashboardViewModel : ViewModelBase
         }
     }
 
-    private async Task ForceRecreateDatabase(string dbDir)
+    /// <summary>
+    /// Builds a JSON array of all valid (plugin_id, entity_type) pairs from registered plugins
+    /// plus system-level entity types. Used to detect orphan entities.
+    /// </summary>
+    private string BuildValidEntityTypesJson()
     {
-        var dbPath = _workspaceService.GetActiveDataPath();
-        var dbFiles = new[]
+        var types = new List<object>();
+
+        // System-level entity types (owned by the shell, not any plugin)
+        foreach (var sysType in new[] { "entity_metadata", "property_template", "property_definition", "property_group" })
         {
-            "data.entities.duckdb",
-            "data.entities.duckdb.wal",
-            "data.datasets.duckdb",
-            "data.datasets.duckdb.wal",
-        };
+            types.Add(new { plugin_id = "privstack.system", entity_type = sysType });
+        }
 
-        // Shutdown the Rust core (closes all DuckDB connections)
-        _log.Information("Shutting down Rust runtime...");
-        await Task.Run(() => _runtime.Shutdown());
-        _log.Information("Rust runtime shut down");
-
-        // Small delay to ensure OS releases file handles
-        await Task.Delay(500);
-
-        // Delete the empty database files
-        foreach (var file in dbFiles)
+        // All registered plugin entity types
+        foreach (var plugin in _pluginRegistry.Plugins)
         {
-            var path = Path.Combine(dbDir, file);
-            if (File.Exists(path))
+            foreach (var schema in plugin.EntitySchemas)
             {
-                try
-                {
-                    File.Delete(path);
-                    _log.Information("Deleted DB file: {File} (existed={Exists})", file, File.Exists(path));
-                }
-                catch (Exception ex)
-                {
-                    _log.Error(ex, "Failed to delete DB file: {File}", file);
-                    throw;
-                }
+                types.Add(new { plugin_id = plugin.Metadata.Id, entity_type = schema.EntityType });
             }
         }
 
-        // Re-initialize (Rust will recreate schemas on fresh files)
-        _log.Information("Re-initializing Rust runtime with: {Path}", dbPath);
-        await Task.Run(() => _runtime.Initialize(dbPath));
-        _log.Information("Database re-initialized after force compact");
+        return System.Text.Json.JsonSerializer.Serialize(types);
     }
 
     private static string FormatBytes(long bytes) => bytes switch
