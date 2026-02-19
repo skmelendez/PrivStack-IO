@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
+using PrivStack.Sdk.Capabilities;
 using PrivStack.Sdk.Services;
 
 namespace PrivStack.Sdk;
@@ -83,6 +84,12 @@ public interface IPluginHost
     /// Nullable for backward compatibility with hosts that don't have AI configured.
     /// </summary>
     IAiService? AI { get; }
+
+    /// <summary>
+    /// AI intent classification and execution engine.
+    /// Nullable for backward compatibility with hosts that don't support intents.
+    /// </summary>
+    IIntentEngine? IntentEngine { get; }
 
     /// <summary>
     /// The active workspace data directory.
