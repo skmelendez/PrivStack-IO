@@ -95,8 +95,8 @@ internal sealed class IntentEngine : IIntentEngine, IRecipient<IntentSignalMessa
             {
                 SystemPrompt = systemPrompt,
                 UserPrompt = userPrompt,
-                MaxTokens = 1024,
-                Temperature = 0.3,
+                MaxTokens = 384,
+                Temperature = 0.2,
                 FeatureId = "intent.classify",
             }, ct);
 
@@ -107,6 +107,7 @@ internal sealed class IntentEngine : IIntentEngine, IRecipient<IntentSignalMessa
                 return;
             }
 
+            _log.Debug("Intent classification raw response: {Response}", response.Content);
             ParseAndAddSuggestions(response.Content, signal, intents);
         }
         catch (OperationCanceledException) { }
