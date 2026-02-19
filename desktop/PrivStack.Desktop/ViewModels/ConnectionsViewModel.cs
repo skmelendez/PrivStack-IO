@@ -373,7 +373,7 @@ public partial class ConnectionsViewModel : ViewModelBase
         }
     }
 
-    private static OAuthConnectionItem ToOAuthItem(string provider, Sdk.ConnectionInfo info)
+    private static OAuthConnectionItem ToOAuthItem(string provider, PrivStack.Sdk.ConnectionInfo info)
     {
         var scopesSummary = SummarizeScopes(provider, info.Scopes);
         return new OAuthConnectionItem(
