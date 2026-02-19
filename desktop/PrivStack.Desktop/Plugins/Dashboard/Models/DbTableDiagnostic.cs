@@ -14,7 +14,7 @@ public sealed record DbTableDiagnostic(
     long ColumnCount)
 {
     public string FormattedSize => FormatBytes(EstimatedSizeBytes);
-    public string FormattedRowCount => RowCount.ToString("N0");
+    public string FormattedRowCount => RowCount == 1 ? "1 row" : $"{RowCount:N0} rows";
     public string DisplayName => $"{DatabaseLabel}.{TableName}";
 
     internal static string FormatBytes(long bytes) => bytes switch

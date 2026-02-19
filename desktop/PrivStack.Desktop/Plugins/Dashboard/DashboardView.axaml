@@ -621,7 +621,7 @@
         <Border Grid.Row="2"
                 IsVisible="{Binding IsDataTab}"
                 Background="{DynamicResource ThemeSurfaceBrush}">
-            <ScrollViewer Padding="24,24,24,48">
+            <ScrollViewer Padding="24,24,24,80">
                 <StackPanel Spacing="24" MaxWidth="900" HorizontalAlignment="Center">
                     <!-- Storage Overview Cards -->
                     <TextBlock Text="Storage Overview" Classes="section-heading"/>
@@ -980,7 +980,7 @@
                                                                                    Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                                                                    VerticalAlignment="Center"/>
                                                                         <TextBlock Grid.Column="1"
-                                                                                   Text="{Binding FormattedRowCount, StringFormat='{}{0} rows'}"
+                                                                                   Text="{Binding FormattedRowCount}"
                                                                                    FontSize="{DynamicResource ThemeFontSizeXs}"
                                                                                    Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                                                                                    VerticalAlignment="Center"
