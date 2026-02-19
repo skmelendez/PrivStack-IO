@@ -20,18 +20,15 @@
         <ControlTheme x:Key="NavButtonTheme" TargetType="Button">
             <Setter Property="Template">
                 <ControlTemplate>
-                    <!-- NavBorder owns its own Background — NOT TemplateBinding.
-                         This decouples it from Button.Background so Fluent's
-                         :pointerover style (which sets Button.Background to white)
-                         has zero visual effect. Local styles target NavBorder directly. -->
+                    <!-- NavBorder owns its own Background (NOT TemplateBinding) so
+                         Fluent/global Button.Background changes are invisible.
+                         No BrushTransition — transition from Transparent (#00FFFFFF)
+                         interpolates through semi-transparent white, and the global
+                         Button:pointerover ThemeHoverBrush bleeds through during
+                         the transition window. Instant state change = no flash. -->
                     <Border Name="NavBorder" Background="Transparent"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Padding="{TemplateBinding Padding}">
-                        <Border.Transitions>
-                            <Transitions>
-                                <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                            </Transitions>
-                        </Border.Transitions>
                         <ContentPresenter Name="NavContent"
                                           Content="{TemplateBinding Content}"
                                           ContentTemplate="{TemplateBinding ContentTemplate}"
