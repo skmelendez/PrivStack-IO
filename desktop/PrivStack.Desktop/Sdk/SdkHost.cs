@@ -351,6 +351,25 @@ internal sealed class SdkHost : IPrivStackSdk, IDisposable
         }
     }
 
+    public string CompactDatabases()
+    {
+        if (!_switchLock.TryEnterReadLock(TimeSpan.FromSeconds(30)))
+            throw new InvalidOperationException("Workspace switch in progress");
+
+        try
+        {
+            var ptr = NativeLib.CompactDatabases();
+            if (ptr == nint.Zero) return "{}";
+            var json = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(ptr) ?? "{}";
+            NativeLib.FreeString(ptr);
+            return json;
+        }
+        finally
+        {
+            _switchLock.ExitReadLock();
+        }
+    }
+
     // =========================================================================
     // Vault (Encrypted Blob Storage)
     // =========================================================================

@@ -56,6 +56,12 @@ public interface IPrivStackSdk
     /// </summary>
     string DeleteOrphanEntities(string validTypesJson);
 
+    /// <summary>
+    /// Compacts all DuckDB databases by copying data to fresh files (reclaims allocated-but-empty blocks).
+    /// Returns JSON with per-database before/after sizes.
+    /// </summary>
+    string CompactDatabases();
+
     // =========================================================================
     // Vault (Encrypted Blob Storage)
     // =========================================================================
