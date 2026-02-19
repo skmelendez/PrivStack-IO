@@ -16,6 +16,14 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
     private static readonly ILogger _log = Log.ForContext<SyncOutboundService>();
     private const int DebounceMs = 2000;
 
+    /// <summary>
+    /// Entity types excluded from cloud sync by default. These are fetchable from
+    /// external sources (e.g. IMAP) and only waste storage/bandwidth if synced.
+    /// Cross-plugin links to these entities are stored on the linking entity, which
+    /// IS synced — so the reference is preserved across devices.
+    /// </summary>
+    private static readonly HashSet<string> CloudSyncExcludedTypes = ["email_message", "email_folder"];
+
     private readonly ISyncService _syncService;
     private readonly ICloudSyncService _cloudSync;
     private readonly ConcurrentDictionary<string, DebounceEntry> _pending = new();
@@ -103,8 +111,8 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
             // Also write to file-based event store if active (cloud/NAS sync)
             _fileEventSync?.WriteEventFile(entityId, entry.EntityType, entry.Payload);
 
-            // Push to cloud sync engine if running
-            if (_cloudSync.IsSyncing)
+            // Push to cloud sync engine if running (skip excluded entity types)
+            if (_cloudSync.IsSyncing && !CloudSyncExcludedTypes.Contains(entry.EntityType))
             {
                 try
                 {

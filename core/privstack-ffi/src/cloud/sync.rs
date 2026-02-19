@@ -317,12 +317,20 @@ pub unsafe extern "C" fn privstack_cloudsync_push_all_entities(
         Err(_) => return PrivStackError::StorageError,
     };
 
+    // Entity types excluded from cloud sync — fetchable from external sources (IMAP).
+    // Cross-plugin links stored on the linking entity are still synced.
+    const EXCLUDED_TYPES: &[&str] = &["email_message", "email_folder"];
+
     let mut pushed: u32 = 0;
     for id in &ids {
         let entity = match handle.entity_store.get_entity(id) {
             Ok(Some(e)) => e,
             _ => continue,
         };
+
+        if EXCLUDED_TYPES.contains(&entity.entity_type.as_str()) {
+            continue;
+        }
 
         let parsed_id = match EntityId::parse(&entity.id) {
             Ok(eid) => eid,
