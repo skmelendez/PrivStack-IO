@@ -108,6 +108,15 @@ public static class ThemeColorKeys
             new("ThemeCalendarEvent", "Event"),
             new("ThemeCalendarEventMuted", "Event Muted"),
         ]),
+        new("System Accent (Fluent Override)", [
+            new("SystemAccentColor", "Accent"),
+            new("SystemAccentColorDark1", "Accent Dark 1"),
+            new("SystemAccentColorDark2", "Accent Dark 2"),
+            new("SystemAccentColorDark3", "Accent Dark 3"),
+            new("SystemAccentColorLight1", "Accent Light 1"),
+            new("SystemAccentColorLight2", "Accent Light 2"),
+            new("SystemAccentColorLight3", "Accent Light 3"),
+        ]),
     ];
 
     /// <summary>

@@ -43,6 +43,17 @@
     <Color x:Key="ThemePrimaryMuted">#664A90A8</Color>
     <Color x:Key="ThemePrimaryGlow">#804A90A8</Color>
 
+    <!-- AVALONIA FLUENT ACCENT COLOR OVERRIDE -->
+    <!-- Maps SystemAccentColor to this theme's primary so ALL built-in Fluent controls respect the theme -->
+    <Color x:Key="SystemAccentColor">#4A90A8</Color>
+    <Color x:Key="SystemAccentColorDark1">#3A8098</Color>
+    <Color x:Key="SystemAccentColorDark2">#2A7088</Color>
+    <Color x:Key="SystemAccentColorDark3">#1A6078</Color>
+    <Color x:Key="SystemAccentColorLight1">#60A0B8</Color>
+    <Color x:Key="SystemAccentColorLight2">#76B0C8</Color>
+    <Color x:Key="SystemAccentColorLight3">#8CC0D8</Color>
+    <SolidColorBrush x:Key="SystemAccentColorBrush" Color="{StaticResource SystemAccentColor}"/>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- SECONDARY ACCENT (LIGHT TEAL)                                            -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

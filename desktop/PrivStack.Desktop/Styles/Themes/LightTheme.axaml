@@ -67,6 +67,17 @@
     <!-- Primary glow - box shadows (15% opacity on light) -->
     <Color x:Key="ThemePrimaryGlow">#264F46E5</Color>
 
+    <!-- AVALONIA FLUENT ACCENT COLOR OVERRIDE -->
+    <!-- Maps SystemAccentColor to this theme's primary so ALL built-in Fluent controls respect the theme -->
+    <Color x:Key="SystemAccentColor">#4F46E5</Color>
+    <Color x:Key="SystemAccentColorDark1">#4338CA</Color>
+    <Color x:Key="SystemAccentColorDark2">#372DB0</Color>
+    <Color x:Key="SystemAccentColorDark3">#2B2396</Color>
+    <Color x:Key="SystemAccentColorLight1">#6A62EA</Color>
+    <Color x:Key="SystemAccentColorLight2">#857EEF</Color>
+    <Color x:Key="SystemAccentColorLight3">#A09BF4</Color>
+    <SolidColorBrush x:Key="SystemAccentColorBrush" Color="{StaticResource SystemAccentColor}"/>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- SECONDARY ACCENT (VIOLET)                                                -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

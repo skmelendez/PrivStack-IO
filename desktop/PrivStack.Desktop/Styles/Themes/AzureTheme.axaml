@@ -45,6 +45,17 @@
     <Color x:Key="ThemePrimaryMuted">#262E6EB5</Color>
     <Color x:Key="ThemePrimaryGlow">#332E6EB5</Color>
 
+    <!-- AVALONIA FLUENT ACCENT COLOR OVERRIDE -->
+    <!-- Maps SystemAccentColor to this theme's primary so ALL built-in Fluent controls respect the theme -->
+    <Color x:Key="SystemAccentColor">#2E6EB5</Color>
+    <Color x:Key="SystemAccentColorDark1">#245C9E</Color>
+    <Color x:Key="SystemAccentColorDark2">#1B4A87</Color>
+    <Color x:Key="SystemAccentColorDark3">#133970</Color>
+    <Color x:Key="SystemAccentColorLight1">#4A84C4</Color>
+    <Color x:Key="SystemAccentColorLight2">#669AD3</Color>
+    <Color x:Key="SystemAccentColorLight3">#82B0E2</Color>
+    <SolidColorBrush x:Key="SystemAccentColorBrush" Color="{StaticResource SystemAccentColor}"/>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- SECONDARY ACCENT (GOLDEN AMBER)                                          -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

@@ -699,6 +699,10 @@
         <Setter Property="CornerRadius" Value="3"/>
     </Style>
 
+    <Style Selector="ProgressBar:indeterminate /template/ Border#PART_Indicator">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}"/>
+    </Style>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- COMBOBOX STYLES                                                          -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -744,6 +748,21 @@
     <Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
         <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="CheckBox:indeterminate /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="CheckBox:checked:pointerover /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
+    </Style>
+
+    <Style Selector="CheckBox:indeterminate:pointerover /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -932,6 +951,14 @@
         <Setter Property="Fill" Value="{DynamicResource ThemePrimaryBrush}"/>
     </Style>
 
+    <Style Selector="RadioButton:checked:pointerover /template/ Ellipse#OuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
+    </Style>
+
+    <Style Selector="RadioButton:checked:pointerover /template/ Ellipse#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
+    </Style>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- TOGGLE SWITCH STYLES                                                     -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -943,6 +970,51 @@
 
     <Style Selector="ToggleSwitch:checked /template/ Border#OuterBorder">
         <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="ToggleSwitch:checked:pointerover /template/ Border#OuterBorder">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
+    </Style>
+
+    <Style Selector="ToggleSwitch /template/ Border#SwitchKnobBounds">
+        <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+    </Style>
+
+    <Style Selector="ToggleSwitch /template/ Border#SwitchKnobOn">
+        <Setter Property="Background" Value="{DynamicResource ThemeTextOnAccentBrush}"/>
+    </Style>
+
+    <Style Selector="ToggleSwitch /template/ Border#SwitchKnobOff">
+        <Setter Property="Background" Value="{DynamicResource ThemeTextMutedBrush}"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- TOGGLE BUTTON STYLES                                                      -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <Style Selector="ToggleButton:checked">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextOnAccentBrush}"/>
+    </Style>
+
+    <Style Selector="ToggleButton:checked:pointerover">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryHoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextOnAccentBrush}"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- AUTOCOMPLETE BOX STYLES                                                   -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+    <Style Selector="AutoCompleteBox">
+        <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
+    </Style>
+
+    <Style Selector="AutoCompleteBox:focus /template/ Border">
         <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryBrush}"/>
     </Style>
 
