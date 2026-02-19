@@ -82,7 +82,11 @@ internal sealed class IntentEngine : IIntentEngine, IRecipient<IntentSignalMessa
         if (!IsEnabled) return;
         if (string.IsNullOrWhiteSpace(signal.Content)) return;
 
-        var intents = GetAllAvailableIntents();
+        var allIntents = GetAllAvailableIntents();
+        if (allIntents.Count == 0) return;
+
+        // Filter intents to only signal-relevant ones so small models aren't overwhelmed
+        var intents = FilterIntentsForSignal(allIntents, signal);
         if (intents.Count == 0) return;
 
         try
@@ -108,7 +112,7 @@ internal sealed class IntentEngine : IIntentEngine, IRecipient<IntentSignalMessa
             }
 
             _log.Debug("Intent classification raw response: {Response}", response.Content);
-            ParseAndAddSuggestions(response.Content, signal, intents);
+            ParseAndAddSuggestions(response.Content, signal, allIntents);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -243,6 +247,41 @@ internal sealed class IntentEngine : IIntentEngine, IRecipient<IntentSignalMessa
     }
 
     // ── Private Helpers ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Core intent IDs that are relevant for general text content analysis.
+    /// Keeps the prompt small so small local models can classify reliably.
+    /// </summary>
+    private static readonly HashSet<string> TextContentIntents =
+    [
+        "calendar.create_event",
+        "tasks.create_task",
+        "contacts.create_contact",
+        "email.draft_email",
+    ];
+
+    private static readonly HashSet<string> EmailIntents =
+    [
+        "calendar.create_event",
+        "tasks.create_task",
+        "contacts.create_contact",
+    ];
+
+    private static IReadOnlyList<IntentDescriptor> FilterIntentsForSignal(
+        IReadOnlyList<IntentDescriptor> allIntents, IntentSignalMessage signal)
+    {
+        // UserRequest = on-demand analysis — show all intents
+        if (signal.SignalType == IntentSignalType.UserRequest)
+            return allIntents;
+
+        var relevant = signal.SignalType switch
+        {
+            IntentSignalType.EmailReceived => EmailIntents,
+            _ => TextContentIntents,
+        };
+
+        return allIntents.Where(i => relevant.Contains(i.IntentId)).ToList().AsReadOnly();
+    }
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
