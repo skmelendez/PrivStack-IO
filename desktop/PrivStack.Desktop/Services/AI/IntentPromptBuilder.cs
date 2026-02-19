@@ -54,7 +54,10 @@ internal static class IntentPromptBuilder
             "Send report to Sarah by Friday",
             ("title", "Send report to Sarah"));
 
-        sb.AppendLine("Now output JSON for the text below.");
+        // Final reminder of valid IDs — critical for small models that drift
+        sb.Append("IMPORTANT: intent_id MUST be one of: ");
+        sb.AppendLine(string.Join(", ", intents.Select(i => i.IntentId)));
+        sb.AppendLine("Do NOT invent new IDs. Output JSON only, no other text.");
 
         return sb.ToString();
     }
