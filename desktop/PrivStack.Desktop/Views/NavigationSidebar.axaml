@@ -40,10 +40,7 @@
         <Style Selector="Button.workspace-btn:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
-        <Style Selector="Button.workspace-btn:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
-        </Style>
-        <Style Selector="Button.workspace-btn:pressed /template/ ContentPresenter">
+        <Style Selector="Button.workspace-btn:pressed">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
         </Style>
 
@@ -89,10 +86,6 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextHoverBrush}"/>
         </Style>
         <Style Selector="Button.nav-item.active">
-            <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextHoverBrush}"/>
-        </Style>
-        <Style Selector="Button.nav-item.active /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextHoverBrush}"/>
         </Style>
@@ -164,16 +157,10 @@
         <Style Selector="Button.nav-item-collapsed:pointerover">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
-        <Style Selector="Button.nav-item-collapsed:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
-        </Style>
-        <Style Selector="Button.nav-item-collapsed:pressed /template/ ContentPresenter">
+        <Style Selector="Button.nav-item-collapsed:pressed">
             <Setter Property="Background" Value="{DynamicResource ThemeNavSelectedBrush}"/>
         </Style>
         <Style Selector="Button.nav-item-collapsed.active">
-            <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
-        </Style>
-        <Style Selector="Button.nav-item-collapsed.active /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource ThemePrimaryMutedBrush}"/>
         </Style>
         <Style Selector="Button.nav-item-collapsed.locked">
@@ -235,10 +222,6 @@
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextHoverBrush}"/>
         </Style>
-        <Style Selector="Button.nav-footer-item:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeNavTextHoverBrush}"/>
-        </Style>
         <Style Selector="Button.nav-footer-item controls|IconControl">
             <Setter Property="Stroke" Value="{DynamicResource ThemeNavTextBrush}"/>
             <Setter Property="Transitions">
@@ -267,9 +250,6 @@
             </Setter>
         </Style>
         <Style Selector="Button.nav-footer-item-collapsed:pointerover">
-            <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
-        </Style>
-        <Style Selector="Button.nav-footer-item-collapsed:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource ThemeNavHoverBrush}"/>
         </Style>
         <Style Selector="Button.nav-footer-item-collapsed controls|IconControl">
