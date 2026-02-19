@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Sdk.Services;
 using Serilog;
@@ -11,7 +12,7 @@ namespace PrivStack.Desktop.ViewModels;
 /// ViewModel for the global intent suggestion tray (flyout from toolbar).
 /// Observes IntentEngine events and maintains the suggestion card collection.
 /// </summary>
-public partial class IntentSuggestionTrayViewModel : ViewModelBase
+public partial class IntentSuggestionTrayViewModel : ViewModelBase, IRecipient<IntentSettingsChangedMessage>
 {
     private static readonly ILogger _log = Log.ForContext<IntentSuggestionTrayViewModel>();
 
@@ -27,12 +28,19 @@ public partial class IntentSuggestionTrayViewModel : ViewModelBase
         _intentEngine.SuggestionRemoved += OnSuggestionRemoved;
         _intentEngine.SuggestionsCleared += OnSuggestionsCleared;
 
+        WeakReferenceMessenger.Default.Register<IntentSettingsChangedMessage>(this);
+
         // Load any existing suggestions
         foreach (var suggestion in _intentEngine.PendingSuggestions)
         {
             Suggestions.Add(new IntentSuggestionCardViewModel(suggestion, _intentEngine));
         }
         UpdateCounts();
+    }
+
+    public void Receive(IntentSettingsChangedMessage message)
+    {
+        _dispatcher.Post(() => OnPropertyChanged(nameof(IsEnabled)));
     }
 
     // ── Properties ───────────────────────────────────────────────────
