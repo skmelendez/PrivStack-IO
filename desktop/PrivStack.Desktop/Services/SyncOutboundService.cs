@@ -17,12 +17,13 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
     private const int DebounceMs = 2000;
 
     /// <summary>
-    /// Entity types excluded from cloud sync by default. These are fetchable from
+    /// Entity types excluded from all sync channels by default. These are fetchable from
     /// external sources (e.g. IMAP) and only waste storage/bandwidth if synced.
     /// Cross-plugin links to these entities are stored on the linking entity, which
     /// IS synced — so the reference is preserved across devices.
+    /// Use <see cref="PromoteEntityForSync"/> to bypass this exclusion for linked entities.
     /// </summary>
-    private static readonly HashSet<string> CloudSyncExcludedTypes = ["email_message", "email_folder"];
+    internal static readonly HashSet<string> SyncExcludedTypes = ["email_message", "email_folder"];
 
     private readonly ISyncService _syncService;
     private readonly ICloudSyncService _cloudSync;
@@ -49,6 +50,23 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
     {
         if (_disposed) return;
 
+        // Skip all sync for excluded entity types (e.g. email — fetched from IMAP per-device)
+        if (SyncExcludedTypes.Contains(entityType)) return;
+
+        EnqueueSync(entityId, entityType, payload);
+    }
+
+    public void PromoteEntityForSync(string entityId, string entityType, string? payload)
+    {
+        if (_disposed) return;
+
+        // Bypasses the SyncExcludedTypes check — used when a normally-excluded entity
+        // gets linked to a synced entity and needs to be pushed once.
+        EnqueueSync(entityId, entityType, payload);
+    }
+
+    private void EnqueueSync(string entityId, string entityType, string? payload)
+    {
         // Register for sync immediately (idempotent HashSet insert, very cheap)
         try
         {
@@ -111,8 +129,8 @@ internal sealed class SyncOutboundService : ISyncOutboundService, IDisposable
             // Also write to file-based event store if active (cloud/NAS sync)
             _fileEventSync?.WriteEventFile(entityId, entry.EntityType, entry.Payload);
 
-            // Push to cloud sync engine if running (skip excluded entity types)
-            if (_cloudSync.IsSyncing && !CloudSyncExcludedTypes.Contains(entry.EntityType))
+            // Push to cloud sync engine if running
+            if (_cloudSync.IsSyncing)
             {
                 try
                 {

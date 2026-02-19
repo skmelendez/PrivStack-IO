@@ -13,6 +13,12 @@ public interface ISyncOutboundService
     void NotifyEntityChanged(string entityId, string entityType, string? payload);
 
     /// <summary>
+    /// Syncs an entity that is normally excluded (e.g. email) because it was linked
+    /// to a synced entity. Bypasses the SyncExcludedTypes check.
+    /// </summary>
+    void PromoteEntityForSync(string entityId, string entityType, string? payload);
+
+    /// <summary>
     /// Cancels all pending debounce timers. Called during workspace switches.
     /// </summary>
     void CancelAll();

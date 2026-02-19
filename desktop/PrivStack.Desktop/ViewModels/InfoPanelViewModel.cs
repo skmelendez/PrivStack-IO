@@ -61,6 +61,8 @@ public partial class InfoPanelViewModel : ViewModelBase
     private readonly EntityMetadataService _entityMetadataService;
     private readonly IAppSettingsService _appSettings;
     private readonly IPluginRegistry _pluginRegistry;
+    private readonly ISyncOutboundService _syncOutbound;
+    private readonly IPrivStackSdk _sdk;
     private CancellationTokenSource? _loadCts;
 
     [ObservableProperty]
@@ -259,13 +261,17 @@ public partial class InfoPanelViewModel : ViewModelBase
         BacklinkService backlinkService,
         EntityMetadataService entityMetadataService,
         IAppSettingsService appSettings,
-        IPluginRegistry pluginRegistry)
+        IPluginRegistry pluginRegistry,
+        ISyncOutboundService syncOutbound,
+        IPrivStackSdk sdk)
     {
         _infoPanelService = infoPanelService;
         _backlinkService = backlinkService;
         _entityMetadataService = entityMetadataService;
         _appSettings = appSettings;
         _pluginRegistry = pluginRegistry;
+        _syncOutbound = syncOutbound;
+        _sdk = sdk;
 
         TemplateDialog = new PropertyTemplateDialogViewModel(entityMetadataService);
 
@@ -931,6 +937,35 @@ public partial class InfoPanelViewModel : ViewModelBase
             var provider = _pluginRegistry.GetCapabilityProviders<ILinkableItemProvider>()
                 .FirstOrDefault(p => p.LinkType == linkType);
             return provider != null ? await provider.GetItemByIdAsync(entityId) : null;
+        };
+
+        vm.OnEntityLinked = async (linkedLinkType, linkedEntityId) =>
+        {
+            if (!SyncOutboundService.SyncExcludedTypes.Contains(linkedLinkType)) return;
+
+            try
+            {
+                var response = await _sdk.SendAsync<JsonElement>(new SdkMessage
+                {
+                    PluginId = "privstack.system",
+                    Action = SdkAction.Read,
+                    EntityType = linkedLinkType,
+                    EntityId = linkedEntityId,
+                });
+
+                if (response.Success)
+                {
+                    var payload = response.Data.GetRawText();
+                    _syncOutbound.PromoteEntityForSync(linkedEntityId, linkedLinkType, payload);
+                    _log.Debug("Promoted excluded entity {LinkType}:{EntityId} for sync after linking",
+                        linkedLinkType, linkedEntityId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "Failed to promote linked entity {LinkType}:{EntityId} for sync",
+                    linkedLinkType, linkedEntityId);
+            }
         };
 
         // Re-resolve now that delegates are wired (items may have loaded before delegates were set)

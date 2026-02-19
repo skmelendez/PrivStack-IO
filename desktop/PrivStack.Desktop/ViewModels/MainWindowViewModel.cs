@@ -206,7 +206,9 @@ public partial class MainWindowViewModel : ViewModelBase
                     App.Services.GetRequiredService<Services.BacklinkService>(),
                     App.Services.GetRequiredService<Services.EntityMetadataService>(),
                     _appSettings,
-                    _pluginRegistry);
+                    _pluginRegistry,
+                    App.Services.GetRequiredService<ISyncOutboundService>(),
+                    App.Services.GetRequiredService<IPrivStackSdk>());
                 _infoPanelVM.NavigateToItemRequested += (linkType, itemId) =>
                     NavigateToLinkedItemAsync(linkType, itemId);
                 _infoPanelVM.PropertyChanged += (s, e) =>

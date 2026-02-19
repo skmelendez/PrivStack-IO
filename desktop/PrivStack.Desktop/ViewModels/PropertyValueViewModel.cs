@@ -79,6 +79,12 @@ public partial class PropertyValueViewModel : ObservableObject
     private List<RelationEntry> _relationEntries = [];
 
     /// <summary>
+    /// Invoked after a relation link is added so the parent can promote excluded entities for sync.
+    /// Parameters: (linkedLinkType, linkedEntityId).
+    /// </summary>
+    public Func<string, string, Task>? OnEntityLinked { get; set; }
+
+    /// <summary>
     /// Invoked after the property is successfully removed from the entity.
     /// The parent should use this to update its collections.
     /// </summary>
@@ -325,6 +331,9 @@ public partial class PropertyValueViewModel : ObservableObject
         _relationEntries.Add(new RelationEntry { LinkType = item.LinkType, EntityId = item.Id });
         RelationItems.Add(item);
         await SaveRelationAsync();
+
+        if (OnEntityLinked != null)
+            await OnEntityLinked(item.LinkType, item.Id);
     }
 
     /// <summary>
