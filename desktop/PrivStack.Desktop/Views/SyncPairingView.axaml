@@ -83,7 +83,7 @@
                                             Padding="16,10" CornerRadius="6"/>
                                     <Button Content="Start Pairing" Command="{Binding StartDiscoveryCommand}"
                                             IsVisible="{Binding HasSyncCode}"
-                                            Background="{DynamicResource ThemeSuccessBrush}"
+                                            Background="{DynamicResource ThemePrimaryBrush}"
                                             Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                             Padding="16,10" CornerRadius="6"/>
                                 </StackPanel>
@@ -108,7 +108,7 @@
 
                                 <Button Content="Join" Command="{Binding JoinWithCodeCommand}"
                                         HorizontalAlignment="Stretch"
-                                        Background="{DynamicResource ThemeSuccessBrush}"
+                                        Background="{DynamicResource ThemePrimaryBrush}"
                                         Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                         Padding="12,10" CornerRadius="6"
                                         HorizontalContentAlignment="Center"/>
@@ -182,7 +182,7 @@
                                                     <Button Grid.Column="1" Content="Approve"
                                                             Command="{Binding $parent[ItemsControl].((vm:SyncPairingViewModel)DataContext).ApprovePeerCommand}"
                                                             CommandParameter="{Binding}"
-                                                            Background="{DynamicResource ThemeSuccessBrush}"
+                                                            Background="{DynamicResource ThemePrimaryBrush}"
                                                             Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                             Padding="12,6" Margin="8,0" CornerRadius="4"/>
                                                     <Button Grid.Column="2" Content="Reject"

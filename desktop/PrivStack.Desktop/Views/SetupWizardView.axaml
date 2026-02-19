@@ -72,7 +72,7 @@
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                 Background="Transparent" Padding="16" CornerRadius="10">
                             <Grid ColumnDefinitions="Auto,*">
-                                <Border Grid.Column="0" Width="44" Height="44" Background="{DynamicResource ThemeSuccessBrush}" CornerRadius="10" VerticalAlignment="Center">
+                                <Border Grid.Column="0" Width="44" Height="44" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="10" VerticalAlignment="Center">
                                     <TextBlock Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeLg}" FontWeight="Bold"
                                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -109,7 +109,7 @@
                                    Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                         <Border Background="{DynamicResource ThemeBackgroundBrush}" CornerRadius="8" Padding="12">
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Border Width="22" Height="22" Background="{DynamicResource ThemeSuccessBrush}" CornerRadius="11">
+                                <Border Width="22" Height="22" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="11">
                                     <TextBlock Text="&#x2713;" FontSize="{DynamicResource ThemeFontSizeSm}" Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
@@ -618,7 +618,7 @@
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                 Background="Transparent" Padding="12" CornerRadius="8">
                             <Grid ColumnDefinitions="Auto,*,Auto">
-                                <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemeSuccessBrush}" CornerRadius="8" VerticalAlignment="Center">
+                                <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ThemePrimaryBrush}" CornerRadius="8" VerticalAlignment="Center">
                                     <TextBlock Text="+" FontSize="{DynamicResource ThemeFontSizeLg}" FontWeight="Bold"
                                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
