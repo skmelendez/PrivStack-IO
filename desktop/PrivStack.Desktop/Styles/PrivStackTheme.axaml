@@ -1029,7 +1029,6 @@
         <Setter Property="Background" Value="{DynamicResource ThemeSurfaceElevatedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="BoxShadow" Value="0 1 3 0 #10000000, 0 0 1 0 #08000000"/>
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

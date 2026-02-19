@@ -407,7 +407,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async void GoNext()
+    private async Task GoNext()
     {
         if (!CanGoNext) return;
 
