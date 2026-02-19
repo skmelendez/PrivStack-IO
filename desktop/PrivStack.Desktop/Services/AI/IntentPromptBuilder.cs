@@ -13,35 +13,39 @@ internal static class IntentPromptBuilder
     {
         var sb = new StringBuilder(2048);
 
-        sb.AppendLine("You extract ACTIONS from text. Be very selective — most text has 0 or 1 actions.");
+        sb.AppendLine("Extract ACTIONS from text. Most text has 0 or 1 actions. Be selective.");
         sb.AppendLine("calendar.create_event = a CONFIRMED meeting/event at a specific time.");
-        sb.AppendLine("tasks.create_task = something the user needs TO DO (call, buy, send, fix, book, schedule).");
-        sb.AppendLine("Fill all slots with values from the text. Output JSON only.");
+        sb.AppendLine("tasks.create_task = something to DO (call, buy, send, fix, book, schedule).");
+        sb.AppendLine("Generate a short clear title. Fill description with details from the text. Fill all applicable slots.");
         sb.AppendLine();
 
-        sb.AppendLine("Action IDs:");
+        sb.AppendLine("Action IDs and slots:");
         foreach (var intent in intents)
         {
-            var slots = string.Join(", ", intent.Slots.Where(s => s.Required).Select(s => s.Name));
-            sb.AppendLine($"- {intent.IntentId} [{slots}]");
+            var allSlots = intent.Slots.Select(s =>
+                s.Required ? s.Name : $"{s.Name}?");
+            sb.AppendLine($"- {intent.IntentId} [{string.Join(", ", allSlots)}]");
         }
 
         sb.AppendLine();
         sb.AppendLine($"Today: {now:yyyy-MM-dd dddd}");
         sb.AppendLine();
 
-        // Few-shot examples teaching correct task vs event distinction
+        // Few-shot examples with rich slot filling
         sb.AppendLine("--- Example 1 ---");
-        sb.AppendLine("Text: \"Team standup meeting every Monday at 9am\"");
+        sb.AppendLine("Text: \"Team standup meeting every Monday at 9am in the conference room\"");
         AppendExample(sb, "calendar.create_event", 0.9,
             "Team standup Monday 9am",
-            ("title", "Team standup"), ("start_time", FutureDay(now, DayOfWeek.Monday, 9)));
+            ("title", "Team Standup"), ("start_time", FutureDay(now, DayOfWeek.Monday, 9)),
+            ("location", "Conference room"), ("description", "Weekly team standup meeting"));
 
         sb.AppendLine("--- Example 2 ---");
-        sb.AppendLine("Text: \"Call the dentist to book an appointment next week\"");
+        sb.AppendLine("Text: \"Call the dentist to book a cleaning appointment next week\"");
         AppendExample(sb, "tasks.create_task", 0.9,
-            "Call dentist to book appointment",
-            ("title", "Call dentist to book appointment"));
+            "Call dentist to book cleaning",
+            ("title", "Call dentist for cleaning appointment"),
+            ("description", "Call the dentist office to schedule a cleaning appointment for next week"),
+            ("priority", "medium"));
 
         sb.AppendLine("--- Example 3 ---");
         sb.AppendLine("Text: \"Had a great day at the park. The sunset was beautiful.\"");
@@ -49,15 +53,17 @@ internal static class IntentPromptBuilder
         sb.AppendLine();
 
         sb.AppendLine("--- Example 4 ---");
-        sb.AppendLine("Text: \"Send the report to Sarah by Friday\"");
+        sb.AppendLine("Text: \"Send the quarterly report to Sarah by Friday, it's urgent\"");
         AppendExample(sb, "tasks.create_task", 0.9,
-            "Send report to Sarah by Friday",
-            ("title", "Send report to Sarah"));
+            "Send quarterly report to Sarah by Friday",
+            ("title", "Send quarterly report to Sarah"),
+            ("description", "Send the quarterly report to Sarah before end of day Friday"),
+            ("due_date", FutureDayDate(now, DayOfWeek.Friday)),
+            ("priority", "high"));
 
-        // Final reminder of valid IDs — critical for small models that drift
-        sb.Append("IMPORTANT: intent_id MUST be one of: ");
+        sb.Append("VALID intent_id: ");
         sb.AppendLine(string.Join(", ", intents.Select(i => i.IntentId)));
-        sb.AppendLine("Do NOT invent new IDs. Output JSON only, no other text.");
+        sb.AppendLine("Output JSON only.");
 
         return sb.ToString();
     }
@@ -85,5 +91,12 @@ internal static class IntentPromptBuilder
         if (daysAhead == 0) daysAhead = 7;
         var date = now.Date.AddDays(daysAhead).AddHours(hour);
         return date.ToString("yyyy-MM-ddTHH:mm:ss");
+    }
+
+    private static string FutureDayDate(DateTimeOffset now, DayOfWeek target)
+    {
+        var daysAhead = ((int)target - (int)now.DayOfWeek + 7) % 7;
+        if (daysAhead == 0) daysAhead = 7;
+        return now.Date.AddDays(daysAhead).ToString("yyyy-MM-dd");
     }
 }
