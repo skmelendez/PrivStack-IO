@@ -273,14 +273,15 @@ impl EntityStore {
         Ok(entities)
     }
 
-    /// Delete an entity by ID.
+    /// Delete an entity by ID, cascading to all referencing tables.
     pub fn delete_entity(&self, id: &str) -> StorageResult<()> {
         let conn = self.conn.lock().unwrap();
-        // Cascade-delete any links referencing this entity as source or target
         conn.execute(
             "DELETE FROM entity_links WHERE source_id = ? OR target_id = ?",
             params![id, id],
         )?;
+        conn.execute("DELETE FROM entity_vectors WHERE entity_id = ?", params![id])?;
+        conn.execute("DELETE FROM sync_ledger WHERE entity_id = ?", params![id])?;
         conn.execute("DELETE FROM entities WHERE id = ?", params![id])?;
         Ok(())
     }
@@ -811,10 +812,18 @@ impl EntityStore {
         Ok(())
     }
 
-    /// Runs database maintenance: WAL checkpoint, then vacuum to reclaim space.
+    /// Runs database maintenance: purge orphaned data, checkpoint WAL, then vacuum.
     pub fn run_maintenance(&self) -> StorageResult<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute_batch("CHECKPOINT; VACUUM;")?;
+        // Purge orphaned rows in auxiliary tables whose parent entity no longer exists
+        conn.execute_batch(
+            "DELETE FROM entity_vectors WHERE entity_id NOT IN (SELECT id FROM entities);
+             DELETE FROM sync_ledger WHERE entity_id NOT IN (SELECT id FROM entities);
+             DELETE FROM entity_links WHERE source_id NOT IN (SELECT id FROM entities)
+                OR target_id NOT IN (SELECT id FROM entities);
+             CHECKPOINT;
+             VACUUM;"
+        )?;
         Ok(())
     }
 }
