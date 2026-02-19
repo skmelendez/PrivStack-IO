@@ -188,6 +188,12 @@ public class AppSettings
     [JsonPropertyName("ai_max_tokens")]
     public int AiMaxTokens { get; set; } = 1024;
 
+    [JsonPropertyName("ai_intent_enabled")]
+    public bool AiIntentEnabled { get; set; }
+
+    [JsonPropertyName("ai_intent_auto_analyze")]
+    public bool AiIntentAutoAnalyze { get; set; } = true;
+
     // Sync settings
     [JsonPropertyName("sync_device_name")]
     public string? SyncDeviceName { get; set; }

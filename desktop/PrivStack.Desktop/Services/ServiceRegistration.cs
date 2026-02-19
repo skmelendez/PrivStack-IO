@@ -13,6 +13,7 @@ using PrivStack.Sdk;
 using PrivStack.Sdk.Capabilities;
 using PrivStack.Sdk.Services;
 using IAiService = PrivStack.Sdk.Services.IAiService;
+using IIntentEngine = PrivStack.Sdk.Services.IIntentEngine;
 using IToastService = PrivStack.Sdk.IToastService;
 
 namespace PrivStack.Desktop.Services;
@@ -86,6 +87,8 @@ public static class ServiceRegistration
         services.AddSingleton<AiModelManager>();
         services.AddSingleton<AiService>();
         services.AddSingleton<IAiService>(sp => sp.GetRequiredService<AiService>());
+        services.AddSingleton<IntentEngine>();
+        services.AddSingleton<IIntentEngine>(sp => sp.GetRequiredService<IntentEngine>());
         services.AddSingleton<ViewStatePrefetchService>();
         services.AddSingleton<LinkProviderCacheService>();
         services.AddSingleton<IDatasetService, DatasetService>();

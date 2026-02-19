@@ -1714,6 +1714,12 @@ public sealed partial class PluginRegistry : ObservableObject, IPluginRegistry, 
                 HostFactory.CapabilityBroker.Register<IVaultConsumer>(vaultConsumer);
             }
 
+            // Auto-register intent providers with the capability broker
+            if (plugin is IIntentProvider intentProvider)
+            {
+                HostFactory.CapabilityBroker.Register<IIntentProvider>(intentProvider);
+            }
+
             _log.Debug("Plugin activated: {PluginId}", plugin.Metadata.Id);
             RaisePluginStateChanged(plugin, PluginState.Active);
         }

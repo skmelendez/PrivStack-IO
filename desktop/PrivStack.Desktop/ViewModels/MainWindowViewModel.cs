@@ -12,6 +12,7 @@ using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.Plugin;
 using PrivStack.Sdk;
 using PrivStack.Sdk.Capabilities;
+using PrivStack.Sdk.Services;
 using PrivStack.UI.Adaptive.Controls.EmojiPicker;
 
 namespace PrivStack.Desktop.ViewModels;
@@ -169,6 +170,20 @@ public partial class MainWindowViewModel : ViewModelBase
     private EmojiPickerViewModel? _emojiPickerVM;
     public EmojiPickerViewModel EmojiPickerVM => _emojiPickerVM ??= new EmojiPickerViewModel(_ => { });
 
+    private IntentSuggestionTrayViewModel? _intentTrayVM;
+    public IntentSuggestionTrayViewModel IntentTrayVM => _intentTrayVM ??=
+        new IntentSuggestionTrayViewModel(
+            App.Services.GetRequiredService<IIntentEngine>(),
+            App.Services.GetRequiredService<IUiDispatcher>());
+
+    private IntentSlotEditorViewModel? _intentSlotEditorVM;
+    public IntentSlotEditorViewModel IntentSlotEditorVM => _intentSlotEditorVM ??=
+        new IntentSlotEditorViewModel(App.Services.GetRequiredService<IIntentEngine>());
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAnyOverlayPanelOpen))]
+    private bool _isIntentTrayOpen;
+
     /// <summary>
     /// Opens the unified emoji picker with the given selection callback.
     /// All consumers should use this instead of creating their own instances.
@@ -216,7 +231,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isSettingsPanelOpen;
 
     public bool IsAnyOverlayPanelOpen =>
-        IsSyncPanelOpen || IsSettingsPanelOpen;
+        IsSyncPanelOpen || IsSettingsPanelOpen || IsIntentTrayOpen;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SidebarCollapseTooltip))]
@@ -789,6 +804,17 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void ToggleIntentTray()
+    {
+        IsIntentTrayOpen = !IsIntentTrayOpen;
+        if (IsIntentTrayOpen)
+        {
+            IsSyncPanelOpen = false;
+            IsSettingsPanelOpen = false;
+        }
+    }
+
+    [RelayCommand]
     private void CloseAllPanels()
     {
         if (IsSyncPanelOpen)
@@ -797,6 +823,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SyncVM.StopRefreshTimer();
         }
         IsSettingsPanelOpen = false;
+        IsIntentTrayOpen = false;
         IsUserMenuOpen = false;
     }
 

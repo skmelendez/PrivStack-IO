@@ -69,6 +69,12 @@ public partial class SettingsViewModel
     [ObservableProperty]
     private string? _aiLocalModelDownloadStatus;
 
+    [ObservableProperty]
+    private bool _aiIntentEnabled;
+
+    [ObservableProperty]
+    private bool _aiIntentAutoAnalyze = true;
+
     public ObservableCollection<AiProviderOption> AiProviderOptions { get; } = [];
     public ObservableCollection<AiModelInfo> AiCloudModels { get; } = [];
     public ObservableCollection<AiLocalModelOption> AiLocalModels { get; } = [];
@@ -126,6 +132,9 @@ public partial class SettingsViewModel
         {
             SelectedAiLocalModel = AiLocalModels.FirstOrDefault(m => m.Id == settings.AiLocalModel);
         }
+
+        AiIntentEnabled = settings.AiIntentEnabled;
+        AiIntentAutoAnalyze = settings.AiIntentAutoAnalyze;
     }
 
     private void RefreshAiCloudModels()
@@ -204,6 +213,18 @@ public partial class SettingsViewModel
     partial void OnAiTemperatureChanged(double value)
     {
         _settingsService.Settings.AiTemperature = value;
+        _settingsService.SaveDebounced();
+    }
+
+    partial void OnAiIntentEnabledChanged(bool value)
+    {
+        _settingsService.Settings.AiIntentEnabled = value;
+        _settingsService.SaveDebounced();
+    }
+
+    partial void OnAiIntentAutoAnalyzeChanged(bool value)
+    {
+        _settingsService.Settings.AiIntentAutoAnalyze = value;
         _settingsService.SaveDebounced();
     }
 

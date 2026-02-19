@@ -7,6 +7,7 @@ using PrivStack.Sdk;
 using PrivStack.Sdk.Capabilities;
 using PrivStack.Sdk.Services;
 using PrivStack.Desktop.Services.Connections;
+using IIntentEngine = PrivStack.Sdk.Services.IIntentEngine;
 
 namespace PrivStack.Desktop.Sdk;
 
@@ -28,6 +29,7 @@ internal sealed class PluginHostFactory
     private readonly IPropertyService _propertyService;
     private readonly IToastService _toastService;
     private readonly IAiService _aiService;
+    private readonly IIntentEngine _intentEngine;
 
     public ICapabilityBroker CapabilityBroker => _capabilityBroker;
 
@@ -44,6 +46,7 @@ internal sealed class PluginHostFactory
         _propertyService = App.Services.GetRequiredService<EntityMetadataService>();
         _toastService = App.Services.GetRequiredService<IToastService>();
         _aiService = App.Services.GetRequiredService<IAiService>();
+        _intentEngine = App.Services.GetRequiredService<IIntentEngine>();
 
         // Register the default local filesystem storage provider
         _capabilityBroker.Register<IStorageProvider>(new LocalStorageProvider());
@@ -55,6 +58,6 @@ internal sealed class PluginHostFactory
 
     public IPluginHost CreateHost(string pluginId)
     {
-        return new PluginHost(_sdkHost, _capabilityBroker, pluginId, _dialogService, _appSettings, _pluginRegistry, _dispatcher, _infoPanelService, _focusModeService, _toastService, _connectionService, _propertyService, _aiService);
+        return new PluginHost(_sdkHost, _capabilityBroker, pluginId, _dialogService, _appSettings, _pluginRegistry, _dispatcher, _infoPanelService, _focusModeService, _toastService, _connectionService, _propertyService, _aiService, _intentEngine);
     }
 }

@@ -333,8 +333,45 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Right side: Update status + Subscription + Storage -->
+                            <!-- Right side: Intent Tray + Update status + Subscription + Storage -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
+                                <!-- AI Intent Suggestions Button -->
+                                <Button Command="{Binding ToggleIntentTrayCommand}"
+                                        IsVisible="{Binding IntentTrayVM.IsEnabled}"
+                                        Background="Transparent" BorderThickness="0"
+                                        Padding="0" Margin="0"
+                                        MinHeight="0" MinWidth="0"
+                                        Cursor="Hand"
+                                        VerticalAlignment="Center"
+                                        ToolTip.Tip="AI Suggestions">
+                                    <Button.Styles>
+                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                        </Style>
+                                    </Button.Styles>
+                                    <Grid>
+                                        <PathIcon Data="M12 2L9.19 8.62 2 9.24l5.45 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.62z"
+                                                 Width="14" Height="14"
+                                                 Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                                        <!-- Badge count -->
+                                        <Border IsVisible="{Binding IntentTrayVM.HasSuggestions}"
+                                                Background="{DynamicResource ThemePrimaryBrush}"
+                                                CornerRadius="6"
+                                                MinWidth="14" Height="14"
+                                                Padding="3,0"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                Margin="8,-6,-6,0">
+                                            <TextBlock Text="{Binding IntentTrayVM.PendingCount}"
+                                                       FontSize="9"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </Button>
+
                                 <!-- Update Status Indicator -->
                                 <Button Command="{Binding UpdateVM.StatusBarClickCommand}"
                                         Background="Transparent" BorderThickness="0"
@@ -520,6 +557,52 @@
 
         <!-- Property Template Manager Dialog Overlay -->
         <views:PropertyTemplateDialog DataContext="{Binding InfoPanelVM.TemplateDialog}" ZIndex="1001"/>
+
+        <!-- Intent Suggestion Tray Panel (floating, right-aligned) -->
+        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                Width="400" MaxHeight="600"
+                ZIndex="1000"
+                Margin="0,56,16,0"
+                IsVisible="{Binding IsIntentTrayOpen}"
+                Background="{DynamicResource ThemeSurfaceBrush}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{DynamicResource ThemeRadiusMd}"
+                BoxShadow="0 8 32 0 #40000000">
+            <Grid RowDefinitions="Auto,*">
+                <!-- Header -->
+                <Border Grid.Row="0" Padding="16,12"
+                        BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
+                        BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                        <TextBlock Text="AI Suggestions"
+                                   FontWeight="SemiBold"
+                                   FontSize="{DynamicResource ThemeFontSizeMd}"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                Content="Clear All"
+                                Command="{Binding IntentTrayVM.ClearAllCommand}"
+                                IsVisible="{Binding IntentTrayVM.HasSuggestions}"
+                                Background="Transparent"
+                                Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                FontSize="{DynamicResource ThemeFontSizeXs}"
+                                Padding="8,4" Margin="0,0,8,0"
+                                VerticalAlignment="Center"/>
+                        <Button Grid.Column="2"
+                                Content="×"
+                                Command="{Binding ToggleIntentTrayCommand}"
+                                Background="Transparent"
+                                FontSize="{DynamicResource ThemeFontSizeXl}"
+                                Padding="8,2"
+                                VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+                <views:IntentSuggestionTray Grid.Row="1" DataContext="{Binding IntentTrayVM}"/>
+            </Grid>
+        </Border>
+
+        <!-- Intent Slot Editor Overlay -->
+        <views:IntentSlotEditorOverlay DataContext="{Binding IntentSlotEditorVM}" ZIndex="1001"/>
 
         <!-- Command Palette Overlay -->
         <views:CommandPalette DataContext="{Binding CommandPaletteVM}" ZIndex="1001"/>

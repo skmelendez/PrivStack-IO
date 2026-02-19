@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PrivStack.Desktop.ViewModels"
+             xmlns:cap="using:PrivStack.Sdk.Capabilities"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
+             x:Class="PrivStack.Desktop.Views.IntentSlotEditorOverlay"
+             x:DataType="vm:IntentSlotEditorViewModel"
+             IsVisible="{Binding IsVisible}">
+
+    <Grid>
+        <!-- Semi-transparent backdrop -->
+        <Border Classes="modal-backdrop-light" PointerPressed="OnBackdropPressed"/>
+
+        <!-- Modal Panel -->
+        <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                CornerRadius="{DynamicResource ThemeRadiusLg}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="24,20"
+                MinWidth="420" MaxWidth="560"
+                MaxHeight="600"
+                Classes="modal">
+            <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+                <!-- Header: Icon + Intent Name -->
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
+                    <PathIcon Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                             Width="20" Height="20"
+                             Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                    <TextBlock Text="{Binding IntentDisplayName}"
+                               FontSize="{DynamicResource ThemeFontSizeLg}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                </StackPanel>
+
+                <!-- Summary + Source -->
+                <StackPanel Grid.Row="1" Spacing="4" Margin="0,0,0,16">
+                    <TextBlock Text="{Binding Summary}"
+                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding SourceContext}"
+                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                               IsVisible="{Binding SourceContext, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+
+                <!-- Slot Fields -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Fields}" Margin="0,0,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SlotEditorFieldViewModel">
+                                <StackPanel Spacing="4" Margin="0,0,0,12">
+                                    <!-- Label -->
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                   FontWeight="Medium"
+                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                        <TextBlock Text="*"
+                                                   IsVisible="{Binding IsRequired}"
+                                                   Foreground="{DynamicResource ThemeDangerBrush}"
+                                                   FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                    </StackPanel>
+
+                                    <!-- Description -->
+                                    <TextBlock Text="{Binding Description}"
+                                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                               IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                                    <!-- Input -->
+                                    <TextBox Text="{Binding Value, Mode=TwoWay}"
+                                             Watermark="{Binding Description}"
+                                             FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Error message -->
+                <Border Grid.Row="3"
+                        IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                        Background="{DynamicResource ThemeDangerMutedBrush}"
+                        CornerRadius="{DynamicResource ThemeRadiusSm}"
+                        Padding="12,8" Margin="0,0,0,12">
+                    <TextBlock Text="{Binding ErrorMessage}"
+                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                               Foreground="{DynamicResource ThemeDangerBrush}"
+                               TextWrapping="Wrap"/>
+                </Border>
+
+                <!-- Action Buttons -->
+                <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                    <Button Content="Cancel"
+                            Command="{Binding CancelCommand}"
+                            Padding="16,8"
+                            Background="{DynamicResource ThemeHoverBrush}"
+                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                            CornerRadius="{DynamicResource ThemeRadiusSm}"/>
+                    <Button Command="{Binding ConfirmCommand}"
+                            IsEnabled="{Binding !IsExecuting}"
+                            Padding="16,8"
+                            Background="{DynamicResource ThemePrimaryBrush}"
+                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                            CornerRadius="{DynamicResource ThemeRadiusSm}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Confirm" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
