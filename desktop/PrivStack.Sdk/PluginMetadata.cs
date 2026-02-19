@@ -1,6 +1,16 @@
 namespace PrivStack.Sdk;
 
 /// <summary>
+/// Indicates the maturity stage of a plugin or feature.
+/// </summary>
+public enum ReleaseStage
+{
+    Release,
+    Beta,
+    Alpha
+}
+
+/// <summary>
 /// Plugin identification and display metadata.
 /// </summary>
 public sealed record PluginMetadata
@@ -26,6 +36,11 @@ public sealed record PluginMetadata
     /// Set to false for global view plugins like Graph/Nexus.
     /// </summary>
     public bool SupportsInfoPanel { get; init; } = true;
+
+    /// <summary>
+    /// The maturity stage of this plugin (Alpha, Beta, or Release).
+    /// </summary>
+    public ReleaseStage ReleaseStage { get; init; } = ReleaseStage.Release;
 
     public override string ToString() => $"{Name} ({Id}) v{Version}";
 }
