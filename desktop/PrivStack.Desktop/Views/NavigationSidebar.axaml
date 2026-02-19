@@ -405,7 +405,7 @@
                                             IsEnabled="{Binding IsEnabled}"
                                             ToolTip.Tip="{Binding Tooltip}">
                                         <Border Classes="nav-bg" Padding="8,9" CornerRadius="8">
-                                            <Grid ColumnDefinitions="Auto,*">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
                                                 <!-- Icon bubble -->
                                                 <Border Classes="nav-icon-bubble" VerticalAlignment="Center">
                                                     <controls:IconControl Icon="{Binding Icon}"
@@ -417,6 +417,15 @@
                                                 <TextBlock Grid.Column="1"
                                                            Text="{Binding DisplayName}"
                                                            Classes="nav-label"/>
+                                                <!-- Release stage badges -->
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+                                                    <Border CornerRadius="4" Padding="4,1" IsVisible="{Binding IsAlpha}" Background="#E53935">
+                                                        <TextBlock Text="A" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                    </Border>
+                                                    <Border CornerRadius="4" Padding="4,1" IsVisible="{Binding IsBeta}" Background="#FB8C00">
+                                                        <TextBlock Text="B" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                    </Border>
+                                                </StackPanel>
                                             </Grid>
                                         </Border>
                                     </Button>

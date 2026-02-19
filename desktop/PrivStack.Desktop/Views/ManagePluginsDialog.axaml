@@ -155,6 +155,20 @@
 
                                                         <!-- Status Badges -->
                                                         <Border CornerRadius="4" Padding="6,2"
+                                                                IsVisible="{Binding IsAlpha}"
+                                                                Background="#E53935">
+                                                            <TextBlock Text="Alpha"
+                                                                       FontSize="{DynamicResource ThemeFontSize2Xs}"
+                                                                       Foreground="White"/>
+                                                        </Border>
+                                                        <Border CornerRadius="4" Padding="6,2"
+                                                                IsVisible="{Binding IsBeta}"
+                                                                Background="#FB8C00">
+                                                            <TextBlock Text="Beta"
+                                                                       FontSize="{DynamicResource ThemeFontSize2Xs}"
+                                                                       Foreground="White"/>
+                                                        </Border>
+                                                        <Border CornerRadius="4" Padding="6,2"
                                                                 IsVisible="{Binding IsHardLocked}"
                                                                 Background="{DynamicResource ThemeWarningBrush}">
                                                             <TextBlock Text="Coming Soon"

@@ -86,6 +86,12 @@ public partial class PluginSettingsItem : ObservableObject
     private string? _hardLockedReason;
 
     [ObservableProperty]
+    private ReleaseStage _releaseStage = ReleaseStage.Release;
+
+    public bool IsAlpha => ReleaseStage == ReleaseStage.Alpha;
+    public bool IsBeta => ReleaseStage == ReleaseStage.Beta;
+
+    [ObservableProperty]
     private ObservableCollection<PluginPermissionItem> _permissions = [];
 
     [ObservableProperty]
@@ -148,6 +154,8 @@ public partial class PluginSettingsItem : ObservableObject
         get
         {
             if (IsHardLocked) return "Coming Soon";
+            if (IsAlpha) return "Alpha";
+            if (IsBeta) return "Beta";
             if (IsExperimental) return "Experimental";
             if (!CanDisable) return "Core";
             return IsEnabled ? "Enabled" : "Disabled";
@@ -1084,7 +1092,8 @@ public partial class SettingsViewModel : ViewModelBase
                 CanDisable = meta.CanDisable,
                 IsExperimental = meta.IsExperimental,
                 IsHardLocked = meta.IsHardLocked,
-                HardLockedReason = meta.HardLockedReason
+                HardLockedReason = meta.HardLockedReason,
+                ReleaseStage = meta.ReleaseStage
             };
 
             // Populate permissions for this plugin

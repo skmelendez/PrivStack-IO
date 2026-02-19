@@ -176,7 +176,7 @@
 
                     <!-- AI -->
                     <ListBoxItem>
-                        <Grid ColumnDefinitions="Auto,*">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
                             <Border Classes="cat-icon-bubble" VerticalAlignment="Center">
                                 <controls:IconControl Icon="BrainCircuit" Size="12"
                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -184,6 +184,10 @@
                             <TextBlock Grid.Column="1" Text="AI" Classes="cat-label"
                                        Margin="10,0,0,0" FontSize="{DynamicResource ThemeFontSizeSm}"
                                        VerticalAlignment="Center"/>
+                            <Border Grid.Column="2" CornerRadius="4" Padding="4,1" Background="#FB8C00"
+                                    VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="B" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                            </Border>
                         </Grid>
                     </ListBoxItem>
 
@@ -215,7 +219,7 @@
 
                     <!-- Cloud Sync -->
                     <ListBoxItem>
-                        <Grid ColumnDefinitions="Auto,*">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
                             <Border Classes="cat-icon-bubble" VerticalAlignment="Center">
                                 <controls:IconControl Icon="Sync" Size="12"
                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -223,6 +227,10 @@
                             <TextBlock Grid.Column="1" Text="Cloud Sync" Classes="cat-label"
                                        Margin="10,0,0,0" FontSize="{DynamicResource ThemeFontSizeSm}"
                                        VerticalAlignment="Center"/>
+                            <Border Grid.Column="2" CornerRadius="4" Padding="4,1" Background="#FB8C00"
+                                    VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="B" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                            </Border>
                         </Grid>
                     </ListBoxItem>
 
@@ -693,7 +701,12 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="24" Margin="32,28,32,40" MaxWidth="520">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="AI" Classes="settings-section-title"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="AI" Classes="settings-section-title"/>
+                                <Border CornerRadius="4" Padding="6,2" Background="#FB8C00" VerticalAlignment="Center">
+                                    <TextBlock Text="Beta" FontSize="10" Foreground="White" FontWeight="Bold"/>
+                                </Border>
+                            </StackPanel>
                             <TextBlock Text="Configure AI providers for intelligent content features" Classes="settings-section-subtitle"/>
                         </StackPanel>
 
@@ -834,8 +847,13 @@
                         <Border Classes="card" Padding="16,14" IsVisible="{Binding AiEnabled}">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock Text="AI Intent Engine"
-                                               FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Medium"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="AI Intent Engine"
+                                                   FontSize="{DynamicResource ThemeFontSizeSm}" FontWeight="Medium"/>
+                                        <Border CornerRadius="4" Padding="4,1" Background="#E53935" VerticalAlignment="Center">
+                                            <TextBlock Text="Alpha" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
                                     <TextBlock Text="Detect actionable intents in your content and suggest cross-plugin actions"
                                                FontSize="{DynamicResource ThemeFontSizeXs}"
                                                Foreground="{DynamicResource ThemeTextMutedBrush}"
@@ -1185,7 +1203,12 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="24" Margin="32,28,32,40" MaxWidth="520">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Cloud Sync" Classes="settings-section-title"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="Cloud Sync" Classes="settings-section-title"/>
+                                <Border CornerRadius="4" Padding="6,2" Background="#FB8C00" VerticalAlignment="Center">
+                                    <TextBlock Text="Beta" FontSize="10" Foreground="White" FontWeight="Bold"/>
+                                </Border>
+                            </StackPanel>
                             <TextBlock Text="Sync your data across devices" Classes="settings-section-subtitle"/>
                         </StackPanel>
                         <views:CloudSyncSettingsSection DataContext="{Binding CloudSync}"
