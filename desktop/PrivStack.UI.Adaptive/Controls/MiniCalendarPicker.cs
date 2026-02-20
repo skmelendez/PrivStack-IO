@@ -70,6 +70,7 @@ public sealed class MiniCalendarPicker : Border
     private UniformGrid _dayGrid = null!;
     private readonly Button _triggerButton;
     private readonly Button _clearButton;
+    private Border _popupBorder = null!;
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -149,6 +150,9 @@ public sealed class MiniCalendarPicker : Border
             else
                 _displayMonth = DateTimeOffset.Now;
             RebuildDayGrid();
+            // Match popup width to trigger button
+            if (_triggerButton.Bounds.Width > 0)
+                _popupBorder.Width = _triggerButton.Bounds.Width;
             _popup!.IsOpen = !_popup.IsOpen;
         };
 
@@ -251,20 +255,20 @@ public sealed class MiniCalendarPicker : Border
         stack.Children.Add(headerGrid);
         stack.Children.Add(_dayGrid);
 
-        var border = new Border
+        _popupBorder = new Border
         {
             Padding = new Thickness(10),
             CornerRadius = new CornerRadius(8),
             MinWidth = 220,
         };
-        border.Bind(Border.BackgroundProperty,
-            border.GetResourceObservable("ThemeSurfaceElevatedBrush"));
-        border.Bind(Border.BorderBrushProperty,
-            border.GetResourceObservable("ThemeBorderSubtleBrush"));
-        border.BorderThickness = new Thickness(1);
+        _popupBorder.Bind(Border.BackgroundProperty,
+            _popupBorder.GetResourceObservable("ThemeSurfaceElevatedBrush"));
+        _popupBorder.Bind(Border.BorderBrushProperty,
+            _popupBorder.GetResourceObservable("ThemeBorderSubtleBrush"));
+        _popupBorder.BorderThickness = new Thickness(1);
 
-        border.Child = stack;
-        return border;
+        _popupBorder.Child = stack;
+        return _popupBorder;
     }
 
     // -------------------------------------------------------------------------
