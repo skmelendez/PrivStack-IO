@@ -46,8 +46,6 @@
 
                 <!-- Password Input (hidden during app loading) -->
                 <StackPanel Spacing="8" IsVisible="{Binding !IsAppLoading}">
-                    <TextBlock Text="Master Password" Classes="field-label"
-                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                     <TextBox x:Name="PasswordBox"
                              Text="{Binding MasterPassword}"
                              PasswordChar="*"
