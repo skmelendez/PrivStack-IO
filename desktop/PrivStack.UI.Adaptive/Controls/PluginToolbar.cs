@@ -4,6 +4,7 @@
 //              subtitle, and an actions slot with responsive compact layout.
 // ============================================================================
 
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
@@ -27,7 +28,7 @@ public sealed class PluginToolbar : Border
         AvaloniaProperty.Register<PluginToolbar, string?>(nameof(Subtitle));
 
     public static readonly StyledProperty<string> SearchWatermarkProperty =
-        AvaloniaProperty.Register<PluginToolbar, string>(nameof(SearchWatermark), "Search");
+        AvaloniaProperty.Register<PluginToolbar, string>(nameof(SearchWatermark), "Search...");
 
     public static readonly StyledProperty<string> SearchTextProperty =
         AvaloniaProperty.Register<PluginToolbar, string>(nameof(SearchText), "",
@@ -73,6 +74,32 @@ public sealed class PluginToolbar : Border
     {
         get => GetValue(ActionsProperty);
         set => SetValue(ActionsProperty, value);
+    }
+
+    /// <summary>
+    /// Public accessor for the active (visible) search pill Border — used by shell for dropdown anchoring.
+    /// </summary>
+    public Control? ActiveSearchPill => IsSearchVisible
+        ? (_searchNormalPill.IsVisible ? (Control)_searchNormalPill : _searchCompactPill)
+        : null;
+
+    /// <summary>Fired when the search TextBox gains focus.</summary>
+    public event EventHandler? SearchGotFocus;
+
+    /// <summary>Fired when the search TextBox loses focus.</summary>
+    public event EventHandler? SearchLostFocus;
+
+    /// <summary>Fired on KeyDown inside the search TextBox.</summary>
+    public event EventHandler<KeyEventArgs>? SearchKeyDown;
+
+    /// <summary>
+    /// Focuses the visible search TextBox and selects all text.
+    /// </summary>
+    public void FocusSearchBox()
+    {
+        var tb = _searchNormalPill.IsVisible ? _searchNormal : _searchCompact;
+        tb.Focus();
+        tb.SelectAll();
     }
 
     private readonly TextBlock _titleBlock;
@@ -262,6 +289,10 @@ public sealed class PluginToolbar : Border
             _suppressSearchSync = false;
         };
 
+        tb.GotFocus += (_, _) => SearchGotFocus?.Invoke(this, EventArgs.Empty);
+        tb.LostFocus += (_, _) => SearchLostFocus?.Invoke(this, EventArgs.Empty);
+        tb.KeyDown += (_, e) => SearchKeyDown?.Invoke(this, e);
+
         return tb;
     }
 
@@ -283,11 +314,28 @@ public sealed class PluginToolbar : Border
         searchIcon.Bind(Avalonia.Controls.Shapes.Path.FillProperty,
             searchIcon.GetResourceObservable("ThemeTextMutedBrush"));
 
+        var shortcutHint = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "⌘K" : "Ctrl+K";
+        var shortcutBadge = new TextBlock
+        {
+            Text = shortcutHint,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 6, 0),
+            Opacity = 0.5,
+        };
+        shortcutBadge.Bind(TextBlock.FontSizeProperty,
+            shortcutBadge.GetResourceObservable("ThemeFontSizeXs"));
+        shortcutBadge.Bind(TextBlock.ForegroundProperty,
+            shortcutBadge.GetResourceObservable("ThemeTextMutedBrush"));
+
+        // Hide the badge when the search TextBox has focus
+        inner.GotFocus += (_, _) => shortcutBadge.IsVisible = false;
+        inner.LostFocus += (_, _) => shortcutBadge.IsVisible = true;
+
         var panel = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center,
-            Children = { searchIcon, inner }
+            Children = { searchIcon, inner, shortcutBadge }
         };
 
         var pill = new Border
