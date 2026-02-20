@@ -941,58 +941,72 @@ impl EntityStore {
     /// swap it into place. The connection is replaced in-place behind the Mutex so all
     /// existing `Arc<EntityStore>` references remain valid.
     ///
+    /// Strategy: close the managed connection first to release file locks, then open a
+    /// fresh standalone connection for the copy. This avoids catalog state issues that
+    /// can occur after maintenance operations on a long-lived connection.
+    ///
     /// Returns `(size_before, size_after)` in bytes.
     pub fn compact(&self, db_path: &Path) -> StorageResult<(u64, u64)> {
         let mut conn_guard = self.conn.lock().unwrap();
 
         let size_before = std::fs::metadata(db_path).map(|m| m.len()).unwrap_or(0);
 
-        // 1. Checkpoint first to flush WAL
+        // 1. Checkpoint to flush WAL, then close the managed connection
         conn_guard.execute_batch("CHECKPOINT;")?;
-
-        // 2. Create the compact target path
-        let compact_path = db_path.with_extension("duckdb.compact");
-        // Clean up any stale compact file from a previous failed attempt
-        let _ = std::fs::remove_file(&compact_path);
-
-        // 3. ATTACH the new empty database, copy all data, then detach
-        let compact_str = compact_path.to_string_lossy();
-        conn_guard.execute_batch(&format!(
-            "ATTACH '{}' AS compact_db;
-             COPY FROM DATABASE main TO compact_db;
-             DETACH compact_db;",
-            compact_str,
-        ))?;
-
-        // 4. Close the current connection by swapping in a temporary in-memory one.
-        //    SAFETY: We hold the mutex, so no other code can access the connection.
         let old_conn = std::mem::replace(
             &mut *conn_guard,
             Connection::open_in_memory().map_err(StorageError::from)?,
         );
         drop(old_conn);
 
-        // 5. Atomic swap: original → backup, compact → original
-        let backup_path = db_path.with_extension("duckdb.backup");
-        let _ = std::fs::remove_file(&backup_path);
-        std::fs::rename(db_path, &backup_path)?;
+        // 2. Open a fresh connection for the copy operation
+        let compact_path = db_path.with_extension("duckdb.compact");
+        let _ = std::fs::remove_file(&compact_path);
 
-        if let Err(e) = std::fs::rename(&compact_path, db_path) {
-            // Restore from backup on failure
-            let _ = std::fs::rename(&backup_path, db_path);
+        let fresh_conn = Connection::open(db_path)?;
+        let compact_str = compact_path.to_string_lossy();
+        let copy_result = fresh_conn.execute_batch(&format!(
+            "ATTACH '{}' AS compact_db;
+             COPY FROM DATABASE main TO compact_db;
+             DETACH compact_db;",
+            compact_str,
+        ));
+        drop(fresh_conn);
+
+        if let Err(e) = copy_result {
+            // Copy failed — reopen original and bail
+            let _ = std::fs::remove_file(&compact_path);
+            let restored = crate::open_duckdb_with_wal_recovery(db_path, "256MB", 2)?;
+            *conn_guard = restored;
             return Err(e.into());
         }
 
-        // 6. Also remove any stale WAL files from the original
+        // 3. Atomic swap: original → backup, compact → original
+        let backup_path = db_path.with_extension("duckdb.backup");
+        let _ = std::fs::remove_file(&backup_path);
+
+        if let Err(e) = std::fs::rename(db_path, &backup_path) {
+            let _ = std::fs::remove_file(&compact_path);
+            let restored = crate::open_duckdb_with_wal_recovery(db_path, "256MB", 2)?;
+            *conn_guard = restored;
+            return Err(e.into());
+        }
+
+        if let Err(e) = std::fs::rename(&compact_path, db_path) {
+            let _ = std::fs::rename(&backup_path, db_path);
+            let restored = crate::open_duckdb_with_wal_recovery(db_path, "256MB", 2)?;
+            *conn_guard = restored;
+            return Err(e.into());
+        }
+
+        // 4. Clean up WAL and backup
         let wal_path = db_path.with_extension("duckdb.wal");
         let _ = std::fs::remove_file(&wal_path);
+        let _ = std::fs::remove_file(&backup_path);
 
-        // 7. Reopen the connection at the original path
+        // 5. Reopen the connection at the original path
         let new_conn = crate::open_duckdb_with_wal_recovery(db_path, "256MB", 2)?;
         *conn_guard = new_conn;
-
-        // 8. Clean up backup
-        let _ = std::fs::remove_file(&backup_path);
 
         let size_after = std::fs::metadata(db_path).map(|m| m.len()).unwrap_or(0);
 
@@ -1157,27 +1171,31 @@ pub fn compact_duckdb_file(path: &std::path::Path) -> Option<(u64, u64)> {
     }
     let size_before = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
 
-    // Open the database
-    let conn = duckdb::Connection::open(path).ok()?;
-    conn.execute_batch("CHECKPOINT;").ok()?;
+    // Checkpoint first to flush WAL, then close
+    {
+        let conn = duckdb::Connection::open(path).ok()?;
+        conn.execute_batch("CHECKPOINT;").ok()?;
+        // conn dropped here — releases file locks
+    }
 
+    // Open a fresh connection for the copy
     let compact_path = path.with_extension("duckdb.compact");
     let _ = std::fs::remove_file(&compact_path);
 
+    let fresh_conn = duckdb::Connection::open(path).ok()?;
     let compact_str = compact_path.to_string_lossy();
-    if conn
+    let copy_ok = fresh_conn
         .execute_batch(&format!(
             "ATTACH '{}' AS compact_db; COPY FROM DATABASE main TO compact_db; DETACH compact_db;",
             compact_str
         ))
-        .is_err()
-    {
+        .is_ok();
+    drop(fresh_conn);
+
+    if !copy_ok {
         let _ = std::fs::remove_file(&compact_path);
         return None;
     }
-
-    // Close the connection before file operations
-    drop(conn);
 
     let backup_path = path.with_extension("duckdb.backup");
     let _ = std::fs::remove_file(&backup_path);
