@@ -15,7 +15,7 @@ mod error;
 pub mod entity_store;
 mod event_store;
 
-pub use entity_store::{EntityStore, scan_duckdb_file, scan_duckdb_connection};
+pub use entity_store::{EntityStore, scan_duckdb_file, scan_duckdb_connection, compact_duckdb_file};
 pub use event_store::EventStore;
 pub use error::{StorageError, StorageResult};
 

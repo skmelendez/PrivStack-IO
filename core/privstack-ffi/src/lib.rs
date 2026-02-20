@@ -5652,6 +5652,68 @@ pub extern "C" fn privstack_db_diagnostics() -> *mut c_char {
     }
 }
 
+/// Compacts all DuckDB databases by copying data to fresh files (reclaims allocated-but-empty blocks).
+/// Returns JSON with per-database before/after sizes. Caller must free with `privstack_free_string`.
+#[unsafe(no_mangle)]
+pub extern "C" fn privstack_compact_databases() -> *mut c_char {
+    use privstack_storage::compact_duckdb_file;
+
+    let handle = HANDLE.lock().unwrap();
+    match handle.as_ref() {
+        Some(h) => {
+            let mut results = serde_json::Map::new();
+            let base = Path::new(&h.db_path);
+
+            // 1. Entity store — uses the managed connection swap approach
+            let entity_path = base.with_extension("entities.duckdb");
+            match h.entity_store.compact(&entity_path) {
+                Ok((before, after)) => {
+                    results.insert("entities".into(), serde_json::json!({
+                        "before": before, "after": after,
+                    }));
+                }
+                Err(e) => {
+                    eprintln!("[compact] entities failed: {}", e);
+                    results.insert("entities".into(), serde_json::json!({
+                        "error": format!("{}", e),
+                    }));
+                }
+            }
+
+            // 2. Sibling databases — standalone compact (open, copy, close, swap)
+            let siblings = [
+                ("datasets", base.with_extension("datasets.duckdb")),
+                ("blobs", base.with_extension("blobs.duckdb")),
+                ("events", base.with_extension("events.duckdb")),
+            ];
+
+            for (label, path) in &siblings {
+                if path.exists() {
+                    match compact_duckdb_file(path) {
+                        Some((before, after)) => {
+                            results.insert((*label).into(), serde_json::json!({
+                                "before": before, "after": after,
+                            }));
+                        }
+                        None => {
+                            eprintln!("[compact] {} failed", label);
+                            results.insert((*label).into(), serde_json::json!({
+                                "error": "compact failed",
+                            }));
+                        }
+                    }
+                }
+            }
+
+            // Note: vault is intentionally excluded — it has an active VaultManager connection
+            // and its data is typically small.
+
+            to_c_string(&serde_json::Value::Object(results).to_string())
+        }
+        None => to_c_string("{}"),
+    }
+}
+
 /// Helper: allocate a C string from a Rust &str. Caller must free with `privstack_free_string`.
 fn to_c_string(s: &str) -> *mut c_char {
     CString::new(s).unwrap_or_default().into_raw()

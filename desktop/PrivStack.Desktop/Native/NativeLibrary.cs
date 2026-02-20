@@ -169,6 +169,13 @@ internal static partial class NativeLibrary
     [LibraryImport(LibraryName, EntryPoint = "privstack_delete_orphan_entities", StringMarshalling = StringMarshalling.Utf8)]
     public static partial nint DeleteOrphanEntities(string validTypesJson);
 
+    /// <summary>
+    /// Compacts all DuckDB databases by copying data to fresh files.
+    /// Returns JSON with per-database before/after sizes. Caller must free with FreeString.
+    /// </summary>
+    [LibraryImport(LibraryName, EntryPoint = "privstack_compact_databases")]
+    public static partial nint CompactDatabases();
+
     // ============================================================
     // Vault Management Functions
     // ============================================================

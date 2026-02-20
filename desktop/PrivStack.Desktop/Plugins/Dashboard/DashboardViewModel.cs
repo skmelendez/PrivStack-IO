@@ -587,13 +587,18 @@ public partial class DashboardViewModel : ViewModelBase
                 _log.Information("Deleted {Count} orphan entities", orphansDeleted);
             }
 
-            // 3. Report results
+            // 3. Compact databases (COPY FROM DATABASE to fresh files, reclaims empty blocks)
+            StatusMessage = "Compacting databases...";
+            var compactJson = await Task.Run(() => _sdk.CompactDatabases());
+            _log.Information("Compact results: {Json}", compactJson);
+
+            // 4. Report results
             var sizeAfter = entityDb != null && File.Exists(entityDb) ? new FileInfo(entityDb).Length : 0;
             var parts = new List<string>();
             if (orphansDeleted > 0)
                 parts.Add($"removed {orphansDeleted} orphan entit{(orphansDeleted == 1 ? "y" : "ies")}");
             parts.Add("cleaned auxiliary tables");
-            parts.Add($"checkpoint complete ({FormatBytes(sizeBefore)} → {FormatBytes(sizeAfter)})");
+            parts.Add($"compacted ({FormatBytes(sizeBefore)} → {FormatBytes(sizeAfter)})");
             var msg = string.Join(", ", parts);
             StatusMessage = msg.Length > 0 ? char.ToUpper(msg[0]) + msg[1..] : msg;
 

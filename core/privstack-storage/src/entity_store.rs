@@ -933,6 +933,92 @@ impl EntityStore {
         let conn = self.conn.lock().unwrap();
         Ok(scan_duckdb_connection(&conn))
     }
+
+    /// Compacts the database by copying all data to a fresh file and swapping it in.
+    ///
+    /// DuckDB's CHECKPOINT reclaims some space but cannot free allocated-but-empty blocks.
+    /// `COPY FROM DATABASE` creates a minimal file with only live data, then we atomically
+    /// swap it into place. The connection is replaced in-place behind the Mutex so all
+    /// existing `Arc<EntityStore>` references remain valid.
+    ///
+    /// Returns `(size_before, size_after)` in bytes.
+    pub fn compact(&self, db_path: &Path) -> StorageResult<(u64, u64)> {
+        let mut conn_guard = self.conn.lock().unwrap();
+
+        let size_before = std::fs::metadata(db_path).map(|m| m.len()).unwrap_or(0);
+
+        // 1. Checkpoint first to flush WAL
+        conn_guard.execute_batch("CHECKPOINT;")?;
+
+        // 2. Create the compact target path
+        let compact_path = db_path.with_extension("duckdb.compact");
+        // Clean up any stale compact file from a previous failed attempt
+        let _ = std::fs::remove_file(&compact_path);
+
+        // 3. ATTACH the new empty database, copy all data, then detach
+        let compact_str = compact_path.to_string_lossy();
+        conn_guard.execute_batch(&format!(
+            "ATTACH '{}' AS compact_db;
+             COPY FROM DATABASE main TO compact_db;
+             DETACH compact_db;",
+            compact_str,
+        ))?;
+
+        // 4. Close the current connection by swapping in a temporary in-memory one.
+        //    SAFETY: We hold the mutex, so no other code can access the connection.
+        let old_conn = std::mem::replace(
+            &mut *conn_guard,
+            Connection::open_in_memory().map_err(StorageError::from)?,
+        );
+        drop(old_conn);
+
+        // 5. Atomic swap: original → backup, compact → original
+        let backup_path = db_path.with_extension("duckdb.backup");
+        let _ = std::fs::remove_file(&backup_path);
+        std::fs::rename(db_path, &backup_path)?;
+
+        if let Err(e) = std::fs::rename(&compact_path, db_path) {
+            // Restore from backup on failure
+            let _ = std::fs::rename(&backup_path, db_path);
+            return Err(e.into());
+        }
+
+        // 6. Also remove any stale WAL files from the original
+        let wal_path = db_path.with_extension("duckdb.wal");
+        let _ = std::fs::remove_file(&wal_path);
+
+        // 7. Reopen the connection at the original path
+        let new_conn = crate::open_duckdb_with_wal_recovery(db_path, "256MB", 2)?;
+        *conn_guard = new_conn;
+
+        // 8. Clean up backup
+        let _ = std::fs::remove_file(&backup_path);
+
+        let size_after = std::fs::metadata(db_path).map(|m| m.len()).unwrap_or(0);
+
+        eprintln!(
+            "[compact] {} -> {} ({:.1}% reduction)",
+            format_bytes_log(size_before),
+            format_bytes_log(size_after),
+            if size_before > 0 {
+                (1.0 - size_after as f64 / size_before as f64) * 100.0
+            } else {
+                0.0
+            }
+        );
+
+        Ok((size_before, size_after))
+    }
+}
+
+fn format_bytes_log(bytes: u64) -> String {
+    if bytes < 1024 {
+        format!("{} B", bytes)
+    } else if bytes < 1024 * 1024 {
+        format!("{:.1} KiB", bytes as f64 / 1024.0)
+    } else {
+        format!("{:.1} MiB", bytes as f64 / (1024.0 * 1024.0))
+    }
 }
 
 /// Scans a DuckDB connection and returns diagnostics: all tables, views, indexes, block info.
@@ -1060,6 +1146,75 @@ pub fn scan_duckdb_file(path: &std::path::Path) -> Option<serde_json::Value> {
         obj.insert("file_size".to_string(), serde_json::json!(file_size));
     }
     Some(diag)
+}
+
+/// Compacts a standalone DuckDB file (not managed by EntityStore) by copying
+/// all data to a fresh file and swapping it in. Returns `(size_before, size_after)`.
+/// Returns None if the file doesn't exist or can't be opened.
+pub fn compact_duckdb_file(path: &std::path::Path) -> Option<(u64, u64)> {
+    if !path.exists() {
+        return None;
+    }
+    let size_before = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+
+    // Open the database
+    let conn = duckdb::Connection::open(path).ok()?;
+    conn.execute_batch("CHECKPOINT;").ok()?;
+
+    let compact_path = path.with_extension("duckdb.compact");
+    let _ = std::fs::remove_file(&compact_path);
+
+    let compact_str = compact_path.to_string_lossy();
+    if conn
+        .execute_batch(&format!(
+            "ATTACH '{}' AS compact_db; COPY FROM DATABASE main TO compact_db; DETACH compact_db;",
+            compact_str
+        ))
+        .is_err()
+    {
+        let _ = std::fs::remove_file(&compact_path);
+        return None;
+    }
+
+    // Close the connection before file operations
+    drop(conn);
+
+    let backup_path = path.with_extension("duckdb.backup");
+    let _ = std::fs::remove_file(&backup_path);
+
+    if std::fs::rename(path, &backup_path).is_err() {
+        let _ = std::fs::remove_file(&compact_path);
+        return None;
+    }
+
+    if std::fs::rename(&compact_path, path).is_err() {
+        let _ = std::fs::rename(&backup_path, path);
+        return None;
+    }
+
+    // Clean up WAL and backup
+    let wal_ext = path
+        .extension()
+        .map(|ext| format!("{}.wal", ext.to_string_lossy()))
+        .unwrap_or_else(|| "wal".to_string());
+    let _ = std::fs::remove_file(path.with_extension(wal_ext));
+    let _ = std::fs::remove_file(&backup_path);
+
+    let size_after = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+
+    eprintln!(
+        "[compact] {} : {} -> {} ({:.1}% reduction)",
+        path.file_name().unwrap_or_default().to_string_lossy(),
+        format_bytes_log(size_before),
+        format_bytes_log(size_after),
+        if size_before > 0 {
+            (1.0 - size_after as f64 / size_before as f64) * 100.0
+        } else {
+            0.0
+        }
+    );
+
+    Some((size_before, size_after))
 }
 
 // -- Field extraction helpers --
