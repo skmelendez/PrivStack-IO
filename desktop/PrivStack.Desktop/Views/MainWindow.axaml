@@ -638,8 +638,11 @@
         <!-- Intent Slot Editor Overlay -->
         <views:IntentSlotEditorOverlay DataContext="{Binding IntentSlotEditorVM}" ZIndex="1001"/>
 
-        <!-- Command Palette Overlay -->
-        <views:CommandPalette DataContext="{Binding CommandPaletteVM}" ZIndex="1001"/>
+        <!-- Universal Search Dropdown (anchored below toolbar search pill) -->
+        <controls:UniversalSearchDropdown x:Name="SearchDropdown"
+            DataContext="{Binding CommandPaletteVM}"
+            ZIndex="1001"
+            IsVisible="{Binding IsOpen}"/>
 
         <!-- Unified Emoji Picker Overlay -->
         <emoji:EmojiPicker DataContext="{Binding EmojiPickerVM}" ZIndex="1001"/>

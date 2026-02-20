@@ -74,6 +74,9 @@ public partial class CommandPaletteViewModel : ViewModelBase
     /// <summary>Whether a plugin scope filter is active.</summary>
     public bool HasPluginFilter => FilterPluginDisplayName is not null;
 
+    /// <summary>Plugin ID of the currently active tab. Used to boost results from this plugin.</summary>
+    public string? ActivePluginContext { get; set; }
+
     /// <summary>
     /// Currently active plugin palette's plugin ID (when in PluginPalette mode).
     /// </summary>
@@ -363,7 +366,7 @@ public partial class CommandPaletteViewModel : ViewModelBase
                     c.Keywords.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                     c.Category.Contains(query, StringComparison.OrdinalIgnoreCase));
 
-            foreach (var cmd in filtered.Take(12))
+            foreach (var cmd in filtered.Take(15))
             {
                 FilteredCommands.Add(cmd);
             }
@@ -456,7 +459,7 @@ public partial class CommandPaletteViewModel : ViewModelBase
         }
 
         // Search linkable items — prepend filter prefix when plugin scope is active
-        var maxResults = HasPluginFilter ? 12 : 8;
+        var maxResults = HasPluginFilter ? 15 : 10;
         List<SearchResultItem>? linkableResults = null;
         if (LinkableItemSearcher is not null)
         {
@@ -491,18 +494,22 @@ public partial class CommandPaletteViewModel : ViewModelBase
 
         if (linkableResults is not null)
         {
-            // Rank by title relevance: exact > starts-with > contains > other
-            if (!string.IsNullOrEmpty(query) && linkableResults.Count > 1)
+            // Context-aware ranking: boost results from the active plugin
+            int ScoreResult(SearchResultItem r)
             {
-                int ScoreTitle(string title)
+                var pluginBoost = (ActivePluginContext != null && r.PluginId == ActivePluginContext) ? 0 : 100;
+                var titleScore = 3;
+                if (!string.IsNullOrEmpty(query))
                 {
-                    if (title.Equals(query, StringComparison.OrdinalIgnoreCase)) return 0;
-                    if (title.StartsWith(query, StringComparison.OrdinalIgnoreCase)) return 1;
-                    if (title.Contains(query, StringComparison.OrdinalIgnoreCase)) return 2;
-                    return 3;
+                    if (r.Title.Equals(query, StringComparison.OrdinalIgnoreCase)) titleScore = 0;
+                    else if (r.Title.StartsWith(query, StringComparison.OrdinalIgnoreCase)) titleScore = 1;
+                    else if (r.Title.Contains(query, StringComparison.OrdinalIgnoreCase)) titleScore = 2;
                 }
-                linkableResults.Sort((a, b) => ScoreTitle(a.Title).CompareTo(ScoreTitle(b.Title)));
+                return pluginBoost + titleScore;
             }
+
+            if (linkableResults.Count > 1)
+                linkableResults.Sort((a, b) => ScoreResult(a).CompareTo(ScoreResult(b)));
 
             foreach (var item in linkableResults)
             {

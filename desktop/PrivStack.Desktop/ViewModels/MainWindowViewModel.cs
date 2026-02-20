@@ -661,6 +661,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         CurrentViewModel = GetOrCreatePluginViewModel(tabName, plugin);
 
+        CommandPaletteVM.ActivePluginContext = plugin.Metadata.Id;
+
         // Skip OnNavigatedToAsync - caller will handle refresh after entity navigation
         // This avoids double-render when navigating to a specific entity
 
@@ -943,6 +945,9 @@ public partial class MainWindowViewModel : ViewModelBase
         infoPanelService.SetActivePlugin(plugin.Metadata.Id);
 
         CurrentViewModel = GetOrCreatePluginViewModel(tabName, plugin);
+
+        // Update command palette context for active-plugin ranking
+        CommandPaletteVM.ActivePluginContext = plugin.Metadata.Id;
 
         await plugin.OnNavigatedToAsync();
 

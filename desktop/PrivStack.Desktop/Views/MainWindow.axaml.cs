@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using AvaloniaEdit;
 using Microsoft.Extensions.DependencyInjection;
+using PrivStack.Desktop.Controls;
 using PrivStack.Desktop.Services;
 using PrivStack.Desktop.Services.Abstractions;
 using PrivStack.Desktop.Services.Plugin;
@@ -17,6 +18,7 @@ public partial class MainWindow : Window
 {
     private readonly IAppSettingsService _settings = App.Services.GetRequiredService<IAppSettingsService>();
     private readonly IResponsiveLayoutService _responsiveLayout = App.Services.GetRequiredService<IResponsiveLayoutService>();
+    private UniversalSearchService? _universalSearch;
     private bool _isInitialized;
     private Control? _speechTargetControl;
     private bool _chordPrefixActive;
@@ -127,6 +129,10 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm)
         {
             vm.PropertyChanged += OnMainVmPropertyChanged;
+
+            // Initialize UniversalSearchService and register the dropdown
+            _universalSearch = new UniversalSearchService(vm.CommandPaletteVM, vm);
+            _universalSearch.SetDropdown(SearchDropdown);
 
             var lastTab = _settings.Settings.LastActiveTab;
             var pluginRegistry = App.Services.GetRequiredService<IPluginRegistry>();
@@ -242,16 +248,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Command Palette: Cmd+K or Ctrl+K (also starts chord prefix)
+        // Universal Search: Cmd+K or Ctrl+K (also starts chord prefix)
         if (isCmdOrCtrl && e.Key == Key.K)
         {
-            // Open the palette immediately AND start chord prefix.
-            // If a chord key (e.g. W) is pressed before KeyUp, we'll close the palette
-            // and execute the chord action instead. This eliminates the 1-second delay.
+            // Focus the toolbar search bar (opens dropdown) AND start chord prefix.
+            // If a chord key (e.g. W) is pressed before KeyUp, we'll close the dropdown
+            // and execute the chord action instead.
             _chordPrefixActive = true;
             _chordTimer?.Stop();
             _chordTimer?.Dispose();
-            // Short timeout to clear chord state if no second key arrives
             _chordTimer = new System.Timers.Timer(300);
             _chordTimer.AutoReset = false;
             _chordTimer.Elapsed += (_, _) =>
@@ -262,7 +267,10 @@ public partial class MainWindow : Window
                 });
             };
             _chordTimer.Start();
-            vm.CommandPaletteVM.ToggleCommand.Execute(null);
+            if (_universalSearch != null)
+                _universalSearch.FocusSearchBar();
+            else
+                vm.CommandPaletteVM.ToggleCommand.Execute(null);
             e.Handled = true;
             return;
         }
