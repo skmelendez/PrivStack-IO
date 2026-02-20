@@ -580,6 +580,9 @@
             </Grid>
         </Border>
 
+        <!-- GitHub Device Flow Dialog Overlay -->
+        <views:GitHubDeviceFlowDialog DataContext="{Binding SettingsVM.Connections}" ZIndex="1001"/>
+
         <!-- Manage Plugins Dialog Overlay -->
         <views:ManagePluginsDialog DataContext="{Binding SettingsVM}" ZIndex="1001"/>
 

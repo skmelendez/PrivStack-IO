@@ -111,6 +111,9 @@ public partial class ConnectionsViewModel : ViewModelBase
     // ========================================
 
     [ObservableProperty]
+    private bool _isGitHubRequired;
+
+    [ObservableProperty]
     private bool _isGoogleRequired;
 
     [ObservableProperty]
@@ -118,6 +121,12 @@ public partial class ConnectionsViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasAnyOAuthProvider;
+
+    [ObservableProperty]
+    private bool _isDeviceFlowModalOpen;
+
+    [ObservableProperty]
+    private bool _codeCopied;
 
     private void RefreshRequiredProviders()
     {
@@ -127,6 +136,7 @@ public partial class ConnectionsViewModel : ViewModelBase
             .Select(r => r.Provider)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        IsGitHubRequired = providers.Contains("github");
         IsGoogleRequired = providers.Contains("google");
         IsMicrosoftRequired = providers.Contains("microsoft");
         HasAnyOAuthProvider = providers.Count > 0;
@@ -142,6 +152,8 @@ public partial class ConnectionsViewModel : ViewModelBase
         if (IsConnecting) return;
 
         IsConnecting = true;
+        IsDeviceFlowModalOpen = true;
+        CodeCopied = false;
         ConnectionError = null;
         _pollCts = new CancellationTokenSource();
 
@@ -176,6 +188,7 @@ public partial class ConnectionsViewModel : ViewModelBase
         finally
         {
             IsConnecting = false;
+            IsDeviceFlowModalOpen = false;
             DeviceUserCode = null;
             _pollCts?.Dispose();
             _pollCts = null;

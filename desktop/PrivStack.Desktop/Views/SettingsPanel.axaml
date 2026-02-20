@@ -1109,11 +1109,12 @@
                         <StackPanel Spacing="12"
                                     DataContext="{Binding Connections}"
                                     x:DataType="vm:ConnectionsViewModel">
-                            <!-- GitHub: not connected -->
-                            <Border Background="{DynamicResource ThemeSurfaceBrush}"
-                                    CornerRadius="10" Padding="14"
-                                    IsVisible="{Binding !IsGitHubConnected}">
-                                <StackPanel Spacing="10">
+                            <!-- ── GitHub ────────────────────────────── -->
+                            <StackPanel IsVisible="{Binding IsGitHubRequired}">
+                                <!-- GitHub: not connected -->
+                                <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                                        CornerRadius="10" Padding="14"
+                                        IsVisible="{Binding !IsGitHubConnected}">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                         <TextBlock Grid.Column="0" Text="GitHub"
                                                    FontSize="{DynamicResource ThemeFontSizeSmMd}"
@@ -1132,77 +1133,43 @@
                                                 Foreground="{DynamicResource ThemeTextOnAccentBrush}"
                                                 CornerRadius="6"/>
                                     </Grid>
-                                    <Border IsVisible="{Binding IsConnecting}"
-                                            Background="{DynamicResource ThemePrimaryMutedBrush}"
-                                            CornerRadius="8" Padding="14">
-                                        <StackPanel Spacing="10">
-                                            <TextBlock Text="Enter this code on GitHub:"
-                                                       FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                       Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                            <TextBlock Text="{Binding DeviceUserCode}"
-                                                       FontSize="{DynamicResource ThemeFontSizeLg}"
-                                                       FontWeight="Bold"
-                                                       FontFamily="{DynamicResource ThemeFontMono}"
-                                                       HorizontalAlignment="Center"/>
-                                            <StackPanel Orientation="Horizontal" Spacing="8"
-                                                        HorizontalAlignment="Center">
-                                                <Button Content="Open GitHub"
-                                                        Command="{Binding OpenVerificationUriCommand}"
-                                                        Padding="12,6"
-                                                        Background="{DynamicResource ThemePrimaryBrush}"
-                                                        Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                                        CornerRadius="6"/>
-                                                <Button Content="Cancel"
-                                                        Command="{Binding CancelConnectCommand}"
-                                                        Padding="12,6"
-                                                        CornerRadius="6"/>
-                                            </StackPanel>
-                                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                                <ProgressBar IsIndeterminate="True" Width="80" Height="4"/>
-                                                <TextBlock Text="Waiting for authorization..."
-                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                           VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </Border>
+                                </Border>
 
-                            <!-- GitHub: connected -->
-                            <Border Background="{DynamicResource ThemeSurfaceBrush}"
-                                    CornerRadius="10" Padding="14"
-                                    IsVisible="{Binding IsGitHubConnected}">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <TextBlock Grid.Column="0" Text="GitHub"
-                                               FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               FontWeight="SemiBold"
-                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock FontSize="{DynamicResource ThemeFontSizeSm}">
-                                            <TextBlock.Text>
-                                                <MultiBinding StringFormat="{}Connected as @{0}">
-                                                    <Binding Path="GitHubUsername"/>
-                                                </MultiBinding>
-                                            </TextBlock.Text>
-                                        </TextBlock>
-                                        <TextBlock FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                   Foreground="{DynamicResource ThemeTextMutedBrush}">
-                                            <TextBlock.Text>
-                                                <MultiBinding StringFormat="{}Scopes: {0}">
-                                                    <Binding Path="GitHubScopes"/>
-                                                </MultiBinding>
-                                            </TextBlock.Text>
-                                        </TextBlock>
-                                    </StackPanel>
-                                    <Button Grid.Column="2"
-                                            Content="Disconnect"
-                                            Command="{Binding DisconnectGitHubCommand}"
-                                            Padding="12,6"
-                                            Foreground="{DynamicResource ThemeDangerBrush}"
-                                            CornerRadius="6"/>
-                                </Grid>
-                            </Border>
+                                <!-- GitHub: connected -->
+                                <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                                        CornerRadius="10" Padding="14"
+                                        IsVisible="{Binding IsGitHubConnected}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <TextBlock Grid.Column="0" Text="GitHub"
+                                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock FontSize="{DynamicResource ThemeFontSizeSm}">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}Connected as @{0}">
+                                                        <Binding Path="GitHubUsername"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                            <TextBlock FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                       Foreground="{DynamicResource ThemeTextMutedBrush}">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}Scopes: {0}">
+                                                        <Binding Path="GitHubScopes"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <Button Grid.Column="2"
+                                                Content="Disconnect"
+                                                Command="{Binding DisconnectGitHubCommand}"
+                                                Padding="12,6"
+                                                Foreground="{DynamicResource ThemeDangerBrush}"
+                                                CornerRadius="6"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
 
                             <!-- ── Google ────────────────────────────── -->
                             <Border Background="{DynamicResource ThemeSurfaceBrush}"
