@@ -449,6 +449,30 @@ impl CloudApiClient {
         Ok(())
     }
 
+    /// Acknowledge that this device has downloaded batches up to a cursor position.
+    /// The server uses GREATEST() so this is idempotent and safe to retry.
+    pub async fn ack_download(
+        &self,
+        workspace_id: &str,
+        device_id: &str,
+        entity_id: &str,
+        cursor_position: i64,
+    ) -> CloudResult<()> {
+        self.auth_post(
+            "/api/cloud/cursors/ack",
+            &serde_json::json!({
+                "workspace_id": workspace_id,
+                "device_id": device_id,
+                "entity_id": entity_id,
+                "cursor_position": cursor_position,
+            }),
+        )
+        .await?
+        .error_for_status()
+        .map_err(|e| CloudError::Api(e.to_string()))?;
+        Ok(())
+    }
+
     pub async fn get_pending_changes(
         &self,
         workspace_id: &str,

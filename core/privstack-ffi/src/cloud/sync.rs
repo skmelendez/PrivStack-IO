@@ -116,8 +116,9 @@ pub unsafe extern "C" fn privstack_cloudsync_start_sync(
     // Spawn inbound event consumer — applies events pulled from S3 to local DB.
     let inbound_store = handle.entity_store.clone();
     let inbound_schemas = handle.entity_registry.clone_schemas();
+    let inbound_device_id = handle.peer_id.to_string();
     handle.runtime.spawn(async move {
-        consume_inbound_events(event_rx, inbound_store, inbound_schemas).await;
+        consume_inbound_events(event_rx, inbound_store, inbound_schemas, inbound_device_id).await;
     });
 
     handle.cloud_sync_handle = Some(sync_handle);
@@ -414,8 +415,14 @@ async fn consume_inbound_events(
     mut rx: mpsc::Receiver<Event>,
     store: Arc<privstack_storage::EntityStore>,
     schemas: HashMap<String, EntitySchema>,
+    device_id: String,
 ) {
     while let Some(event) = rx.recv().await {
+        // Defense-in-depth: skip own events that made it past sync engine filter
+        if event.peer_id.to_string() == device_id {
+            continue;
+        }
+
         let store = store.clone();
         let schemas = schemas.clone();
 
