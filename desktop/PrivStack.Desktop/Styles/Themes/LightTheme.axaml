@@ -218,6 +218,9 @@
     <SolidColorBrush x:Key="ThemeTableOrangeHeaderBrush" Color="#1AFF9800"/>
     <SolidColorBrush x:Key="ThemeTableOrangeStripeBrush" Color="#0DFF9800"/>
 
+    <!-- Theme-aware default table color -->
+    <x:String x:Key="ThemeTableDefaultColor">Purple</x:String>
+
     <!-- Code Block Brushes -->
     <SolidColorBrush x:Key="ThemeCodeBlockBrush" Color="{StaticResource ThemeBackground}"/>
     <SolidColorBrush x:Key="ThemeCodeBlockGutterBrush" Color="{StaticResource ThemeSurface}"/>

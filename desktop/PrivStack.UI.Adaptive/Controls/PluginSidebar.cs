@@ -5,6 +5,8 @@
 // ============================================================================
 
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Data;
@@ -165,6 +167,16 @@ public sealed class PluginSidebar : Border
     public PluginSidebar()
     {
         ClipToBounds = true;
+
+        Transitions = new Transitions
+        {
+            new DoubleTransition
+            {
+                Property = WidthProperty,
+                Duration = TimeSpan.FromMilliseconds(200),
+                Easing = new CubicEaseOut(),
+            }
+        };
 
         _chevronIcon = new PathIcon
         {
