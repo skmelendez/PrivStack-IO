@@ -97,8 +97,26 @@ public abstract class PluginBase<TViewModel> : ObservableObject, IAppPlugin
 
     public ViewModelBase CreateViewModel()
     {
-        _viewModel ??= CreateViewModelCore();
-        return _viewModel;
+        if (_viewModel != null)
+        {
+            Serilog.Log.Information("[PluginBase] CreateViewModel cache hit for {PluginId}", Metadata.Id);
+            return _viewModel;
+        }
+
+        try
+        {
+            Serilog.Log.Information("[PluginBase] CreateViewModel calling CreateViewModelCore for {PluginId} (State={State})",
+                Metadata.Id, State);
+            _viewModel = CreateViewModelCore();
+            Serilog.Log.Information("[PluginBase] CreateViewModel SUCCESS for {PluginId}, VM type={VmType}",
+                Metadata.Id, _viewModel.GetType().FullName);
+            return _viewModel;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "[PluginBase] CreateViewModel FAILED for {PluginId}", Metadata.Id);
+            throw;
+        }
     }
 
     public void ResetViewModel()

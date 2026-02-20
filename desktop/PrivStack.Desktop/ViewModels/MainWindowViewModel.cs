@@ -991,12 +991,26 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_pluginViewModelCache.TryGetValue(tabName, out var cached))
         {
+            Serilog.Log.Information("[PluginVM] Cache hit for {Tab}, VM type={VmType}", tabName, cached.GetType().FullName);
             return cached;
         }
 
-        var viewModel = plugin.CreateViewModel();
-        _pluginViewModelCache[tabName] = viewModel;
-        return viewModel;
+        try
+        {
+            Serilog.Log.Information("[PluginVM] Creating ViewModel for {Tab} (plugin={PluginId}, state={State})",
+                tabName, plugin.Metadata.Id, plugin.State);
+            var viewModel = plugin.CreateViewModel();
+            Serilog.Log.Information("[PluginVM] Created VM type={VmType} for {Tab}",
+                viewModel.GetType().FullName, tabName);
+            _pluginViewModelCache[tabName] = viewModel;
+            return viewModel;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "[PluginVM] FAILED to create ViewModel for {Tab} (plugin={PluginId})",
+                tabName, plugin.Metadata.Id);
+            throw;
+        }
     }
 
     /// <summary>

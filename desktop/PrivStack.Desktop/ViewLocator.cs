@@ -83,11 +83,25 @@ public class ViewLocator : IDataTemplate
 
         if (viewType != null)
         {
-            var view = (Control)Activator.CreateInstance(viewType)!;
-            _viewCache[vmType] = view;
-            return view;
+            try
+            {
+                Log.Information("[ViewLocator] Instantiating view {ViewType} from assembly {Assembly}",
+                    viewType.FullName, viewType.Assembly.GetName().Name);
+                var view = (Control)Activator.CreateInstance(viewType)!;
+                _viewCache[vmType] = view;
+                Log.Information("[ViewLocator] Successfully created view {ViewType}", viewType.FullName);
+                return view;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[ViewLocator] FAILED to create view {ViewType} for VM {VmType}",
+                    viewType.FullName, vmType.FullName);
+                return new TextBlock { Text = $"View Error: {viewType.Name}\n{ex.InnerException?.Message ?? ex.Message}" };
+            }
         }
 
+        Log.Warning("[ViewLocator] View type NOT FOUND for {ViewName} (VM: {VmType}, Assembly: {Assembly})",
+            viewName, vmType.FullName, vmType.Assembly.GetName().Name);
         return new TextBlock { Text = "Not Found: " + viewName };
     }
 
