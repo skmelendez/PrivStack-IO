@@ -621,7 +621,7 @@
         <Border Grid.Row="2"
                 IsVisible="{Binding IsDataTab}"
                 Background="{DynamicResource ThemeSurfaceBrush}">
-            <ScrollViewer Padding="24,24,24,80">
+            <ScrollViewer Padding="24,24,24,80" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="24" MaxWidth="900" HorizontalAlignment="Center">
                     <!-- Storage Overview Cards -->
                     <TextBlock Text="Storage Overview" Classes="section-heading"/>
