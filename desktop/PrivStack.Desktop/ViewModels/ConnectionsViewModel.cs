@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PrivStack.Desktop.Services.Connections;
@@ -6,8 +7,22 @@ using Serilog;
 namespace PrivStack.Desktop.ViewModels;
 
 /// <summary>
+/// Item representing a connected OAuth account (Google or Microsoft).
+/// </summary>
+public record OAuthConnectionItem(
+    string ConnectionId,
+    string Provider,
+    string? Email,
+    string ScopesSummary,
+    string ConnectedAt)
+{
+    /// <summary>Composite key for disconnect command: "provider:connectionId".</summary>
+    public string CompositeKey => $"{Provider}:{ConnectionId}";
+}
+
+/// <summary>
 /// ViewModel for the Connections section in Settings.
-/// Manages GitHub OAuth device flow and connection state.
+/// Manages GitHub device flow, Google OAuth, and Microsoft OAuth connections.
 /// </summary>
 public partial class ConnectionsViewModel : ViewModelBase
 {
@@ -26,6 +41,8 @@ public partial class ConnectionsViewModel : ViewModelBase
         _connectionService.ConnectionChanged += OnConnectionChanged;
 
         LoadGitHubState();
+        LoadGoogleConnections();
+        LoadMicrosoftConnections();
     }
 
     // ========================================
@@ -48,7 +65,7 @@ public partial class ConnectionsViewModel : ViewModelBase
     private string? _gitHubConnectedAt;
 
     // ========================================
-    // Device Flow State
+    // GitHub Device Flow State
     // ========================================
 
     [ObservableProperty]
@@ -63,9 +80,30 @@ public partial class ConnectionsViewModel : ViewModelBase
     [ObservableProperty]
     private string? _connectionError;
 
-    /// <summary>
-    /// Initiates GitHub device flow OAuth.
-    /// </summary>
+    // ========================================
+    // Google Connection State
+    // ========================================
+
+    [ObservableProperty]
+    private ObservableCollection<OAuthConnectionItem> _googleConnections = [];
+
+    [ObservableProperty]
+    private bool _isGoogleConnecting;
+
+    // ========================================
+    // Microsoft Connection State
+    // ========================================
+
+    [ObservableProperty]
+    private ObservableCollection<OAuthConnectionItem> _microsoftConnections = [];
+
+    [ObservableProperty]
+    private bool _isMicrosoftConnecting;
+
+    // ========================================
+    // GitHub Commands
+    // ========================================
+
     [RelayCommand]
     private async Task ConnectGitHubAsync()
     {
@@ -77,29 +115,22 @@ public partial class ConnectionsViewModel : ViewModelBase
 
         try
         {
-            // Step 1: Request device code
             var deviceCode = await _deviceFlowService.RequestDeviceCodeAsync(_pollCts.Token);
             DeviceUserCode = deviceCode.UserCode;
             DeviceVerificationUri = deviceCode.VerificationUri;
 
-            // Step 2: Poll for token (user completes auth in browser)
             var tokenResponse = await _deviceFlowService.PollForTokenAsync(
                 deviceCode, _pollCts.Token);
 
-            // Step 3: Fetch user info
             var (username, avatarUrl) = await _deviceFlowService.GetUserInfoAsync(
                 tokenResponse.AccessToken, _pollCts.Token);
 
-            // Step 4: Store connection
             var scopes = tokenResponse.Scope.Split(',',
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             await _connectionService.ConnectGitHubAsync(
                 tokenResponse.AccessToken, scopes, username, avatarUrl, _pollCts.Token);
         }
-        catch (OperationCanceledException)
-        {
-            // User cancelled
-        }
+        catch (OperationCanceledException) { }
         catch (TimeoutException ex)
         {
             ConnectionError = ex.Message;
@@ -119,18 +150,12 @@ public partial class ConnectionsViewModel : ViewModelBase
         }
     }
 
-    /// <summary>
-    /// Cancels an in-progress device flow.
-    /// </summary>
     [RelayCommand]
     private void CancelConnect()
     {
         _pollCts?.Cancel();
     }
 
-    /// <summary>
-    /// Disconnects GitHub.
-    /// </summary>
     [RelayCommand]
     private async Task DisconnectGitHubAsync()
     {
@@ -145,9 +170,6 @@ public partial class ConnectionsViewModel : ViewModelBase
         }
     }
 
-    /// <summary>
-    /// Opens the verification URI in the default browser.
-    /// </summary>
     [RelayCommand]
     private void OpenVerificationUri()
     {
@@ -166,10 +188,99 @@ public partial class ConnectionsViewModel : ViewModelBase
         }
     }
 
+    // ========================================
+    // Google Commands
+    // ========================================
+
+    [RelayCommand]
+    private async Task ConnectGoogleAsync()
+    {
+        if (IsGoogleConnecting) return;
+
+        IsGoogleConnecting = true;
+        ConnectionError = null;
+
+        try
+        {
+            await _connectionService.ConnectOAuthAsync(OAuthProviderConfig.Google);
+        }
+        catch (Exception ex)
+        {
+            ConnectionError = $"Google connection failed: {ex.Message}";
+            Log.Error(ex, "Google OAuth flow failed");
+        }
+        finally
+        {
+            IsGoogleConnecting = false;
+        }
+    }
+
+    // ========================================
+    // Microsoft Commands
+    // ========================================
+
+    [RelayCommand]
+    private async Task ConnectMicrosoftAsync()
+    {
+        if (IsMicrosoftConnecting) return;
+
+        IsMicrosoftConnecting = true;
+        ConnectionError = null;
+
+        try
+        {
+            await _connectionService.ConnectOAuthAsync(OAuthProviderConfig.Microsoft);
+        }
+        catch (Exception ex)
+        {
+            ConnectionError = $"Microsoft connection failed: {ex.Message}";
+            Log.Error(ex, "Microsoft OAuth flow failed");
+        }
+        finally
+        {
+            IsMicrosoftConnecting = false;
+        }
+    }
+
+    // ========================================
+    // Disconnect OAuth (Google / Microsoft)
+    // ========================================
+
+    [RelayCommand]
+    private async Task DisconnectOAuthAsync(string compositeKey)
+    {
+        try
+        {
+            var parts = compositeKey.Split(':', 2);
+            if (parts.Length != 2) return;
+
+            await _connectionService.DisconnectByIdAsync(parts[0], parts[1]);
+        }
+        catch (Exception ex)
+        {
+            ConnectionError = $"Disconnect failed: {ex.Message}";
+            Log.Error(ex, "Failed to disconnect OAuth connection {Key}", compositeKey);
+        }
+    }
+
+    // ========================================
+    // State Loading
+    // ========================================
+
     private void OnConnectionChanged(string provider)
     {
-        if (provider == "github")
-            LoadGitHubState();
+        switch (provider)
+        {
+            case "github":
+                LoadGitHubState();
+                break;
+            case "google":
+                LoadGoogleConnections();
+                break;
+            case "microsoft":
+                LoadMicrosoftConnections();
+                break;
+        }
     }
 
     private async void LoadGitHubState()
@@ -187,5 +298,61 @@ public partial class ConnectionsViewModel : ViewModelBase
         {
             Log.Warning(ex, "Failed to load GitHub connection state");
         }
+    }
+
+    private async void LoadGoogleConnections()
+    {
+        try
+        {
+            var connections = await _connectionService.GetConnectionsAsync("google");
+            GoogleConnections = new ObservableCollection<OAuthConnectionItem>(
+                connections.Select(c => ToOAuthItem("google", c)));
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to load Google connections");
+        }
+    }
+
+    private async void LoadMicrosoftConnections()
+    {
+        try
+        {
+            var connections = await _connectionService.GetConnectionsAsync("microsoft");
+            MicrosoftConnections = new ObservableCollection<OAuthConnectionItem>(
+                connections.Select(c => ToOAuthItem("microsoft", c)));
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to load Microsoft connections");
+        }
+    }
+
+    private static OAuthConnectionItem ToOAuthItem(string provider, Sdk.ConnectionInfo info)
+    {
+        var scopesSummary = SummarizeScopes(provider, info.Scopes);
+        return new OAuthConnectionItem(
+            ConnectionId: info.ConnectionId ?? "",
+            Provider: provider,
+            Email: info.Username,
+            ScopesSummary: scopesSummary,
+            ConnectedAt: info.ConnectedAt.LocalDateTime.ToString("MMM d, yyyy"));
+    }
+
+    private static string SummarizeScopes(string provider, IReadOnlyList<string> scopes)
+    {
+        var parts = new List<string>();
+
+        if (provider == "google")
+        {
+            if (scopes.Any(s => s.Contains("mail.google.com"))) parts.Add("Gmail");
+            if (scopes.Any(s => s.Contains("calendar"))) parts.Add("Calendar");
+        }
+        else if (provider == "microsoft")
+        {
+            if (scopes.Any(s => s.Contains("IMAP") || s.Contains("SMTP"))) parts.Add("Outlook");
+        }
+
+        return parts.Count > 0 ? string.Join(", ", parts) : string.Join(", ", scopes);
     }
 }

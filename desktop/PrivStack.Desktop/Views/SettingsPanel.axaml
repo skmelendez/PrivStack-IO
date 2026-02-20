@@ -1204,6 +1204,136 @@
                                 </Grid>
                             </Border>
 
+                            <!-- ── Google ────────────────────────────── -->
+                            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                                    CornerRadius="10" Padding="14">
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="Google"
+                                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1"
+                                                Content="Connect Google Account"
+                                                Command="{Binding ConnectGoogleCommand}"
+                                                IsEnabled="{Binding !IsGoogleConnecting}"
+                                                Padding="12,6"
+                                                Background="{DynamicResource ThemePrimaryBrush}"
+                                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                                CornerRadius="6"/>
+                                    </Grid>
+
+                                    <!-- Connecting indicator -->
+                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                IsVisible="{Binding IsGoogleConnecting}">
+                                        <ProgressBar IsIndeterminate="True" Width="80" Height="4"/>
+                                        <TextBlock Text="Waiting for Google authorization..."
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <!-- Connected accounts list -->
+                                    <ItemsControl ItemsSource="{Binding GoogleConnections}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:OAuthConnectionItem">
+                                                <Border Background="{DynamicResource ThemePrimaryMutedBrush}"
+                                                        CornerRadius="8" Padding="12" Margin="0,2">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Email}"
+                                                                       FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                                            <TextBlock FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                                       Foreground="{DynamicResource ThemeTextMutedBrush}">
+                                                                <TextBlock.Text>
+                                                                    <MultiBinding StringFormat="{}{0} · Connected {1}">
+                                                                        <Binding Path="ScopesSummary"/>
+                                                                        <Binding Path="ConnectedAt"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Text>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1"
+                                                                Content="Disconnect"
+                                                                Command="{Binding $parent[ItemsControl].((vm:ConnectionsViewModel)DataContext).DisconnectOAuthCommand}"
+                                                                CommandParameter="{Binding CompositeKey}"
+                                                                Padding="8,4"
+                                                                Foreground="{DynamicResource ThemeDangerBrush}"
+                                                                CornerRadius="6"
+                                                                VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ── Microsoft ─────────────────────────── -->
+                            <Border Background="{DynamicResource ThemeSurfaceBrush}"
+                                    CornerRadius="10" Padding="14">
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="Microsoft"
+                                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1"
+                                                Content="Connect Microsoft Account"
+                                                Command="{Binding ConnectMicrosoftCommand}"
+                                                IsEnabled="{Binding !IsMicrosoftConnecting}"
+                                                Padding="12,6"
+                                                Background="{DynamicResource ThemePrimaryBrush}"
+                                                Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                                CornerRadius="6"/>
+                                    </Grid>
+
+                                    <!-- Connecting indicator -->
+                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                IsVisible="{Binding IsMicrosoftConnecting}">
+                                        <ProgressBar IsIndeterminate="True" Width="80" Height="4"/>
+                                        <TextBlock Text="Waiting for Microsoft authorization..."
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <!-- Connected accounts list -->
+                                    <ItemsControl ItemsSource="{Binding MicrosoftConnections}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:OAuthConnectionItem">
+                                                <Border Background="{DynamicResource ThemePrimaryMutedBrush}"
+                                                        CornerRadius="8" Padding="12" Margin="0,2">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Email}"
+                                                                       FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                                            <TextBlock FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                                       Foreground="{DynamicResource ThemeTextMutedBrush}">
+                                                                <TextBlock.Text>
+                                                                    <MultiBinding StringFormat="{}{0} · Connected {1}">
+                                                                        <Binding Path="ScopesSummary"/>
+                                                                        <Binding Path="ConnectedAt"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Text>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1"
+                                                                Content="Disconnect"
+                                                                Command="{Binding $parent[ItemsControl].((vm:ConnectionsViewModel)DataContext).DisconnectOAuthCommand}"
+                                                                CommandParameter="{Binding CompositeKey}"
+                                                                Padding="8,4"
+                                                                Foreground="{DynamicResource ThemeDangerBrush}"
+                                                                CornerRadius="6"
+                                                                VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
                             <TextBlock Text="{Binding ConnectionError}"
                                        IsVisible="{Binding ConnectionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                        Foreground="{DynamicResource ThemeDangerBrush}"
