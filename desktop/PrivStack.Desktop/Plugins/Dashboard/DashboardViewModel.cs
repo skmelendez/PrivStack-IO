@@ -113,11 +113,6 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private string _memoryGcHeap = "—";
 
-    [ObservableProperty]
-    private bool _isStorageExpanded;
-
-    public ObservableCollection<PluginSizeInfo> PluginSizes { get; } = [];
-
     // --- Data Metrics (Data tab) ---
 
     [ObservableProperty]
@@ -159,20 +154,6 @@ public partial class DashboardViewModel : ViewModelBase
     public ObservableCollection<DbFileDiagnostic> DiagnosticsFiles { get; } = [];
 
     public ObservableCollection<PluginDataInfo> PluginDataItems { get; } = [];
-
-    // --- Workspace Plugins ---
-
-    public ObservableCollection<WorkspacePluginEntry> WorkspacePlugins { get; } = [];
-
-    [ObservableProperty]
-    private bool _isWorkspacePluginsExpanded = true;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasInactivePlugins))]
-    private int _activeWorkspacePluginCount;
-
-    public bool HasInactivePlugins => WorkspacePlugins.Count > 0 &&
-        WorkspacePlugins.Any(p => !p.IsActivated);
 
     // --- Computed ---
 
@@ -311,6 +292,22 @@ public partial class DashboardViewModel : ViewModelBase
                 });
             }
 
+            // Populate workspace activation state on each plugin item
+            foreach (var item in AllPlugins)
+            {
+                var plugin = _pluginRegistry.GetPlugin(item.Id);
+                if (plugin != null && !plugin.Metadata.IsHardLocked && plugin.Metadata.CanDisable)
+                {
+                    item.CanToggle = true;
+                    item.IsActivated = _pluginRegistry.IsPluginEnabled(item.Id);
+                }
+                else if (plugin != null)
+                {
+                    item.CanToggle = false;
+                    item.IsActivated = true;
+                }
+            }
+
             NotifyCountsChanged();
 
             if (IsOffline && AllPlugins.Count == 0)
@@ -319,7 +316,6 @@ public partial class DashboardViewModel : ViewModelBase
             }
 
             await LoadSystemMetricsAsync();
-            LoadWorkspacePlugins();
 
             HasLoadedOnce = true;
         }
@@ -348,13 +344,7 @@ public partial class DashboardViewModel : ViewModelBase
             AppShellSize = SystemMetricsHelper.FormatBytes(shellSize);
 
             var pluginSizes = await _metricsService.GetPluginBinarySizesAsync(_pluginRegistry);
-            PluginSizes.Clear();
-            long totalBinaries = 0;
-            foreach (var ps in pluginSizes)
-            {
-                PluginSizes.Add(ps);
-                totalBinaries += ps.SizeBytes;
-            }
+            long totalBinaries = pluginSizes.Sum(ps => ps.SizeBytes);
             PluginBinariesTotal = SystemMetricsHelper.FormatBytes(totalBinaries);
 
             var sizeLookup = pluginSizes.ToDictionary(
@@ -382,65 +372,24 @@ public partial class DashboardViewModel : ViewModelBase
     }
 
     // =========================================================================
-    // Workspace plugins
+    // Plugin activation toggle (workspace on/off)
     // =========================================================================
 
     [RelayCommand]
-    private void ToggleWorkspacePluginsExpanded()
+    private void TogglePluginActivation(DashboardPluginItem? item)
     {
-        IsWorkspacePluginsExpanded = !IsWorkspacePluginsExpanded;
-    }
+        if (item is not { CanToggle: true }) return;
 
-    [RelayCommand]
-    private void LoadWorkspacePlugins()
-    {
-        WorkspacePlugins.Clear();
-
-        foreach (var plugin in _pluginRegistry.Plugins)
+        if (item.IsActivated)
         {
-            if (plugin.Metadata.IsHardLocked) continue;
-            if (!plugin.Metadata.CanDisable) continue;
-
-            WorkspacePlugins.Add(new WorkspacePluginEntry
-            {
-                Id = plugin.Metadata.Id,
-                Name = plugin.Metadata.Name,
-                Description = plugin.Metadata.Description,
-                Icon = plugin.Metadata.Icon,
-                Category = plugin.Metadata.Category,
-                ReleaseStage = plugin.Metadata.ReleaseStage,
-                IsActivated = _pluginRegistry.IsPluginEnabled(plugin.Metadata.Id),
-            });
-        }
-
-        ActiveWorkspacePluginCount = WorkspacePlugins.Count(p => p.IsActivated);
-        OnPropertyChanged(nameof(HasInactivePlugins));
-    }
-
-    [RelayCommand]
-    private void ToggleWorkspacePlugin(WorkspacePluginEntry? entry)
-    {
-        if (entry == null) return;
-
-        if (entry.IsActivated)
-        {
-            _pluginRegistry.DisablePlugin(entry.Id);
-            entry.IsActivated = false;
+            _pluginRegistry.DisablePlugin(item.Id);
+            item.IsActivated = false;
         }
         else
         {
-            _pluginRegistry.EnablePlugin(entry.Id);
-            entry.IsActivated = true;
+            _pluginRegistry.EnablePlugin(item.Id);
+            item.IsActivated = true;
         }
-
-        ActiveWorkspacePluginCount = WorkspacePlugins.Count(p => p.IsActivated);
-        OnPropertyChanged(nameof(HasInactivePlugins));
-    }
-
-    [RelayCommand]
-    private void ToggleStorageExpanded()
-    {
-        IsStorageExpanded = !IsStorageExpanded;
     }
 
     [RelayCommand]

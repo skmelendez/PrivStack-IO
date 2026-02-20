@@ -130,105 +130,6 @@
                       IsVisible="{Binding IsOverviewTab}">
             <StackPanel Spacing="20">
 
-                <!-- Workspace Plugins Section (collapsible) -->
-                <StackPanel Spacing="8">
-                    <Button Background="Transparent" Padding="0" Cursor="Hand"
-                            HorizontalAlignment="Left" HorizontalContentAlignment="Left"
-                            Command="{Binding ToggleWorkspacePluginsExpandedCommand}">
-                        <StackPanel Spacing="4">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="&#x25B8;"
-                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding !IsWorkspacePluginsExpanded}"/>
-                                <TextBlock Text="&#x25BE;"
-                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding IsWorkspacePluginsExpanded}"/>
-                                <TextBlock Text="Workspace Plugins"
-                                           Classes="section-heading"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <TextBlock Text="Manage which plugins are active in this workspace"
-                                       FontSize="{DynamicResource ThemeFontSizeXs}"
-                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                       Margin="22,0,0,0"/>
-                        </StackPanel>
-                    </Button>
-
-                    <StackPanel Spacing="8" IsVisible="{Binding IsWorkspacePluginsExpanded}">
-                        <ItemsControl ItemsSource="{Binding WorkspacePlugins}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="3" ColumnSpacing="10" RowSpacing="10"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:WorkspacePluginEntry">
-                                    <Border CornerRadius="12" Padding="20"
-                                            MinWidth="200"
-                                            BorderThickness="0"
-                                            Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                            Classes="shadow-sm">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <Border Grid.Column="0" Width="32" Height="32"
-                                                    Background="{DynamicResource ThemeSurfaceBrush}"
-                                                    CornerRadius="6" Margin="0,0,10,0"
-                                                    VerticalAlignment="Center">
-                                                <controls:IconControl Icon="{Binding Icon}"
-                                                                      Size="16"
-                                                                      Stroke="{DynamicResource ThemeTextMutedBrush}"
-                                                                      HorizontalAlignment="Center"
-                                                                      VerticalAlignment="Center"/>
-                                            </Border>
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontWeight="SemiBold"
-                                                               FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <Border CornerRadius="4" Padding="4,1"
-                                                            IsVisible="{Binding IsAlpha}"
-                                                            Background="{DynamicResource ThemeAlphaBadgeBrush}" VerticalAlignment="Center">
-                                                        <TextBlock Text="Alpha" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
-                                                    </Border>
-                                                    <Border CornerRadius="4" Padding="4,1"
-                                                            IsVisible="{Binding IsBeta}"
-                                                            Background="{DynamicResource ThemeBetaBadgeBrush}" VerticalAlignment="Center">
-                                                        <TextBlock Text="Beta" FontSize="9" Foreground="{DynamicResource ThemeTextOnAccentBrush}" FontWeight="Bold"/>
-                                                    </Border>
-                                                </StackPanel>
-                                                <TextBlock Text="{Binding Description}"
-                                                           FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           MaxLines="1"/>
-                                            </StackPanel>
-                                            <ToggleSwitch Grid.Column="2"
-                                                          IsChecked="{Binding IsActivated, Mode=OneWay}"
-                                                          VerticalAlignment="Center"
-                                                          Margin="8,0,0,0"
-                                                          OnContent="" OffContent=""
-                                                          Command="{Binding $parent[UserControl].((vm:DashboardViewModel)DataContext).ToggleWorkspacePluginCommand}"
-                                                          CommandParameter="{Binding}"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!-- Hint when some plugins are inactive -->
-                        <TextBlock IsVisible="{Binding HasInactivePlugins}"
-                                   Text="Toggle plugins on to add them to this workspace's sidebar"
-                                   FontSize="{DynamicResource ThemeFontSizeXs}"
-                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                   FontStyle="Italic"/>
-                    </StackPanel>
-                </StackPanel>
-
                 <!-- System Overview Cards -->
                 <StackPanel Spacing="8">
                     <TextBlock Text="System Overview" Classes="section-heading"/>
@@ -316,98 +217,41 @@
                     </WrapPanel>
                 </StackPanel>
 
-                <!-- Storage Details (collapsible) -->
-                <StackPanel Spacing="8">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Button Grid.Column="0"
-                                Background="Transparent" Padding="0" Cursor="Hand"
-                                HorizontalAlignment="Left" HorizontalContentAlignment="Left"
-                                Command="{Binding ToggleStorageExpandedCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="&#x25B8;"
-                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding !IsStorageExpanded}"/>
-                                <TextBlock Text="&#x25BE;"
-                                           FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding IsStorageExpanded}"/>
-                                <TextBlock Text="Storage Details"
-                                           Classes="section-heading"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="1"
-                                Background="Transparent" Padding="0" Cursor="Hand"
-                                VerticalAlignment="Center"
-                                Command="{Binding OpenPluginsFolderCommand}"
-                                ToolTip.Tip="Open plugins folder in file manager"
-                                IsVisible="{Binding IsStorageExpanded}">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <PathIcon Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
-                                          Width="12" Height="12"
-                                          Foreground="{DynamicResource ThemePrimaryBrush}"/>
-                                <TextBlock Text="Open Folder"
-                                           FontSize="{DynamicResource ThemeFontSizeXsSm}"
-                                           Foreground="{DynamicResource ThemePrimaryBrush}"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-
-                    <StackPanel Spacing="6" IsVisible="{Binding IsStorageExpanded}">
-                        <ItemsControl ItemsSource="{Binding PluginSizes}">
+                <!-- Category Filter + Open Folder -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Categories}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="6"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:PluginSizeInfo">
-                                    <Border Padding="12,8" Margin="0,2" CornerRadius="6"
-                                            Background="{DynamicResource ThemeSurfaceElevatedBrush}">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <Border Grid.Column="0" Width="28" Height="28"
-                                                    Background="{DynamicResource ThemeSurfaceBrush}"
-                                                    CornerRadius="6" Margin="0,0,10,0"
-                                                    VerticalAlignment="Center">
-                                                <controls:IconControl Icon="{Binding Icon}"
-                                                                      Size="14"
-                                                                      Stroke="{DynamicResource ThemeTextMutedBrush}"
-                                                                      HorizontalAlignment="Center"
-                                                                      VerticalAlignment="Center"/>
-                                            </Border>
-                                            <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                                       FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                       VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding FormattedSize}"
-                                                       FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                                       VerticalAlignment="Center"/>
-                                        </Grid>
-                                    </Border>
+                                <DataTemplate>
+                                    <Button Classes="category-pill"
+                                            Content="{Binding}"
+                                            Command="{Binding $parent[UserControl].((vm:DashboardViewModel)DataContext).SelectCategoryCommand}"
+                                            CommandParameter="{Binding}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </StackPanel>
-                </StackPanel>
-
-                <!-- Category Filter -->
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                    <ItemsControl ItemsSource="{Binding Categories}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="6"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Classes="category-pill"
-                                        Content="{Binding}"
-                                        Command="{Binding $parent[UserControl].((vm:DashboardViewModel)DataContext).SelectCategoryCommand}"
-                                        CommandParameter="{Binding}"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                    </ScrollViewer>
+                    <Button Grid.Column="1"
+                            Background="Transparent" Padding="0" Cursor="Hand"
+                            VerticalAlignment="Center" Margin="8,0,0,0"
+                            Command="{Binding OpenPluginsFolderCommand}"
+                            ToolTip.Tip="Open plugins folder in file manager">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <PathIcon Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
+                                      Width="12" Height="12"
+                                      Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                            <TextBlock Text="Open Folder"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       Foreground="{DynamicResource ThemePrimaryBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
 
                 <!-- Plugin Marketplace -->
                 <StackPanel Spacing="0">
@@ -469,9 +313,9 @@
                                         BorderThickness="0"
                                         Classes="shadow-sm">
                                     <Grid RowDefinitions="Auto,*,Auto">
-                                        <!-- Header: icon + name + badges -->
+                                        <!-- Header: icon + name + badges + toggle -->
                                         <StackPanel Grid.Row="0" Spacing="10">
-                                            <Grid ColumnDefinitions="Auto,*">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
                                                 <Border Grid.Column="0" Width="36" Height="36"
                                                         Background="{DynamicResource ThemeSurfaceBrush}"
                                                         CornerRadius="8" Margin="0,0,10,0">
@@ -517,6 +361,15 @@
                                                         </Border>
                                                     </StackPanel>
                                                 </StackPanel>
+                                                <!-- Workspace toggle (only for toggleable plugins) -->
+                                                <ToggleSwitch Grid.Column="2"
+                                                              IsVisible="{Binding CanToggle}"
+                                                              IsChecked="{Binding IsActivated, Mode=OneWay}"
+                                                              VerticalAlignment="Center"
+                                                              Margin="4,0,0,0"
+                                                              OnContent="" OffContent=""
+                                                              Command="{Binding $parent[UserControl].((vm:DashboardViewModel)DataContext).TogglePluginActivationCommand}"
+                                                              CommandParameter="{Binding}"/>
                                             </Grid>
                                         </StackPanel>
 
@@ -534,6 +387,10 @@
                                                 <Run Text=" · "/>
                                                 <Run Text="{Binding DisplayVersion}"/>
                                             </TextBlock>
+                                            <TextBlock Text="{Binding DiskSizeDisplay}"
+                                                       FontSize="{DynamicResource ThemeFontSize2Xs}"
+                                                       Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                       IsVisible="{Binding DiskSizeDisplay, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                             <ProgressBar IsVisible="{Binding IsInstalling}"
                                                          Value="{Binding InstallProgress}"
                                                          Minimum="0" Maximum="1"

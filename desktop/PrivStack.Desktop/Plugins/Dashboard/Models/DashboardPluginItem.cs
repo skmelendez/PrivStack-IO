@@ -59,6 +59,12 @@ public partial class DashboardPluginItem : ObservableObject
     [ObservableProperty]
     private string _releaseStage = "release";
 
+    [ObservableProperty]
+    private bool _isActivated;
+
+    [ObservableProperty]
+    private bool _canToggle;
+
     public bool IsAlpha => string.Equals(ReleaseStage, "alpha", StringComparison.OrdinalIgnoreCase);
     public bool IsBeta => string.Equals(ReleaseStage, "beta", StringComparison.OrdinalIgnoreCase);
 
