@@ -75,8 +75,9 @@ public static class ServiceRegistration
         services.AddSingleton<IPluginInstallService, PluginInstallService>();
         services.AddSingleton<IUpdateService, RegistryUpdateService>();
 
-        // External connections (GitHub, etc.)
+        // External connections (GitHub, Google, Microsoft)
         services.AddSingleton<GitHubDeviceFlowService>();
+        services.AddSingleton<OAuthBrowserFlowService>();
         services.AddSingleton<ConnectionService>();
         services.AddSingleton<IConnectionService>(sp => sp.GetRequiredService<ConnectionService>());
 
