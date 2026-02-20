@@ -15,7 +15,10 @@
     <CFBundleDisplayName>PrivStack</CFBundleDisplayName>
     <AssemblyTitle>PrivStack</AssemblyTitle>
     <Product>PrivStack</Product>
-    <Version>1.47.2</Version>
+    <Version>1.47.3</Version>
+
+    <!-- LlamaSharp.Backend.Cpu ships multiple AVX variants (avx/avx2/avx512/base) that collide on publish -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
   <ItemGroup>

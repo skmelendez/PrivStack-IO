@@ -59,6 +59,7 @@ test-data/
 .env.*
 !.env.example
 *.pem
+!core/privstack-cloud/data/cacert.pem
 *.key
 *.pfx
 *.p12
