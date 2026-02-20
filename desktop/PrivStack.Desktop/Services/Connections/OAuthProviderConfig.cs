@@ -36,8 +36,9 @@ public sealed record OAuthProviderConfig
     {
         ProviderId = "google",
         ProviderDisplayName = "Google",
-        ClientId = "***REMOVED***",
-        ClientSecret = "***REMOVED***",
+        ClientId = Environment.GetEnvironmentVariable("PRIVSTACK_GOOGLE_CLIENT_ID")
+            ?? throw new InvalidOperationException("PRIVSTACK_GOOGLE_CLIENT_ID env var not set"),
+        ClientSecret = Environment.GetEnvironmentVariable("PRIVSTACK_GOOGLE_CLIENT_SECRET"),
         AuthorizeEndpoint = "https://accounts.google.com/o/oauth2/v2/auth",
         TokenEndpoint = "https://oauth2.googleapis.com/token",
         Scopes = "https://mail.google.com/ https://www.googleapis.com/auth/calendar email openid",
@@ -49,7 +50,8 @@ public sealed record OAuthProviderConfig
     {
         ProviderId = "microsoft",
         ProviderDisplayName = "Microsoft",
-        ClientId = "***REMOVED***",
+        ClientId = Environment.GetEnvironmentVariable("PRIVSTACK_MICROSOFT_CLIENT_ID")
+            ?? throw new InvalidOperationException("PRIVSTACK_MICROSOFT_CLIENT_ID env var not set"),
         AuthorizeEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
         TokenEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token",
         Scopes = "https://outlook.office365.com/IMAP.AccessAsUser.All https://outlook.office365.com/SMTP.Send offline_access openid email",

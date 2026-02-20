@@ -57,6 +57,7 @@ test-data/
 # Secrets / env
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 *.pfx

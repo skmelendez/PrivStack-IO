@@ -34,7 +34,9 @@ public sealed class GitHubDeviceFlowService
 
     // GitHub App client ID — permissions (issues:write, contents:write) are
     // configured on the app itself at https://github.com/settings/apps
-    private const string ClientId = "***REMOVED***";
+    private static readonly string ClientId =
+        Environment.GetEnvironmentVariable("PRIVSTACK_GITHUB_CLIENT_ID")
+        ?? throw new InvalidOperationException("PRIVSTACK_GITHUB_CLIENT_ID env var not set");
 
     private static HttpClient CreateHttpClient()
     {
