@@ -96,6 +96,9 @@ public partial class ConnectionsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isGoogleConnecting;
 
+    [ObservableProperty]
+    private bool _isGoogleConnected;
+
     // ========================================
     // Microsoft Connection State
     // ========================================
@@ -105,6 +108,9 @@ public partial class ConnectionsViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isMicrosoftConnecting;
+
+    [ObservableProperty]
+    private bool _isMicrosoftConnected;
 
     // ========================================
     // Plugin-Driven Provider Visibility
@@ -352,6 +358,7 @@ public partial class ConnectionsViewModel : ViewModelBase
             var connections = await _connectionService.GetConnectionsAsync("google");
             GoogleConnections = new ObservableCollection<OAuthConnectionItem>(
                 connections.Select(c => ToOAuthItem("google", c)));
+            IsGoogleConnected = GoogleConnections.Count > 0;
         }
         catch (Exception ex)
         {
@@ -366,6 +373,7 @@ public partial class ConnectionsViewModel : ViewModelBase
             var connections = await _connectionService.GetConnectionsAsync("microsoft");
             MicrosoftConnections = new ObservableCollection<OAuthConnectionItem>(
                 connections.Select(c => ToOAuthItem("microsoft", c)));
+            IsMicrosoftConnected = MicrosoftConnections.Count > 0;
         }
         catch (Exception ex)
         {

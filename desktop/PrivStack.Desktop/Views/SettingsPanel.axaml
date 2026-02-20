@@ -1119,13 +1119,13 @@
                                         IsEnabled="{Binding !IsConnecting}"
                                         IsVisible="{Binding IsGitHubRequired}"
                                         Background="Transparent" BorderThickness="0"
-                                        Padding="0"
+                                        Padding="0" HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Stretch">
                                     <Border CornerRadius="10" Padding="12,10"
                                             Background="{DynamicResource ThemeSurfaceBrush}"
                                             BorderBrush="{DynamicResource ThemeBorderBrush}"
                                             BorderThickness="1">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <Grid ColumnDefinitions="Auto,*">
                                             <!-- GitHub logo with themed background -->
                                             <Border CornerRadius="8" Width="36" Height="36"
                                                     Background="{DynamicResource ThemeGitHubBrandBrush}"
@@ -1155,12 +1155,6 @@
                                                            IsVisible="{Binding IsGitHubConnected}"
                                                            TextWrapping="Wrap"/>
                                             </StackPanel>
-                                            <!-- Action hint -->
-                                            <TextBlock Grid.Column="2" Text="Connect"
-                                                       FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                       Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                       VerticalAlignment="Center"
-                                                       IsVisible="{Binding !IsGitHubConnected}"/>
                                         </Grid>
                                     </Border>
                                 </Button>
@@ -1170,7 +1164,7 @@
                                         IsEnabled="{Binding !IsGoogleConnecting}"
                                         IsVisible="{Binding IsGoogleRequired}"
                                         Background="Transparent" BorderThickness="0"
-                                        Padding="0"
+                                        Padding="0" HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Stretch">
                                     <Border CornerRadius="10" Padding="12,10"
                                             Background="{DynamicResource ThemeSurfaceBrush}"
@@ -1199,21 +1193,16 @@
                                                 <TextBlock Text="Connect your account"
                                                            FontSize="{DynamicResource ThemeFontSizeXs}"
                                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                           IsVisible="{Binding GoogleConnections.Count, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=0}"
+                                                           IsVisible="{Binding !IsGoogleConnected}"
                                                            TextWrapping="Wrap"/>
                                                 <!-- Connected -->
                                                 <TextBlock Text="Connected"
                                                            FontSize="{DynamicResource ThemeFontSizeXs}"
                                                            Foreground="{DynamicResource ThemeSuccessBrush}"
-                                                           IsVisible="{Binding GoogleConnections.Count, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter=0}"
+                                                           IsVisible="{Binding IsGoogleConnected}"
                                                            TextWrapping="Wrap"/>
                                             </StackPanel>
-                                            <!-- Action hint / spinner -->
-                                            <TextBlock Grid.Column="2" Text="Connect"
-                                                       FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                       Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                       VerticalAlignment="Center"
-                                                       IsVisible="{Binding GoogleConnections.Count, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=0}"/>
+                                            <!-- Connecting spinner -->
                                             <ProgressBar Grid.Column="2" IsIndeterminate="True" Width="40" Height="3"
                                                          VerticalAlignment="Center"
                                                          IsVisible="{Binding IsGoogleConnecting}"/>
@@ -1226,7 +1215,7 @@
                                         IsEnabled="{Binding !IsMicrosoftConnecting}"
                                         IsVisible="{Binding IsMicrosoftRequired}"
                                         Background="Transparent" BorderThickness="0"
-                                        Padding="0"
+                                        Padding="0" HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Stretch">
                                     <Border CornerRadius="10" Padding="12,10"
                                             Background="{DynamicResource ThemeSurfaceBrush}"
@@ -1255,21 +1244,16 @@
                                                 <TextBlock Text="Connect your account"
                                                            FontSize="{DynamicResource ThemeFontSizeXs}"
                                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                           IsVisible="{Binding MicrosoftConnections.Count, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=0}"
+                                                           IsVisible="{Binding !IsMicrosoftConnected}"
                                                            TextWrapping="Wrap"/>
                                                 <!-- Connected -->
                                                 <TextBlock Text="Connected"
                                                            FontSize="{DynamicResource ThemeFontSizeXs}"
                                                            Foreground="{DynamicResource ThemeSuccessBrush}"
-                                                           IsVisible="{Binding MicrosoftConnections.Count, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter=0}"
+                                                           IsVisible="{Binding IsMicrosoftConnected}"
                                                            TextWrapping="Wrap"/>
                                             </StackPanel>
-                                            <!-- Action hint / spinner -->
-                                            <TextBlock Grid.Column="2" Text="Connect"
-                                                       FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                       Foreground="{DynamicResource ThemePrimaryBrush}"
-                                                       VerticalAlignment="Center"
-                                                       IsVisible="{Binding MicrosoftConnections.Count, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=0}"/>
+                                            <!-- Connecting spinner -->
                                             <ProgressBar Grid.Column="2" IsIndeterminate="True" Width="40" Height="3"
                                                          VerticalAlignment="Center"
                                                          IsVisible="{Binding IsMicrosoftConnecting}"/>
