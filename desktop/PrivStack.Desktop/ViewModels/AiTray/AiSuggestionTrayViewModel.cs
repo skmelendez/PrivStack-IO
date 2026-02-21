@@ -24,11 +24,19 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
 
     private readonly IIntentEngine _intentEngine;
     private readonly IUiDispatcher _dispatcher;
+    private readonly IAppSettingsService _appSettings;
+    private readonly IAiService _aiService;
 
-    public AiSuggestionTrayViewModel(IIntentEngine intentEngine, IUiDispatcher dispatcher)
+    public AiSuggestionTrayViewModel(
+        IIntentEngine intentEngine,
+        IUiDispatcher dispatcher,
+        IAppSettingsService appSettings,
+        IAiService aiService)
     {
         _intentEngine = intentEngine;
         _dispatcher = dispatcher;
+        _appSettings = appSettings;
+        _aiService = aiService;
 
         // Subscribe to IntentEngine events for intent cards
         _intentEngine.SuggestionAdded += OnIntentSuggestionAdded;
@@ -62,7 +70,10 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     [ObservableProperty]
     private bool _isOpen;
 
-    public bool IsEnabled => _intentEngine.IsEnabled;
+    /// <summary>
+    /// The tray is visible when any AI feature is enabled (not just intents).
+    /// </summary>
+    public bool IsEnabled => _appSettings.Settings.AiEnabled && _aiService.IsAvailable;
 
     // ── Commands ─────────────────────────────────────────────────────
 

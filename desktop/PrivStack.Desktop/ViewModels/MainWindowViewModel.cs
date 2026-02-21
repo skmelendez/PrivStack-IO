@@ -174,7 +174,9 @@ public partial class MainWindowViewModel : ViewModelBase
     public AiTray.AiSuggestionTrayViewModel AiTrayVM => _aiTrayVM ??=
         new AiTray.AiSuggestionTrayViewModel(
             App.Services.GetRequiredService<IIntentEngine>(),
-            App.Services.GetRequiredService<IUiDispatcher>());
+            App.Services.GetRequiredService<IUiDispatcher>(),
+            App.Services.GetRequiredService<IAppSettingsService>(),
+            App.Services.GetRequiredService<IAiService>());
 
     private IntentSlotEditorViewModel? _intentSlotEditorVM;
     public IntentSlotEditorViewModel IntentSlotEditorVM => _intentSlotEditorVM ??=
