@@ -41,7 +41,7 @@ hostname = "0.4"
 hex = "0.4"
 
 [target.'cfg(target_os = "android")'.dependencies]
-jni = "0.21"
+jni = "0.22"
 
 [dev-dependencies]
 serial_test = "3.1"
