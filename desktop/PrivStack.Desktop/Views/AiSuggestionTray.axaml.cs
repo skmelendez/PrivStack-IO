@@ -30,7 +30,7 @@ public partial class AiSuggestionTray : UserControl
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
                 sv.ScrollToEnd();
-            }, Avalonia.Threading.DispatcherPriority.Layout);
+            }, Avalonia.Threading.DispatcherPriority.Render);
         }
     }
 
