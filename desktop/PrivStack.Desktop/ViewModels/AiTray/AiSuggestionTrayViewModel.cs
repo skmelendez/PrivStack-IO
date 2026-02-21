@@ -147,30 +147,30 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     {
         try
         {
+            var displayName = EntityTypeMap.GetDisplayName(linkType) ?? linkType;
+            string? json = null;
+
+            // Try SDK entity read for mapped types
             var entityType = EntityTypeMap.GetEntityType(linkType);
-            if (entityType == null) return;
-
-            var response = await _sdk.SendAsync<JsonElement>(new SdkMessage
+            if (entityType != null)
             {
-                PluginId = "privstack.graph",
-                Action = SdkAction.Read,
-                EntityType = entityType,
-                EntityId = itemId,
-            });
+                json = await FetchEntityViaSDkAsync(entityType, itemId);
 
-            if (!response.Success || response.Data.ValueKind == JsonValueKind.Undefined) return;
+                // For notes, append embedded dataset/table content
+                if (json != null && linkType == "page")
+                    json = await AppendEmbeddedDatasetContentAsync(json, itemId);
+            }
 
-            // Verify we're still looking at the same item
-            if (_infoPanelService.ActiveItemId != itemId) return;
+            // Fallback: query via IPluginDataSourceProvider for unmapped types (e.g. dataset_row)
+            if (json == null)
+                json = await FetchEntityViaDataSourceProviderAsync(linkType, itemId);
 
-            var json = JsonSerializer.Serialize(response.Data, new JsonSerializerOptions { WriteIndented = true });
+            if (json == null || _infoPanelService.ActiveItemId != itemId) return;
 
-            // Cap at ~8K chars to avoid blowing up the prompt on huge entities
             const int maxContextChars = 8000;
             if (json.Length > maxContextChars)
                 json = json[..maxContextChars] + "\n... (truncated)";
 
-            var displayName = EntityTypeMap.GetDisplayName(linkType) ?? linkType;
             _activeItemContextFull =
                 $"The user is currently viewing a {displayName} item: \"{title}\"\n" +
                 $"Full entity data (JSON):\n```json\n{json}\n```";
@@ -178,6 +178,120 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
         catch (Exception ex)
         {
             _log.Debug(ex, "Failed to fetch active item entity for context: {LinkType}:{ItemId}", linkType, itemId);
+        }
+    }
+
+    private async Task<string?> FetchEntityViaSDkAsync(string entityType, string itemId)
+    {
+        var response = await _sdk.SendAsync<JsonElement>(new SdkMessage
+        {
+            PluginId = "privstack.graph",
+            Action = SdkAction.Read,
+            EntityType = entityType,
+            EntityId = itemId,
+        });
+
+        if (!response.Success || response.Data.ValueKind == JsonValueKind.Undefined) return null;
+        return JsonSerializer.Serialize(response.Data, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private async Task<string?> FetchEntityViaDataSourceProviderAsync(string linkType, string itemId)
+    {
+        var providers = _pluginRegistry.GetCapabilityProviders<PrivStack.Sdk.Capabilities.IPluginDataSourceProvider>();
+        var provider = providers.FirstOrDefault(p => p.NavigationLinkType == linkType);
+        if (provider == null) return null;
+
+        try
+        {
+            // Query the provider filtering by ID — fetch a small page and serialize
+            var result = await provider.QueryItemAsync("all", page: 0, pageSize: 50, filterText: itemId);
+            if (result.Rows.Count == 0) return null;
+
+            // Build a readable representation: column headers + matching rows
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Columns: {string.Join(", ", result.Columns)}");
+            foreach (var row in result.Rows)
+            {
+                var fields = new List<string>();
+                for (var i = 0; i < Math.Min(row.Count, result.Columns.Count); i++)
+                    fields.Add($"{result.Columns[i]}: {row[i]}");
+                sb.AppendLine(string.Join(", ", fields));
+            }
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            _log.Debug(ex, "DataSourceProvider query failed for {LinkType}:{ItemId}", linkType, itemId);
+            return null;
+        }
+    }
+
+    private async Task<string> AppendEmbeddedDatasetContentAsync(string noteJson, string itemId)
+    {
+        try
+        {
+            // Parse the note JSON to find embedded table/dataset references
+            using var doc = JsonDocument.Parse(noteJson);
+            var root = doc.RootElement;
+
+            // Look for content field that may contain table block references
+            if (!root.TryGetProperty("content", out var content) || content.ValueKind != JsonValueKind.String)
+                return noteJson;
+
+            var contentStr = content.GetString() ?? "";
+
+            // Find dataset_id references in the note content (tables reference datasets by ID)
+            var datasetIds = new HashSet<string>();
+            var idx = 0;
+            while ((idx = contentStr.IndexOf("dataset_id", idx, StringComparison.Ordinal)) >= 0)
+            {
+                // Simple extraction: find the value after dataset_id
+                var start = contentStr.IndexOf('"', idx + 10);
+                if (start < 0) { idx++; continue; }
+                start++; // skip opening quote
+                var end = contentStr.IndexOf('"', start);
+                if (end > start && end - start < 100)
+                    datasetIds.Add(contentStr[start..end]);
+                idx = end > 0 ? end : idx + 1;
+            }
+
+            if (datasetIds.Count == 0) return noteJson;
+
+            // Fetch each dataset's first rows via IPluginDataSourceProvider
+            var providers = _pluginRegistry.GetCapabilityProviders<PrivStack.Sdk.Capabilities.IPluginDataSourceProvider>();
+            var dataProvider = providers.FirstOrDefault(p => p.NavigationLinkType == "dataset_row");
+            if (dataProvider == null) return noteJson;
+
+            var sb = new System.Text.StringBuilder(noteJson);
+            foreach (var dsId in datasetIds.Take(3)) // cap at 3 datasets
+            {
+                try
+                {
+                    var result = await dataProvider.QueryItemAsync(dsId, page: 0, pageSize: 20);
+                    if (result.Rows.Count == 0) continue;
+
+                    sb.AppendLine();
+                    sb.AppendLine($"\n--- Embedded Dataset ({dsId}) ---");
+                    sb.AppendLine($"Columns: {string.Join(", ", result.Columns)}");
+                    sb.AppendLine($"Total rows: {result.TotalCount}");
+                    foreach (var row in result.Rows)
+                    {
+                        var fields = new List<string>();
+                        for (var i = 0; i < Math.Min(row.Count, result.Columns.Count); i++)
+                            fields.Add($"{result.Columns[i]}: {row[i]}");
+                        sb.AppendLine(string.Join(" | ", fields));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.Debug(ex, "Failed to fetch embedded dataset {DatasetId} for note {NoteId}", dsId, itemId);
+                }
+            }
+            return sb.ToString();
+        }
+        catch
+        {
+            return noteJson; // If parsing fails, just return the original
         }
     }
 

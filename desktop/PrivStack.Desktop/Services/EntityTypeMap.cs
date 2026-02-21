@@ -28,6 +28,8 @@ public static class EntityTypeMap
         new("vault_file", "file", "FileText", "Files"),
         new("sticky_note", "sticky_note", "Edit", "Sticky Notes"),
         new("wiki_source", "wiki_source", "Globe", "Wiki Sources"),
+        new("email_message", "email_message", "Mail", "Email"),
+        new("web_clip", "web_clip", "Globe", "Web Clips"),
     ];
 
     private static readonly Dictionary<string, EntityTypeInfo> _byLinkType =

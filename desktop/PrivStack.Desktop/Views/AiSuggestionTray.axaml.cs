@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -7,6 +8,8 @@ namespace PrivStack.Desktop.Views;
 
 public partial class AiSuggestionTray : UserControl
 {
+    private AiSuggestionTrayViewModel? _currentVm;
+
     public AiSuggestionTray()
     {
         InitializeComponent();
@@ -15,11 +18,24 @@ public partial class AiSuggestionTray : UserControl
 
     private void OnDataContextChanged(object? sender, System.EventArgs e)
     {
-        if (DataContext is AiSuggestionTrayViewModel vm)
+        if (_currentVm != null)
         {
-            vm.ScrollToBottomRequested -= OnScrollToBottomRequested;
-            vm.ScrollToBottomRequested += OnScrollToBottomRequested;
+            _currentVm.ScrollToBottomRequested -= OnScrollToBottomRequested;
+            _currentVm.PropertyChanged -= OnVmPropertyChanged;
         }
+
+        _currentVm = DataContext as AiSuggestionTrayViewModel;
+        if (_currentVm != null)
+        {
+            _currentVm.ScrollToBottomRequested += OnScrollToBottomRequested;
+            _currentVm.PropertyChanged += OnVmPropertyChanged;
+        }
+    }
+
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AiSuggestionTrayViewModel.SelectedTabIndex) && _currentVm != null)
+            ApplyTabVisibility(_currentVm.SelectedTabIndex);
     }
 
     private void OnScrollToBottomRequested(object? sender, System.EventArgs e)
@@ -40,9 +56,13 @@ public partial class AiSuggestionTray : UserControl
 
     private void SwitchTab(int index)
     {
-        if (DataContext is AiSuggestionTrayViewModel vm)
-            vm.SelectedTabIndex = index;
+        if (_currentVm != null)
+            _currentVm.SelectedTabIndex = index;
+        ApplyTabVisibility(index);
+    }
 
+    private void ApplyTabVisibility(int index)
+    {
         var chatPanel = this.FindControl<Panel>("ChatPanel");
         var intentsPanel = this.FindControl<Panel>("IntentsPanel");
         var historyPanel = this.FindControl<Panel>("HistoryPanel");
