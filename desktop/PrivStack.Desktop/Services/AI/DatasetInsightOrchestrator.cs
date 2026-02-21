@@ -98,6 +98,14 @@ internal sealed class DatasetInsightOrchestrator
                 - Place the chart marker right after the paragraph that describes the insight it visualizes
                 - Only suggest charts where they genuinely add clarity — not every section needs one
                 - Prefer variety: use different chart types across sections when appropriate
+
+                FORMATTING:
+                - Use --- on its own line to insert a visual divider between major sections
+                - When presenting tabular data (e.g., top N values, comparisons, statistics), use markdown pipe tables:
+                  | Column A | Column B |
+                  |----------|----------|
+                  | value1   | value2   |
+                - Tables are rendered as rich interactive tables in the output — prefer them over bullet lists for structured data
                 """,
             UserPrompt = $"""
                 Dataset: "{msg.DatasetName}"
@@ -221,30 +229,98 @@ internal sealed class DatasetInsightOrchestrator
     }
 
     /// <summary>
-    /// Converts section content text into paragraph and chart blocks.
-    /// Lines matching [CHART: ...] are converted to dataset-backed chart blocks.
+    /// Converts section content text into paragraph, chart, divider, and table blocks.
+    /// Recognizes [CHART:] markers, --- dividers, and markdown pipe tables.
     /// </summary>
     private static void BuildSectionBlocks(
         string content, DatasetInsightResult result, List<JsonObject> blocks)
     {
         var paragraph = new StringBuilder();
+        var lines = content.Split('\n');
+        var i = 0;
 
-        foreach (var line in content.Split('\n'))
+        while (i < lines.Length)
         {
+            var line = lines[i];
+
+            // Chart marker
             var chart = TryParseChartMarker(line, result.Columns);
             if (chart != null)
             {
-                // Flush accumulated paragraph text before the chart
                 FlushParagraph(paragraph, blocks);
                 blocks.Add(InsightPageBuilder.BuildChartBlock(chart, result.DatasetId));
+                i++;
+                continue;
             }
-            else
+
+            // Horizontal rule / divider (---, ***, ___ with optional spaces)
+            if (DividerRegex.IsMatch(line))
             {
-                paragraph.AppendLine(line);
+                FlushParagraph(paragraph, blocks);
+                blocks.Add(InsightPageBuilder.BuildDividerBlock());
+                i++;
+                continue;
             }
+
+            // Markdown pipe table detection
+            if (IsTableRow(line) && i + 1 < lines.Length && IsTableSeparator(lines[i + 1]))
+            {
+                FlushParagraph(paragraph, blocks);
+                var (headers, dataRows, consumed) = ParseMarkdownTable(lines, i);
+                if (headers.Count > 0)
+                    blocks.Add(InsightPageBuilder.BuildTableBlock(headers, dataRows));
+                i += consumed;
+                continue;
+            }
+
+            paragraph.AppendLine(line);
+            i++;
         }
 
         FlushParagraph(paragraph, blocks);
+    }
+
+    private static readonly Regex DividerRegex = new(
+        @"^\s*[-*_]{3,}\s*$", RegexOptions.Compiled);
+
+    private static bool IsTableRow(string line) =>
+        line.TrimStart().StartsWith('|') && line.TrimEnd().EndsWith('|');
+
+    private static bool IsTableSeparator(string line) =>
+        IsTableRow(line) && Regex.IsMatch(line, @"^\s*\|[\s:_-|]+\|\s*$");
+
+    private static (List<string> headers, List<List<string>> rows, int linesConsumed)
+        ParseMarkdownTable(string[] lines, int startIndex)
+    {
+        var headers = new List<string>();
+        var rows = new List<List<string>>();
+        var idx = startIndex;
+
+        // Header row
+        if (idx < lines.Length && IsTableRow(lines[idx]))
+        {
+            headers = ParseTableCells(lines[idx]);
+            idx++;
+        }
+
+        // Separator row (skip it)
+        if (idx < lines.Length && IsTableSeparator(lines[idx]))
+            idx++;
+
+        // Data rows
+        while (idx < lines.Length && IsTableRow(lines[idx]))
+        {
+            rows.Add(ParseTableCells(lines[idx]));
+            idx++;
+        }
+
+        return (headers, rows, idx - startIndex);
+    }
+
+    private static List<string> ParseTableCells(string line)
+    {
+        var trimmed = line.Trim().Trim('|');
+        return trimmed.Split('|').Select(c => c.Trim()).ToList();
     }
 
     private static void FlushParagraph(StringBuilder sb, List<JsonObject> blocks)

@@ -72,6 +72,66 @@ internal static class InsightPageBuilder
         };
     }
 
+    /// <summary>Builds a horizontal_rule (divider) block.</summary>
+    public static JsonObject BuildDividerBlock()
+    {
+        return new JsonObject
+        {
+            ["id"] = Guid.NewGuid().ToString(),
+            ["type"] = "horizontal_rule",
+        };
+    }
+
+    /// <summary>
+    /// Builds an inline table block from parsed markdown table data.
+    /// First row is treated as the header row.
+    /// </summary>
+    public static JsonObject BuildTableBlock(List<string> headers, List<List<string>> dataRows)
+    {
+        var alignments = new JsonArray();
+        foreach (var _ in headers)
+            alignments.Add("left");
+
+        var rows = new JsonArray();
+
+        // Header row
+        var headerCells = new JsonArray();
+        foreach (var h in headers)
+            headerCells.Add(h.Trim());
+
+        rows.Add(new JsonObject
+        {
+            ["id"] = Guid.NewGuid().ToString(),
+            ["is_header"] = true,
+            ["cells"] = headerCells,
+        });
+
+        // Data rows
+        foreach (var row in dataRows)
+        {
+            var cells = new JsonArray();
+            for (var i = 0; i < headers.Count; i++)
+                cells.Add(i < row.Count ? row[i].Trim() : "");
+
+            rows.Add(new JsonObject
+            {
+                ["id"] = Guid.NewGuid().ToString(),
+                ["is_header"] = false,
+                ["cells"] = cells,
+            });
+        }
+
+        return new JsonObject
+        {
+            ["id"] = Guid.NewGuid().ToString(),
+            ["type"] = "table",
+            ["alignments"] = alignments,
+            ["rows"] = rows,
+            ["has_header"] = true,
+            ["is_striped"] = true,
+        };
+    }
+
     /// <summary>
     /// Builds a dataset-backed chart block. Derives orientation, inner_radius_ratio,
     /// and show_legend from the chart type.
