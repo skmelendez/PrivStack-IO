@@ -29,7 +29,8 @@ internal sealed class PluginHost : IPluginHost
         IConnectionService? connectionService = null,
         IPropertyService? propertyService = null,
         IAiService? aiService = null,
-        IIntentEngine? intentEngine = null)
+        IIntentEngine? intentEngine = null,
+        IAiSuggestionService? suggestionService = null)
     {
         Sdk = sdk;
         Capabilities = capabilities;
@@ -44,6 +45,7 @@ internal sealed class PluginHost : IPluginHost
         Properties = propertyService;
         AI = aiService;
         IntentEngine = intentEngine;
+        Suggestions = suggestionService;
         Messenger = WeakReferenceMessenger.Default;
         AppVersion = typeof(PluginHost).Assembly.GetName().Version ?? new Version(1, 0, 0);
     }
@@ -61,6 +63,7 @@ internal sealed class PluginHost : IPluginHost
     public IPropertyService? Properties { get; }
     public IAiService? AI { get; }
     public IIntentEngine? IntentEngine { get; }
+    public IAiSuggestionService? Suggestions { get; }
     public IMessenger Messenger { get; }
     public Version AppVersion { get; }
 

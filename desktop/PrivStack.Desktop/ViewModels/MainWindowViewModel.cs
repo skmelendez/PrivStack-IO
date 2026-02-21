@@ -170,9 +170,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private EmojiPickerViewModel? _emojiPickerVM;
     public EmojiPickerViewModel EmojiPickerVM => _emojiPickerVM ??= new EmojiPickerViewModel(_ => { });
 
-    private IntentSuggestionTrayViewModel? _intentTrayVM;
-    public IntentSuggestionTrayViewModel IntentTrayVM => _intentTrayVM ??=
-        new IntentSuggestionTrayViewModel(
+    private AiTray.AiSuggestionTrayViewModel? _aiTrayVM;
+    public AiTray.AiSuggestionTrayViewModel AiTrayVM => _aiTrayVM ??=
+        new AiTray.AiSuggestionTrayViewModel(
             App.Services.GetRequiredService<IIntentEngine>(),
             App.Services.GetRequiredService<IUiDispatcher>());
 
@@ -182,7 +182,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAnyOverlayPanelOpen))]
-    private bool _isIntentTrayOpen;
+    private bool _isAiTrayOpen;
 
     /// <summary>
     /// Opens the unified emoji picker with the given selection callback.
@@ -262,7 +262,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public bool IsAnyOverlayPanelOpen =>
-        IsSyncPanelOpen || IsSettingsPanelOpen || IsIntentTrayOpen || IsQuickActionOverlayOpen;
+        IsSyncPanelOpen || IsSettingsPanelOpen || IsAiTrayOpen || IsQuickActionOverlayOpen;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SidebarCollapseTooltip))]
@@ -837,10 +837,10 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ToggleIntentTray()
+    private void ToggleAiTray()
     {
-        IsIntentTrayOpen = !IsIntentTrayOpen;
-        if (IsIntentTrayOpen)
+        IsAiTrayOpen = !IsAiTrayOpen;
+        if (IsAiTrayOpen)
         {
             IsSyncPanelOpen = false;
             IsSettingsPanelOpen = false;
@@ -856,7 +856,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SyncVM.StopRefreshTimer();
         }
         IsSettingsPanelOpen = false;
-        IsIntentTrayOpen = false;
+        IsAiTrayOpen = false;
         IsUserMenuOpen = false;
     }
 

@@ -366,9 +366,9 @@
 
                             <!-- Right side: Intent Tray + Update status + Subscription + Storage -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
-                                <!-- AI Intent Suggestions Button -->
-                                <Button Command="{Binding ToggleIntentTrayCommand}"
-                                        IsVisible="{Binding IntentTrayVM.IsEnabled}"
+                                <!-- AI Suggestions Button -->
+                                <Button Command="{Binding ToggleAiTrayCommand}"
+                                        IsVisible="{Binding AiTrayVM.IsEnabled}"
                                         Background="Transparent" BorderThickness="0"
                                         Padding="0" Margin="0"
                                         MinHeight="0" MinWidth="0"
@@ -385,7 +385,7 @@
                                                  Width="14" Height="14"
                                                  Foreground="{DynamicResource ThemePrimaryBrush}"/>
                                         <!-- Badge count -->
-                                        <Border IsVisible="{Binding IntentTrayVM.HasSuggestions}"
+                                        <Border IsVisible="{Binding AiTrayVM.HasCards}"
                                                 Background="{DynamicResource ThemePrimaryBrush}"
                                                 CornerRadius="6"
                                                 MinWidth="14" Height="14"
@@ -393,7 +393,7 @@
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Top"
                                                 Margin="8,-6,-6,0">
-                                            <TextBlock Text="{Binding IntentTrayVM.PendingCount}"
+                                            <TextBlock Text="{Binding AiTrayVM.PendingCount}"
                                                        FontSize="9"
                                                        FontWeight="Bold"
                                                        Foreground="{DynamicResource ThemeTextOnAccentBrush}"
@@ -592,12 +592,12 @@
         <!-- Property Template Manager Dialog Overlay -->
         <views:PropertyTemplateDialog DataContext="{Binding InfoPanelVM.TemplateDialog}" ZIndex="1001"/>
 
-        <!-- Intent Suggestion Tray Panel (floating, right-aligned) -->
+        <!-- AI Suggestion Tray Panel (floating, right-aligned) -->
         <Border HorizontalAlignment="Right" VerticalAlignment="Top"
                 Width="400" MaxHeight="600"
                 ZIndex="1000"
                 Margin="0,56,16,0"
-                IsVisible="{Binding IsIntentTrayOpen}"
+                IsVisible="{Binding IsAiTrayOpen}"
                 Background="{DynamicResource ThemeSurfaceBrush}"
                 BorderBrush="{DynamicResource ThemeBorderBrush}"
                 BorderThickness="1"
@@ -615,8 +615,8 @@
                                    VerticalAlignment="Center"/>
                         <Button Grid.Column="1"
                                 Content="Clear All"
-                                Command="{Binding IntentTrayVM.ClearAllCommand}"
-                                IsVisible="{Binding IntentTrayVM.HasSuggestions}"
+                                Command="{Binding AiTrayVM.ClearAllCommand}"
+                                IsVisible="{Binding AiTrayVM.HasCards}"
                                 Background="Transparent"
                                 Foreground="{DynamicResource ThemeTextMutedBrush}"
                                 FontSize="{DynamicResource ThemeFontSizeXs}"
@@ -624,7 +624,7 @@
                                 VerticalAlignment="Center"/>
                         <Button Grid.Column="2"
                                 Content="×"
-                                Command="{Binding ToggleIntentTrayCommand}"
+                                Command="{Binding ToggleAiTrayCommand}"
                                 Background="{DynamicResource ThemeSecondaryBrush}"
                                 Foreground="{DynamicResource ThemeTextBrush}"
                                 FontSize="{DynamicResource ThemeFontSizeMd}"
@@ -638,7 +638,7 @@
                                 Cursor="Hand"/>
                     </Grid>
                 </Border>
-                <views:IntentSuggestionTray Grid.Row="1" DataContext="{Binding IntentTrayVM}"/>
+                <views:AiSuggestionTray Grid.Row="1" DataContext="{Binding AiTrayVM}"/>
             </Grid>
         </Border>
 

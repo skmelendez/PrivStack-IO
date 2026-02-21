@@ -30,6 +30,7 @@ internal sealed class PluginHostFactory
     private readonly IToastService _toastService;
     private readonly IAiService _aiService;
     private readonly IIntentEngine _intentEngine;
+    private readonly IAiSuggestionService _suggestionService;
 
     public ICapabilityBroker CapabilityBroker => _capabilityBroker;
 
@@ -47,6 +48,7 @@ internal sealed class PluginHostFactory
         _toastService = App.Services.GetRequiredService<IToastService>();
         _aiService = App.Services.GetRequiredService<IAiService>();
         _intentEngine = App.Services.GetRequiredService<IIntentEngine>();
+        _suggestionService = App.Services.GetRequiredService<IAiSuggestionService>();
 
         // Register the default local filesystem storage provider
         _capabilityBroker.Register<IStorageProvider>(new LocalStorageProvider());
@@ -58,6 +60,6 @@ internal sealed class PluginHostFactory
 
     public IPluginHost CreateHost(string pluginId)
     {
-        return new PluginHost(_sdkHost, _capabilityBroker, pluginId, _dialogService, _appSettings, _pluginRegistry, _dispatcher, _infoPanelService, _focusModeService, _toastService, _connectionService, _propertyService, _aiService, _intentEngine);
+        return new PluginHost(_sdkHost, _capabilityBroker, pluginId, _dialogService, _appSettings, _pluginRegistry, _dispatcher, _infoPanelService, _focusModeService, _toastService, _connectionService, _propertyService, _aiService, _intentEngine, _suggestionService);
     }
 }

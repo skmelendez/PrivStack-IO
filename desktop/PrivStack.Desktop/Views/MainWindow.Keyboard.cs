@@ -234,6 +234,13 @@ public partial class MainWindow
                 return;
             }
 
+            if (vm.IsAiTrayOpen)
+            {
+                vm.ToggleAiTrayCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+
             if (vm.UpdateVM.IsUpdateModalOpen)
             {
                 vm.UpdateVM.CloseModalCommand.Execute(null);

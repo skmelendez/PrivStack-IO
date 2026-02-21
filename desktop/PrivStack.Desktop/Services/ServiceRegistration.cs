@@ -90,6 +90,7 @@ public static class ServiceRegistration
         services.AddSingleton<IAiService>(sp => sp.GetRequiredService<AiService>());
         services.AddSingleton<IntentEngine>();
         services.AddSingleton<IIntentEngine>(sp => sp.GetRequiredService<IntentEngine>());
+        services.AddSingleton<IAiSuggestionService, AiSuggestionServiceImpl>();
         services.AddSingleton<ViewStatePrefetchService>();
         services.AddSingleton<LinkProviderCacheService>();
         services.AddSingleton<IDatasetService, DatasetService>();
