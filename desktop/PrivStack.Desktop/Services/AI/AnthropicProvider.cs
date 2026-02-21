@@ -13,12 +13,13 @@ internal sealed class AnthropicProvider : AiProviderBase
     private const string ApiUrl = "https://api.anthropic.com/v1/messages";
     private const string VaultId = "ai-vault";
     private const string BlobId = "anthropic-api-key";
-    private const string DefaultModel = "claude-sonnet-4-20250514";
+    private const string DefaultModel = "claude-sonnet-4-6";
     private const string ApiVersion = "2023-06-01";
 
     private static readonly AiModelInfo[] Models =
     [
-        new() { Id = "claude-sonnet-4-20250514", DisplayName = "Claude Sonnet 4", ContextWindowTokens = 200_000 },
+        new() { Id = "claude-sonnet-4-6", DisplayName = "Claude Sonnet 4.6", ContextWindowTokens = 200_000 },
+        new() { Id = "claude-opus-4-6", DisplayName = "Claude Opus 4.6", ContextWindowTokens = 200_000 },
         new() { Id = "claude-haiku-4-5-20251001", DisplayName = "Claude Haiku 4.5", ContextWindowTokens = 200_000 },
         new() { Id = "claude-sonnet-4-5-20250929", DisplayName = "Claude Sonnet 4.5", ContextWindowTokens = 200_000 },
     ];

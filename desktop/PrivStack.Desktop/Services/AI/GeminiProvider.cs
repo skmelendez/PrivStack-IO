@@ -13,13 +13,13 @@ internal sealed class GeminiProvider : AiProviderBase
     private const string ApiBase = "https://generativelanguage.googleapis.com/v1beta/models";
     private const string VaultId = "ai-vault";
     private const string BlobId = "gemini-api-key";
-    private const string DefaultModel = "gemini-2.0-flash";
+    private const string DefaultModel = "gemini-2.5-flash";
 
     private static readonly AiModelInfo[] Models =
     [
-        new() { Id = "gemini-2.0-flash", DisplayName = "Gemini 2.0 Flash", ContextWindowTokens = 1_000_000 },
-        new() { Id = "gemini-2.0-flash-lite", DisplayName = "Gemini 2.0 Flash Lite", ContextWindowTokens = 1_000_000 },
-        new() { Id = "gemini-2.5-pro-preview-05-06", DisplayName = "Gemini 2.5 Pro", ContextWindowTokens = 1_000_000 },
+        new() { Id = "gemini-2.5-pro", DisplayName = "Gemini 2.5 Pro", ContextWindowTokens = 1_000_000 },
+        new() { Id = "gemini-2.5-flash", DisplayName = "Gemini 2.5 Flash", ContextWindowTokens = 1_000_000 },
+        new() { Id = "gemini-2.5-flash-lite", DisplayName = "Gemini 2.5 Flash Lite", ContextWindowTokens = 1_000_000 },
     ];
 
     private readonly IPrivStackSdk _sdk;

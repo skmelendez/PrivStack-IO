@@ -17,9 +17,11 @@ internal sealed class OpenAiProvider : AiProviderBase
 
     private static readonly AiModelInfo[] Models =
     [
+        new() { Id = "gpt-4.1", DisplayName = "GPT-4.1", ContextWindowTokens = 1_000_000 },
+        new() { Id = "gpt-4.1-mini", DisplayName = "GPT-4.1 Mini", ContextWindowTokens = 1_000_000 },
         new() { Id = "gpt-4o", DisplayName = "GPT-4o", ContextWindowTokens = 128_000 },
         new() { Id = "gpt-4o-mini", DisplayName = "GPT-4o Mini", ContextWindowTokens = 128_000 },
-        new() { Id = "gpt-4-turbo", DisplayName = "GPT-4 Turbo", ContextWindowTokens = 128_000 },
+        new() { Id = "o4-mini", DisplayName = "o4-mini", ContextWindowTokens = 200_000 },
     ];
 
     private readonly IPrivStackSdk _sdk;

@@ -194,6 +194,9 @@ public class AppSettings
     [JsonPropertyName("ai_intent_auto_analyze")]
     public bool AiIntentAutoAnalyze { get; set; } = true;
 
+    [JsonPropertyName("ai_saved_key_hints")]
+    public Dictionary<string, string> AiSavedKeyHints { get; set; } = [];
+
     // Sync settings
     [JsonPropertyName("sync_device_name")]
     public string? SyncDeviceName { get; set; }

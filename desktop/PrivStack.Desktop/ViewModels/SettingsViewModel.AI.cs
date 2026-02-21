@@ -27,6 +27,11 @@ public record AiProviderOption(string Id, string DisplayName);
 public record AiLocalModelOption(string Id, string DisplayName, string SizeText, bool IsDownloaded);
 
 /// <summary>
+/// Represents a saved API key entry for display in the settings panel.
+/// </summary>
+public record SavedApiKeyEntry(string ProviderId, string ProviderDisplayName, string KeyHint);
+
+/// <summary>
 /// AI settings section of the Settings panel.
 /// </summary>
 public partial class SettingsViewModel
@@ -84,6 +89,7 @@ public partial class SettingsViewModel
     public ObservableCollection<AiProviderOption> AiProviderOptions { get; } = [];
     public ObservableCollection<AiModelInfo> AiCloudModels { get; } = [];
     public ObservableCollection<AiLocalModelOption> AiLocalModels { get; } = [];
+    public ObservableCollection<SavedApiKeyEntry> SavedApiKeys { get; } = [];
 
     // ── Computed Properties ────────────────────────────────────────────
 
@@ -141,6 +147,8 @@ public partial class SettingsViewModel
 
         AiIntentEnabled = settings.AiIntentEnabled;
         AiIntentAutoAnalyze = settings.AiIntentAutoAnalyze;
+
+        LoadSavedApiKeys();
     }
 
     private void RefreshAiCloudModels()
@@ -178,6 +186,25 @@ public partial class SettingsViewModel
             }
         }
         catch { /* model manager may not be ready */ }
+    }
+
+    private static readonly Dictionary<string, (string DisplayName, string BlobId)> ProviderKeyMap = new()
+    {
+        ["openai"] = ("OpenAI", "openai-api-key"),
+        ["anthropic"] = ("Anthropic", "anthropic-api-key"),
+        ["gemini"] = ("Google Gemini", "gemini-api-key"),
+    };
+
+    private void LoadSavedApiKeys()
+    {
+        SavedApiKeys.Clear();
+        var hints = _settingsService.Settings.AiSavedKeyHints;
+        foreach (var (providerId, hint) in hints)
+        {
+            var displayName = ProviderKeyMap.TryGetValue(providerId, out var info)
+                ? info.DisplayName : providerId;
+            SavedApiKeys.Add(new SavedApiKeyEntry(providerId, displayName, hint));
+        }
     }
 
     // ── Change Handlers ────────────────────────────────────────────────
@@ -270,9 +297,17 @@ public partial class SettingsViewModel
             var keyBytes = System.Text.Encoding.UTF8.GetBytes(AiApiKey.Trim());
             await sdk.VaultBlobStore("ai-vault", blobId, keyBytes);
 
+            // Store hint (last 4 chars) for display
+            var trimmedKey = AiApiKey.Trim();
+            var hint = trimmedKey.Length >= 4 ? trimmedKey[^4..] : trimmedKey;
+            _settingsService.Settings.AiSavedKeyHints[SelectedAiProvider.Id] = hint;
+            _settingsService.SaveDebounced();
+
             AiApiKeyStatus = "API key saved to vault";
             AiApiKeySaveLabel = "Saved";
             AiApiKey = null;
+
+            LoadSavedApiKeys();
 
             // Clear cached key in provider
             var aiService = App.Services.GetRequiredService<AiService>();
@@ -321,6 +356,46 @@ public partial class SettingsViewModel
             IsAiLocalModelDownloading = false;
             var modelManager = App.Services.GetRequiredService<AiModelManager>();
             modelManager.PropertyChanged -= OnAiModelManagerPropertyChanged;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteAiApiKeyAsync(SavedApiKeyEntry? entry)
+    {
+        if (entry == null) return;
+
+        if (!ProviderKeyMap.TryGetValue(entry.ProviderId, out var info)) return;
+
+        try
+        {
+            var sdk = App.Services.GetRequiredService<IPrivStackSdk>();
+
+            var isUnlocked = await sdk.VaultIsUnlocked("ai-vault");
+            if (!isUnlocked)
+            {
+                var unlocked = await sdk.RequestVaultUnlockAsync("ai-vault");
+                if (!unlocked) { AiApiKeyStatus = "Vault unlock required"; return; }
+            }
+
+            await sdk.VaultBlobDelete("ai-vault", info.BlobId);
+
+            _settingsService.Settings.AiSavedKeyHints.Remove(entry.ProviderId);
+            _settingsService.SaveDebounced();
+
+            LoadSavedApiKeys();
+
+            // Clear cached key in the provider
+            var aiService = App.Services.GetRequiredService<AiService>();
+            var provider = aiService.GetProvider(entry.ProviderId);
+            if (provider is OpenAiProvider oai) oai.ClearCachedKey();
+            if (provider is AnthropicProvider ant) ant.ClearCachedKey();
+            if (provider is GeminiProvider gem) gem.ClearCachedKey();
+
+            AiApiKeyStatus = $"{entry.ProviderDisplayName} API key deleted";
+        }
+        catch (Exception ex)
+        {
+            AiApiKeyStatus = $"Failed to delete: {ex.Message}";
         }
     }
 

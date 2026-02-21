@@ -766,6 +766,45 @@
                                        Foreground="{DynamicResource ThemeTextMutedBrush}"/>
                         </StackPanel>
 
+                        <!-- Saved API keys list -->
+                        <StackPanel Spacing="6"
+                                    IsVisible="{Binding AiEnabled}">
+                            <TextBlock Text="Saved Keys" Classes="field-label"
+                                       IsVisible="{Binding SavedApiKeys.Count}"/>
+                            <ItemsControl ItemsSource="{Binding SavedApiKeys}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SavedApiKeyEntry">
+                                        <Border Classes="card" Padding="10,8" Margin="0,0,0,4">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <TextBlock Text="****" FontFamily="Consolas,Menlo,monospace"
+                                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding KeyHint}" FontFamily="Consolas,Menlo,monospace"
+                                                               FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding ProviderDisplayName, StringFormat='[{0}]'}"
+                                                               FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                               Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        Content="&#xD7;"
+                                                        Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).DeleteAiApiKeyCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="6,2"
+                                                        FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                        VerticalAlignment="Center"
+                                                        Background="Transparent"
+                                                        Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                         <!-- Cloud model selection -->
                         <StackPanel Spacing="8"
                                     IsVisible="{Binding ShowAiCloudModelSelect}">
