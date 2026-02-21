@@ -257,18 +257,22 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void ShowQuickActionOverlay(string title, object content)
     {
-        // Reset stale state before showing new content
-        if (IsQuickActionOverlayOpen)
-        {
-            IsQuickActionOverlayOpen = false;
-            QuickActionOverlayContent = null;
-        }
+        // Always reset state — clears stale content even when the overlay appears closed
+        IsQuickActionOverlayOpen = false;
+        QuickActionOverlayContent = null;
+        QuickActionOverlayTitle = string.Empty;
 
+        // Defer the open to the next dispatcher frame so the visual tree
+        // fully processes the close (detach) before we reattach new content.
+        // CRITICAL: IsQuickActionOverlayOpen must be set to true BEFORE
+        // QuickActionOverlayContent is assigned so the ContentPresenter is
+        // live in the visual tree when it receives the new control — otherwise
+        // Avalonia's ContentPresenter silently drops the visual child setup.
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             QuickActionOverlayTitle = title;
-            QuickActionOverlayContent = content;
             IsQuickActionOverlayOpen = true;
+            QuickActionOverlayContent = content;
         });
     }
 
