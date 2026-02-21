@@ -73,10 +73,15 @@ internal static class InsightPageBuilder
     }
 
     /// <summary>
-    /// Builds a dataset-backed chart block.
+    /// Builds a dataset-backed chart block. Derives orientation, inner_radius_ratio,
+    /// and show_legend from the chart type.
     /// </summary>
     public static JsonObject BuildChartBlock(ChartSuggestion chart, string datasetId)
     {
+        var showLegend = chart.ChartType is "pie" or "donut"
+            || chart.GroupBy != null
+            || chart.ChartType is "stacked_bar" or "grouped_bar";
+
         var block = new JsonObject
         {
             ["id"] = Guid.NewGuid().ToString(),
@@ -88,7 +93,7 @@ internal static class InsightPageBuilder
             ["title"] = chart.Title,
             ["width"] = 600,
             ["height"] = 400,
-            ["show_legend"] = chart.ChartType == "pie",
+            ["show_legend"] = showLegend,
         };
 
         if (chart.Aggregation != null)
@@ -96,6 +101,12 @@ internal static class InsightPageBuilder
 
         if (chart.GroupBy != null)
             block["group_by"] = chart.GroupBy;
+
+        if (chart.ChartType == "horizontal_bar")
+            block["orientation"] = "horizontal";
+
+        if (chart.ChartType == "donut")
+            block["inner_radius_ratio"] = 0.5;
 
         return block;
     }

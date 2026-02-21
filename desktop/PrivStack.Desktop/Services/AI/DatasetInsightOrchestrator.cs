@@ -73,16 +73,31 @@ internal sealed class DatasetInsightOrchestrator
 
                 CHART SUGGESTIONS:
                 Where a chart would help visualize an insight, include a chart marker on its own line:
-                [CHART: type={ChartTypeList} | title=Chart Title | x=column_name | y=column_name | agg=sum/count/avg/min/max | group=column_name]
+                [CHART: type=CHART_TYPE | title=Chart Title | x=column_name | y=column_name | agg=sum/count/avg/min/max | group=column_name]
+
+                Available chart types and when to use each:
+                - bar: Compare values across categories (e.g., revenue by product)
+                - line: Show trends over time or ordered sequences
+                - pie: Show proportions of a whole (best with <8 categories)
+                - donut: Same as pie but visually lighter — prefer for fewer categories
+                - area: Like line but emphasizes volume/magnitude of change over time
+                - scatter: Show correlation between two numeric columns
+                - stacked_bar: Compare totals AND their sub-component breakdown (requires group=column)
+                - grouped_bar: Side-by-side comparison of sub-groups within categories (requires group=column)
+                - horizontal_bar: Like bar but horizontal — better for long category labels or ranking
+                - timeline: NOT for insights (requires start/end date columns) — do not use
 
                 Rules for chart markers:
-                - type must be one of: bar, line, pie
+                - type must be one of: {ChartTypeList}
                 - x and y must be exact column names from: {columnList}
                 - agg is optional (use when y needs aggregation, e.g., sum of budget grouped by status)
-                - group is optional (use to group data by a categorical column)
-                - For pie charts: x is the category/label column, y is the value column
+                - group is required for stacked_bar and grouped_bar (categorical column to split series)
+                - group is optional for bar and line (creates multi-series version)
+                - For pie/donut: x is the category/label column, y is the value column
+                - For scatter: x and y should both be numeric columns
                 - Place the chart marker right after the paragraph that describes the insight it visualizes
                 - Only suggest charts where they genuinely add clarity — not every section needs one
+                - Prefer variety: use different chart types across sections when appropriate
                 """,
             UserPrompt = $"""
                 Dataset: "{msg.DatasetName}"
@@ -348,7 +363,8 @@ internal sealed class DatasetInsightOrchestrator
     private static readonly Regex ChartMarkerRegex = new(
         @"^\s*\[CHART:\s*(.+?)\]\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private static readonly string[] ValidChartTypes = ["bar", "line", "pie"];
+    private static readonly string[] ValidChartTypes =
+        ["bar", "line", "pie", "donut", "area", "scatter", "stacked_bar", "grouped_bar", "horizontal_bar"];
     private static readonly string[] ValidAggregations = ["count", "sum", "avg", "min", "max"];
 
     /// <summary>
@@ -405,5 +421,5 @@ internal sealed class DatasetInsightOrchestrator
             xCol, yCol, agg, groupBy);
     }
 
-    private const string ChartTypeList = "bar, line, pie";
+    private const string ChartTypeList = "bar, line, pie, donut, area, scatter, stacked_bar, grouped_bar, horizontal_bar";
 }
