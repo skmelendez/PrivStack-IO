@@ -253,6 +253,15 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnAiTrayBackdropPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm && vm.IsAiTrayOpen)
+        {
+            vm.ToggleAiTrayCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private void OnInfoPanelBackdropPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm && vm.InfoPanelVM.IsOpen)

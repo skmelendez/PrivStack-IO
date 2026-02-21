@@ -71,6 +71,12 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     private bool _isOpen;
 
     /// <summary>
+    /// True when there are active suggestion cards — drives the gold spin animation on the status bar icon.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasActiveNotification;
+
+    /// <summary>
     /// The tray is visible when any AI feature is enabled (not just intents).
     /// </summary>
     public bool IsEnabled => _appSettings.Settings.AiEnabled && _aiService.IsAvailable;
@@ -172,5 +178,6 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     private void UpdateCounts()
     {
         PendingCount = Cards.Count;
+        HasActiveNotification = Cards.Count > 0;
     }
 }

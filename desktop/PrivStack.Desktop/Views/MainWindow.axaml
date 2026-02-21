@@ -54,6 +54,24 @@
             <Setter Property="Width" Value="56"/>
         </Style>
 
+        <!-- AI Tray slide drawer animation -->
+        <Style Selector="StackPanel#AiTrayDrawer">
+            <Setter Property="RenderTransform" Value="translate(420px, 0px)"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="StackPanel#AiTrayDrawer.open">
+            <Setter Property="RenderTransform" Value="translate(0px, 0px)"/>
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
+        </Style>
+
         <!-- Info panel slide drawer animation -->
         <Style Selector="StackPanel#InfoPanelDrawer">
             <Setter Property="RenderTransform" Value="translate(700px, 0px)"/>
@@ -180,6 +198,73 @@
                             </StackPanel>
                         </Button>
                         </Border>
+
+                        <!-- Click-outside backdrop: closes AI Tray when clicking outside -->
+                        <Border x:Name="AiTrayBackdrop"
+                                Background="Transparent"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                ZIndex="11"
+                                IsVisible="{Binding IsAiTrayOpen}"
+                                IsHitTestVisible="{Binding IsAiTrayOpen}"
+                                PointerPressed="OnAiTrayBackdropPressed"/>
+
+                        <!-- AI Suggestion Tray: Slide Drawer (right-side panel) -->
+                        <StackPanel x:Name="AiTrayDrawer"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Stretch"
+                                    Margin="0,0,0,0"
+                                    ZIndex="12"
+                                    IsHitTestVisible="False"
+                                    IsVisible="{Binding AiTrayVM.IsEnabled}"
+                                    Classes.open="{Binding IsAiTrayOpen}">
+                            <Border CornerRadius="8,0,0,8"
+                                    Background="{DynamicResource ThemeSurfaceBrush}"
+                                    BorderBrush="{DynamicResource ThemeBorderBrush}"
+                                    BorderThickness="1,1,0,1"
+                                    BoxShadow="-4 0 20 0 #40000000"
+                                    Width="400"
+                                    ClipToBounds="True">
+                                <Grid RowDefinitions="Auto,*">
+                                    <!-- Header -->
+                                    <Border Grid.Row="0" Padding="16,12"
+                                            BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
+                                            BorderThickness="0,0,0,1">
+                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                            <TextBlock Text="AI Suggestions"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource ThemeFontSizeMd}"
+                                                       VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Clear All"
+                                                    Command="{Binding AiTrayVM.ClearAllCommand}"
+                                                    IsVisible="{Binding AiTrayVM.HasCards}"
+                                                    Background="Transparent"
+                                                    Foreground="{DynamicResource ThemeTextMutedBrush}"
+                                                    FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                    Padding="8,4" Margin="0,0,8,0"
+                                                    VerticalAlignment="Center"/>
+                                            <Button Grid.Column="2"
+                                                    Content="x"
+                                                    Command="{Binding ToggleAiTrayCommand}"
+                                                    Background="{DynamicResource ThemeSecondaryBrush}"
+                                                    Foreground="{DynamicResource ThemeTextBrush}"
+                                                    FontSize="{DynamicResource ThemeFontSizeMd}"
+                                                    FontWeight="Bold"
+                                                    CornerRadius="{DynamicResource ThemeRadiusSm}"
+                                                    Padding="8,4"
+                                                    MinWidth="28" MinHeight="28"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Cursor="Hand"/>
+                                        </Grid>
+                                    </Border>
+                                    <views:AiSuggestionTray Grid.Row="1" DataContext="{Binding AiTrayVM}"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
 
                         <!-- Click-outside backdrop: closes InfoPanel when clicking outside -->
                         <Border x:Name="InfoPanelBackdrop"
@@ -381,9 +466,33 @@
                                         </Style>
                                     </Button.Styles>
                                     <Grid>
-                                        <PathIcon Data="M12 2L9.19 8.62 2 9.24l5.45 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.62z"
+                                        <PathIcon Data="M12 0 L14.5 9.5 L24 12 L14.5 14.5 L12 24 L9.5 14.5 L0 12 L9.5 9.5 Z"
                                                  Width="14" Height="14"
-                                                 Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                                                 RenderTransformOrigin="0.5,0.5"
+                                                 Classes.notifying="{Binding AiTrayVM.HasActiveNotification}"
+                                                 Foreground="{DynamicResource ThemePrimaryBrush}">
+                                            <PathIcon.RenderTransform>
+                                                <RotateTransform Angle="0"/>
+                                            </PathIcon.RenderTransform>
+                                            <PathIcon.Styles>
+                                                <Style Selector="PathIcon.notifying">
+                                                    <Setter Property="Foreground" Value="#FFD700"/>
+                                                    <Style.Animations>
+                                                        <Animation Duration="0:0:1"
+                                                                   IterationCount="1"
+                                                                   FillMode="Forward"
+                                                                   Easing="CubicEaseInOut">
+                                                            <KeyFrame Cue="0%">
+                                                                <Setter Property="RotateTransform.Angle" Value="0"/>
+                                                            </KeyFrame>
+                                                            <KeyFrame Cue="100%">
+                                                                <Setter Property="RotateTransform.Angle" Value="720"/>
+                                                            </KeyFrame>
+                                                        </Animation>
+                                                    </Style.Animations>
+                                                </Style>
+                                            </PathIcon.Styles>
+                                        </PathIcon>
                                         <!-- Badge count -->
                                         <Border IsVisible="{Binding AiTrayVM.HasCards}"
                                                 Background="{DynamicResource ThemePrimaryBrush}"
@@ -592,55 +701,7 @@
         <!-- Property Template Manager Dialog Overlay -->
         <views:PropertyTemplateDialog DataContext="{Binding InfoPanelVM.TemplateDialog}" ZIndex="1001"/>
 
-        <!-- AI Suggestion Tray Panel (floating, right-aligned) -->
-        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                Width="400" MaxHeight="600"
-                ZIndex="1000"
-                Margin="0,56,16,0"
-                IsVisible="{Binding IsAiTrayOpen}"
-                Background="{DynamicResource ThemeSurfaceBrush}"
-                BorderBrush="{DynamicResource ThemeBorderBrush}"
-                BorderThickness="1"
-                CornerRadius="{DynamicResource ThemeRadiusMd}"
-                BoxShadow="0 8 32 0 #40000000">
-            <Grid RowDefinitions="Auto,*">
-                <!-- Header -->
-                <Border Grid.Row="0" Padding="16,12"
-                        BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
-                        BorderThickness="0,0,0,1">
-                    <Grid ColumnDefinitions="*,Auto,Auto">
-                        <TextBlock Text="AI Suggestions"
-                                   FontWeight="SemiBold"
-                                   FontSize="{DynamicResource ThemeFontSizeMd}"
-                                   VerticalAlignment="Center"/>
-                        <Button Grid.Column="1"
-                                Content="Clear All"
-                                Command="{Binding AiTrayVM.ClearAllCommand}"
-                                IsVisible="{Binding AiTrayVM.HasCards}"
-                                Background="Transparent"
-                                Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                FontSize="{DynamicResource ThemeFontSizeXs}"
-                                Padding="8,4" Margin="0,0,8,0"
-                                VerticalAlignment="Center"/>
-                        <Button Grid.Column="2"
-                                Content="×"
-                                Command="{Binding ToggleAiTrayCommand}"
-                                Background="{DynamicResource ThemeSecondaryBrush}"
-                                Foreground="{DynamicResource ThemeTextBrush}"
-                                FontSize="{DynamicResource ThemeFontSizeMd}"
-                                FontWeight="Bold"
-                                CornerRadius="{DynamicResource ThemeRadiusSm}"
-                                Padding="8,4"
-                                MinWidth="28" MinHeight="28"
-                                HorizontalContentAlignment="Center"
-                                VerticalContentAlignment="Center"
-                                VerticalAlignment="Center"
-                                Cursor="Hand"/>
-                    </Grid>
-                </Border>
-                <views:AiSuggestionTray Grid.Row="1" DataContext="{Binding AiTrayVM}"/>
-            </Grid>
-        </Border>
+        <!-- AI Suggestion Tray — removed; now rendered as slide drawer inside content area -->
 
         <!-- Intent Slot Editor Overlay -->
         <views:IntentSlotEditorOverlay DataContext="{Binding IntentSlotEditorVM}" ZIndex="1001"/>
