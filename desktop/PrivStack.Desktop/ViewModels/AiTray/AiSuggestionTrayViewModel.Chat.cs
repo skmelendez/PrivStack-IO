@@ -61,7 +61,7 @@ public partial class AiSuggestionTrayViewModel
 
             if (response.Success && !string.IsNullOrEmpty(response.Content))
             {
-                assistantMsg.Content = AiPersona.Sanitize(response.Content);
+                assistantMsg.Content = AiPersona.Sanitize(response.Content, tier);
                 assistantMsg.State = ChatMessageState.Ready;
             }
             else

@@ -27,19 +27,19 @@ public static partial class AiPersona
     /// <summary>Token budget per tier.</summary>
     public static int MaxTokensFor(ResponseTier tier) => tier switch
     {
-        ResponseTier.Short  => 100,
-        ResponseTier.Medium => 300,
+        ResponseTier.Short  => 60,
+        ResponseTier.Medium => 250,
         ResponseTier.Long   => 800,
-        _ => 200,
+        _ => 150,
     };
 
-    /// <summary>Length guidance sentence injected into the system prompt per tier.</summary>
-    private static string LengthRule(ResponseTier tier) => tier switch
+    /// <summary>Max sentences to keep per tier during post-processing truncation.</summary>
+    private static int MaxSentences(ResponseTier tier) => tier switch
     {
-        ResponseTier.Short  => "Reply in 1-2 short sentences max.",
-        ResponseTier.Medium => "Reply in 3-5 sentences. Be thorough but not verbose.",
-        ResponseTier.Long   => "You may use multiple paragraphs. Be thorough and well-structured, but don't pad with filler.",
-        _ => "Reply in 1-2 short sentences max.",
+        ResponseTier.Short  => 2,
+        ResponseTier.Medium => 5,
+        ResponseTier.Long   => 30,
+        _ => 3,
     };
 
     // ── Keyword sets for classification ─────────────────────────────
@@ -77,7 +77,6 @@ public static partial class AiPersona
 
     /// <summary>
     /// Classifies the user's message into a response tier based on intent signals.
-    /// Uses keyword matching — longest match wins, with fallback to Medium.
     /// </summary>
     public static ResponseTier Classify(string userMessage)
     {
@@ -102,49 +101,106 @@ public static partial class AiPersona
     }
 
     /// <summary>
-    /// Builds the full system prompt with tier-appropriate length guidance.
-    /// The user's display name is injected so the assistant knows who it's talking to.
+    /// Builds the system prompt. Kept extremely minimal for local LLM compatibility.
     /// </summary>
     /// <remarks>
-    /// IMPORTANT: Do NOT put example conversations in this prompt. Local LLMs will
-    /// parrot them verbatim instead of treating them as behavioral guidance.
+    /// Small local models (Phi-3, Mistral 7B) cannot follow complex multi-rule prompts.
+    /// Keep this to the absolute minimum number of short, direct sentences.
+    /// Do NOT add examples — local models parrot them verbatim.
+    /// Do NOT add numbered rules — local models echo the list back.
     /// </remarks>
-    public static string GetSystemPrompt(ResponseTier tier, string userName) => $"""
-        You are {Name}. The user's name is {userName}.
-        You are a concise assistant inside PrivStack, a local productivity app.
-        You run offline with no internet access.
-        {LengthRule(tier)}
-        Never describe yourself or say what you are.
-        Never use filler phrases.
-        Never repeat prior answers.
-        Plain text only, no formatting.
-        If asked about weather, live data, or anything requiring internet, say you can't access the web in one short sentence.
-        """;
+    public static string GetSystemPrompt(ResponseTier tier, string userName)
+    {
+        var brevity = tier switch
+        {
+            ResponseTier.Short  => "Answer in one sentence only.",
+            ResponseTier.Medium => "Keep your answer to a few sentences.",
+            ResponseTier.Long   => "Give a thorough answer.",
+            _ => "Be brief.",
+        };
+
+        return $"""
+            You are {Name}, a concise offline assistant. The user is {userName}. {brevity} Never mention being an AI. No markdown. No lists. No notes or disclaimers.
+            """;
+    }
 
     // ── Response sanitization ────────────────────────────────────────
 
-    [GeneratedRegex(@"<\|?(system|user|assistant|end|im_start|im_end)\|?>", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"<\|?/?(system|user|assistant|end|im_start|im_end|eot_id|start_header_id|end_header_id|begin_of_text|end_of_text|endoftext)\|?>", RegexOptions.IgnoreCase)]
     private static partial Regex ChatTokenPattern();
 
-    [GeneratedRegex(@"^\s*-\s*(User|Assistant|Duncan|System)\s*:", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
-    private static partial Regex RolePrefixPattern();
+    [GeneratedRegex(@"^\s*-?\s*(User|Assistant|Duncan|System|Note)\s*:.*$", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
+    private static partial Regex RolePrefixLinePattern();
+
+    [GeneratedRegex(@"\*{1,2}([^*]+)\*{1,2}")]
+    private static partial Regex MarkdownBoldPattern();
+
+    [GeneratedRegex(@"^[\s\-\*•]+", RegexOptions.Multiline)]
+    private static partial Regex BulletPrefixPattern();
+
+    [GeneratedRegex(@"^#{1,6}\s+", RegexOptions.Multiline)]
+    private static partial Regex MarkdownHeaderPattern();
+
+    [GeneratedRegex(@"\n{3,}")]
+    private static partial Regex ExcessiveNewlines();
 
     /// <summary>
-    /// Strips raw chat template tokens and role prefixes that local models sometimes leak.
+    /// Strips chat tokens, markdown, role prefixes, self-referential lines,
+    /// and enforces sentence count limits per tier.
     /// </summary>
-    public static string Sanitize(string response)
+    public static string Sanitize(string response, ResponseTier tier = ResponseTier.Medium)
     {
         if (string.IsNullOrEmpty(response)) return response;
 
-        // Strip raw chat tokens like <|assistant|>, <|end|>, <|im_start|>, etc.
+        // Strip raw chat tokens
         var cleaned = ChatTokenPattern().Replace(response, "");
 
-        // Strip lines that start with role prefixes like "- User:", "Assistant:", "Duncan:"
-        cleaned = RolePrefixPattern().Replace(cleaned, "");
+        // Strip entire lines that are role prefixes or "**Note:**" disclaimers
+        cleaned = RolePrefixLinePattern().Replace(cleaned, "");
 
-        // Collapse excessive whitespace from removed tokens
+        // Strip markdown bold/italic
+        cleaned = MarkdownBoldPattern().Replace(cleaned, "$1");
+
+        // Strip markdown headers
+        cleaned = MarkdownHeaderPattern().Replace(cleaned, "");
+
+        // Strip bullet prefixes (convert to plain sentences)
+        cleaned = BulletPrefixPattern().Replace(cleaned, "");
+
+        // Collapse excessive newlines
+        cleaned = ExcessiveNewlines().Replace(cleaned, "\n\n");
+
         cleaned = cleaned.Trim();
 
+        // Hard sentence-count cap per tier
+        cleaned = TruncateToSentences(cleaned, MaxSentences(tier));
+
         return cleaned;
+    }
+
+    /// <summary>
+    /// Truncates text to a maximum number of sentences.
+    /// </summary>
+    private static string TruncateToSentences(string text, int maxSentences)
+    {
+        if (maxSentences <= 0 || string.IsNullOrEmpty(text)) return text;
+
+        var count = 0;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c is '.' or '!' or '?')
+            {
+                // Skip consecutive punctuation (e.g., "..." or "?!")
+                while (i + 1 < text.Length && text[i + 1] is '.' or '!' or '?')
+                    i++;
+
+                count++;
+                if (count >= maxSentences)
+                    return text[..(i + 1)].Trim();
+            }
+        }
+
+        return text;
     }
 }

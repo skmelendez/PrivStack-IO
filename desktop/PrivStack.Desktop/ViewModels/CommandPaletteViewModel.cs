@@ -275,6 +275,9 @@ public partial class CommandPaletteViewModel : ViewModelBase
     {
         _coreCommands =
         [
+            // AI assistant commands — top of palette when AI is enabled
+            ..BuildAiCommands(),
+
             // Navigation — generated dynamically from plugin registry
             ..BuildNavigationCommands(),
 
@@ -289,19 +292,35 @@ public partial class CommandPaletteViewModel : ViewModelBase
             }),
             new CommandItem("Start Sync", "Start P2P sync", "sync start", "Sync", () => _mainVm.SyncVM.StartSyncCommand.Execute(null)),
             new CommandItem("Stop Sync", "Stop P2P sync", "sync stop", "Sync", () => _mainVm.SyncVM.StopSyncCommand.Execute(null)),
-
-            // AI assistant commands
-            new CommandItem($"Open {AiPersona.Name}", $"Open the {AiPersona.Name} AI assistant", $"ai {AiPersona.Name.ToLowerInvariant()} chat assistant", "AI", () => {
-                if (!_mainVm.IsAiTrayOpen)
-                    _mainVm.ToggleAiTrayCommand.Execute(null);
-            }),
-            new CommandItem($"Close {AiPersona.Name}", $"Close the {AiPersona.Name} AI assistant", $"ai {AiPersona.Name.ToLowerInvariant()} chat close", "AI", () => {
-                if (_mainVm.IsAiTrayOpen)
-                    _mainVm.ToggleAiTrayCommand.Execute(null);
-            }),
         ];
 
         InvalidateCache();
+    }
+
+    private IEnumerable<CommandItem> BuildAiCommands()
+    {
+        if (!_mainVm.AiTrayVM.IsEnabled) yield break;
+
+        yield return new CommandItem(
+            $"Chat with {AiPersona.Name}",
+            $"Open the {AiPersona.Name} AI assistant",
+            $"ai {AiPersona.Name.ToLowerInvariant()} chat assistant open",
+            "AI",
+            () => { if (!_mainVm.IsAiTrayOpen) _mainVm.ToggleAiTrayCommand.Execute(null); });
+
+        yield return new CommandItem(
+            $"Clear {AiPersona.Name} Chat",
+            "Clear all chat messages and suggestion history",
+            $"ai {AiPersona.Name.ToLowerInvariant()} chat clear reset",
+            "AI",
+            () => _mainVm.AiTrayVM.ClearAllCommand.Execute(null));
+
+        yield return new CommandItem(
+            $"Close {AiPersona.Name}",
+            $"Close the {AiPersona.Name} AI assistant",
+            $"ai {AiPersona.Name.ToLowerInvariant()} chat close hide",
+            "AI",
+            () => { if (_mainVm.IsAiTrayOpen) _mainVm.ToggleAiTrayCommand.Execute(null); });
     }
 
     private IEnumerable<CommandItem> BuildNavigationCommands()
