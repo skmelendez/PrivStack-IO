@@ -96,6 +96,20 @@ public partial class MainWindow
             }
         }
 
+        // Quick Task: Cmd+T or Ctrl+T
+        if (isCmdOrCtrl && e.Key == Key.T)
+        {
+            var quickActionService = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                .GetService<Services.QuickActionService>(App.Services);
+            var entry = quickActionService?.FindAction("tasks.new_quick_task");
+            if (entry != null)
+            {
+                _ = quickActionService!.InvokeActionAsync(entry, vm);
+                e.Handled = true;
+                return;
+            }
+        }
+
         // Info Panel: Cmd+I or Ctrl+I
         if (isCmdOrCtrl && e.Key == Key.I)
         {
