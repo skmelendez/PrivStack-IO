@@ -439,6 +439,9 @@ public partial class MainWindowViewModel : ViewModelBase
             var subService = App.Services.GetRequiredService<SubscriptionValidationService>();
             await subService.ValidateAsync();
         });
+
+        // Activate dataset insight orchestrator (subscribes to messenger)
+        _ = App.Services.GetRequiredService<Services.AI.DatasetInsightOrchestrator>();
     }
 
     private void WireCommandPaletteDelegates(CommandPaletteViewModel palette)
