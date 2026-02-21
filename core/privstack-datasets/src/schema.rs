@@ -74,6 +74,10 @@ CREATE TABLE IF NOT EXISTS _dataset_saved_queries (
 const SAVED_QUERIES_ADD_IS_VIEW: &str =
     "ALTER TABLE _dataset_saved_queries ADD COLUMN IF NOT EXISTS is_view BOOLEAN DEFAULT FALSE;";
 
+/// Migration: add category column to datasets metadata for AI-generated dataset isolation.
+const DATASETS_META_ADD_CATEGORY: &str =
+    "ALTER TABLE _datasets_meta ADD COLUMN IF NOT EXISTS category VARCHAR;";
+
 /// Initialize all dataset schema tables.
 pub fn initialize_datasets_schema(conn: &Connection) -> DatasetResult<()> {
     conn.execute_batch(DATASETS_META_DDL)?;
@@ -83,6 +87,7 @@ pub fn initialize_datasets_schema(conn: &Connection) -> DatasetResult<()> {
     conn.execute_batch(DATASET_SAVED_QUERIES_DDL)?;
     // Migrations
     conn.execute_batch(SAVED_QUERIES_ADD_IS_VIEW)?;
+    conn.execute_batch(DATASETS_META_ADD_CATEGORY)?;
     Ok(())
 }
 

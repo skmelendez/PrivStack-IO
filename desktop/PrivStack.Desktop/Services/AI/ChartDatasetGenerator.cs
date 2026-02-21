@@ -54,7 +54,7 @@ internal sealed class ChartDatasetGenerator
                 return null;
 
             var datasetName = $"[AI] {SanitizeName(chart.Title)} — {sourceDatasetName}";
-            var dataset = await _datasetService.ImportFromContentAsync(csv, datasetName, ct);
+            var dataset = await _datasetService.ImportFromContentAsync(csv, datasetName, ct, category: "ai-generated");
             Log.Information("Created chart dataset {Id} ({Name}) with aggregated data", dataset.Id, datasetName);
             return dataset.Id.Value;
         }

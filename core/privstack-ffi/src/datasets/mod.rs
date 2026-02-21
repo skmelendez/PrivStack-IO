@@ -175,6 +175,7 @@ pub(crate) struct SavedQueryRequest {
 pub(crate) struct CreateEmptyRequest {
     pub name: String,
     pub columns: Vec<privstack_datasets::ColumnDef>,
+    pub category: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -187,6 +188,7 @@ pub(crate) struct DuplicateRequest {
 pub(crate) struct ImportContentRequest {
     pub content: String,
     pub name: String,
+    pub category: Option<String>,
 }
 
 #[derive(Deserialize)]

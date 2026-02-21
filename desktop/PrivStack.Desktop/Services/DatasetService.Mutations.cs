@@ -11,9 +11,9 @@ public sealed partial class DatasetService
     // ── Dataset Creation ────────────────────────────────────────────────
 
     public Task<DatasetInfo> CreateEmptyDatasetAsync(
-        string name, IReadOnlyList<DatasetColumnDef> columns, CancellationToken ct)
+        string name, IReadOnlyList<DatasetColumnDef> columns, CancellationToken ct, string? category = null)
     {
-        var request = new { name, columns };
+        var request = new { name, columns, category };
         var ptr = DatasetNative.CreateEmpty(JsonSerializer.Serialize(request, JsonOptions));
         try
         {
@@ -58,9 +58,9 @@ public sealed partial class DatasetService
         }
     }
 
-    public Task<DatasetInfo> ImportFromContentAsync(string content, string name, CancellationToken ct)
+    public Task<DatasetInfo> ImportFromContentAsync(string content, string name, CancellationToken ct, string? category = null)
     {
-        var request = new { content, name };
+        var request = new { content, name, category };
         var ptr = DatasetNative.ImportContent(JsonSerializer.Serialize(request, JsonOptions));
         try
         {

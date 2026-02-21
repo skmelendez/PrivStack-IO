@@ -67,6 +67,7 @@ impl DatasetStore {
             source_file_name,
             row_count,
             columns,
+            category: None,
             created_at: now,
             modified_at: now,
         })
@@ -76,7 +77,7 @@ impl DatasetStore {
     pub fn list(&self) -> DatasetResult<Vec<DatasetMeta>> {
         let conn = self.lock_conn();
         let mut stmt = conn.prepare(
-            "SELECT id, name, source_file_name, row_count, columns_json, created_at, modified_at FROM _datasets_meta ORDER BY modified_at DESC"
+            "SELECT id, name, source_file_name, row_count, columns_json, created_at, modified_at, category FROM _datasets_meta ORDER BY modified_at DESC"
         )?;
 
         let rows = stmt
@@ -89,6 +90,7 @@ impl DatasetStore {
                     row.get::<_, String>(4)?,
                     row.get::<_, i64>(5)?,
                     row.get::<_, i64>(6)?,
+                    row.get::<_, Option<String>>(7)?,
                 ))
             })?
             .filter_map(|r| r.ok())
@@ -98,7 +100,7 @@ impl DatasetStore {
         drop(conn);
 
         rows.into_iter()
-            .map(|(id, name, source, row_count, cols_json, created, modified)| {
+            .map(|(id, name, source, row_count, cols_json, created, modified, category)| {
                 let columns: Vec<DatasetColumn> =
                     serde_json::from_str(&cols_json).unwrap_or_default();
                 Ok(DatasetMeta {
@@ -109,6 +111,7 @@ impl DatasetStore {
                     source_file_name: source,
                     row_count,
                     columns,
+                    category,
                     created_at: created,
                     modified_at: modified,
                 })
@@ -120,7 +123,7 @@ impl DatasetStore {
     pub fn get(&self, id: &DatasetId) -> DatasetResult<DatasetMeta> {
         let conn = self.lock_conn();
         let result = conn.query_row(
-            "SELECT name, source_file_name, row_count, columns_json, created_at, modified_at FROM _datasets_meta WHERE id = ?",
+            "SELECT name, source_file_name, row_count, columns_json, created_at, modified_at, category FROM _datasets_meta WHERE id = ?",
             params![id.to_string()],
             |row| {
                 Ok((
@@ -130,12 +133,13 @@ impl DatasetStore {
                     row.get::<_, String>(3)?,
                     row.get::<_, i64>(4)?,
                     row.get::<_, i64>(5)?,
+                    row.get::<_, Option<String>>(6)?,
                 ))
             },
         );
 
         match result {
-            Ok((name, source, row_count, cols_json, created, modified)) => {
+            Ok((name, source, row_count, cols_json, created, modified, category)) => {
                 let columns: Vec<DatasetColumn> =
                     serde_json::from_str(&cols_json).unwrap_or_default();
                 Ok(DatasetMeta {
@@ -144,6 +148,7 @@ impl DatasetStore {
                     source_file_name: source,
                     row_count,
                     columns,
+                    category,
                     created_at: created,
                     modified_at: modified,
                 })
@@ -185,6 +190,21 @@ impl DatasetStore {
         }
 
         info!(dataset_id = %id, "Dataset deleted");
+        Ok(())
+    }
+
+    /// Set or clear the category for a dataset.
+    pub fn set_category(&self, id: &DatasetId, category: Option<&str>) -> DatasetResult<()> {
+        let now = now_millis();
+        let conn = self.lock_conn();
+        let updated = conn.execute(
+            "UPDATE _datasets_meta SET category = ?, modified_at = ? WHERE id = ?",
+            params![category, now, id.to_string()],
+        )?;
+
+        if updated == 0 {
+            return Err(DatasetError::NotFound(id.to_string()));
+        }
         Ok(())
     }
 

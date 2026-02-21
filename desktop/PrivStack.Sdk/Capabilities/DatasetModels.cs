@@ -13,6 +13,7 @@ public sealed record DatasetInfo
     [JsonPropertyName("source_file_name")] public string? SourceFileName { get; init; }
     [JsonPropertyName("row_count")] public long RowCount { get; init; }
     [JsonPropertyName("columns")] public IReadOnlyList<DatasetColumnInfo> Columns { get; init; } = [];
+    [JsonPropertyName("category")] public string? Category { get; init; }
     [JsonPropertyName("created_at")] public long CreatedAt { get; init; }
     [JsonPropertyName("modified_at")] public long ModifiedAt { get; init; }
 }

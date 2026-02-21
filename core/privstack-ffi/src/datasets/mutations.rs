@@ -18,7 +18,7 @@ pub unsafe extern "C" fn privstack_dataset_create_empty(
         let req = parse_json_request!(request_json, CreateEmptyRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
-            match store.create_empty(&req.name, &req.columns) {
+            match store.create_empty(&req.name, &req.columns, req.category.as_deref()) {
                 Ok(meta) => {
                     let json =
                         serde_json::to_string(&meta).unwrap_or_else(|_| "{}".to_string());
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn privstack_dataset_import_content(
         let req = parse_json_request!(request_json, ImportContentRequest);
 
         with_store_json!(r#"{"error":"not initialized"}"#, |store| {
-            match store.import_csv_content(&req.content, &req.name) {
+            match store.import_csv_content(&req.content, &req.name, req.category.as_deref()) {
                 Ok(meta) => {
                     let json =
                         serde_json::to_string(&meta).unwrap_or_else(|_| "{}".to_string());

@@ -80,6 +80,7 @@ pub struct DatasetMeta {
     pub source_file_name: Option<String>,
     pub row_count: i64,
     pub columns: Vec<DatasetColumn>,
+    pub category: Option<String>,
     pub created_at: i64,
     pub modified_at: i64,
 }

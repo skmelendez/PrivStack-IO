@@ -14,6 +14,7 @@ impl DatasetStore {
         &self,
         name: &str,
         columns: &[ColumnDef],
+        category: Option<&str>,
     ) -> DatasetResult<DatasetMeta> {
         if columns.is_empty() {
             return Err(DatasetError::InvalidQuery(
@@ -44,9 +45,9 @@ impl DatasetStore {
         let columns_json = serde_json::to_string(&ds_columns)?;
 
         conn.execute(
-            r#"INSERT INTO _datasets_meta (id, name, source_file_name, row_count, columns_json, created_at, modified_at)
-               VALUES (?, ?, NULL, 0, ?, ?, ?)"#,
-            params![id.to_string(), name, columns_json, now, now],
+            r#"INSERT INTO _datasets_meta (id, name, source_file_name, row_count, columns_json, category, created_at, modified_at)
+               VALUES (?, ?, NULL, 0, ?, ?, ?, ?)"#,
+            params![id.to_string(), name, columns_json, category, now, now],
         )?;
 
         info!(dataset_id = %id, name, "Empty dataset created");
@@ -57,6 +58,7 @@ impl DatasetStore {
             source_file_name: None,
             row_count: 0,
             columns: ds_columns,
+            category: category.map(|s| s.to_string()),
             created_at: now,
             modified_at: now,
         })
@@ -75,6 +77,15 @@ impl DatasetStore {
 
         let conn = self.lock_conn();
 
+        // Read source category before duplicating
+        let source_category: Option<String> = conn
+            .query_row(
+                "SELECT category FROM _datasets_meta WHERE id = ?",
+                params![source_id.to_string()],
+                |row| row.get(0),
+            )
+            .unwrap_or(None);
+
         let create_sql = format!("CREATE TABLE {new_table} AS SELECT * FROM {source_table}");
         conn.execute_batch(&create_sql).map_err(|e| {
             DatasetError::ImportFailed(format!("Failed to duplicate dataset: {e}"))
@@ -88,9 +99,9 @@ impl DatasetStore {
         let columns_json = serde_json::to_string(&columns)?;
 
         conn.execute(
-            r#"INSERT INTO _datasets_meta (id, name, source_file_name, row_count, columns_json, created_at, modified_at)
-               VALUES (?, ?, NULL, ?, ?, ?, ?)"#,
-            params![new_id.to_string(), new_name, row_count, columns_json, now, now],
+            r#"INSERT INTO _datasets_meta (id, name, source_file_name, row_count, columns_json, category, created_at, modified_at)
+               VALUES (?, ?, NULL, ?, ?, ?, ?, ?)"#,
+            params![new_id.to_string(), new_name, row_count, columns_json, source_category, now, now],
         )?;
 
         info!(dataset_id = %new_id, new_name, "Dataset duplicated from {}", source_id);
@@ -101,6 +112,7 @@ impl DatasetStore {
             source_file_name: None,
             row_count,
             columns,
+            category: source_category,
             created_at: now,
             modified_at: now,
         })
@@ -111,6 +123,7 @@ impl DatasetStore {
         &self,
         csv_content: &str,
         name: &str,
+        category: Option<&str>,
     ) -> DatasetResult<DatasetMeta> {
         let id = DatasetId::new();
         let table = dataset_table_name(&id);
@@ -143,9 +156,9 @@ impl DatasetStore {
         let columns_json = serde_json::to_string(&columns)?;
 
         conn.execute(
-            r#"INSERT INTO _datasets_meta (id, name, source_file_name, row_count, columns_json, created_at, modified_at)
-               VALUES (?, ?, NULL, ?, ?, ?, ?)"#,
-            params![id.to_string(), name, row_count, columns_json, now, now],
+            r#"INSERT INTO _datasets_meta (id, name, source_file_name, row_count, columns_json, category, created_at, modified_at)
+               VALUES (?, ?, NULL, ?, ?, ?, ?, ?)"#,
+            params![id.to_string(), name, row_count, columns_json, category, now, now],
         )?;
 
         info!(dataset_id = %id, name, row_count, "Dataset imported from content");
@@ -156,6 +169,7 @@ impl DatasetStore {
             source_file_name: None,
             row_count,
             columns,
+            category: category.map(|s| s.to_string()),
             created_at: now,
             modified_at: now,
         })

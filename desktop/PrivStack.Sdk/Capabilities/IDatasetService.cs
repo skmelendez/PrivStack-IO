@@ -77,13 +77,13 @@ public interface IDatasetService
     // ── Dataset creation ────────────────────────────────────────────────
 
     /// <summary>Create an empty dataset with a defined schema.</summary>
-    Task<DatasetInfo> CreateEmptyDatasetAsync(string name, IReadOnlyList<DatasetColumnDef> columns, CancellationToken ct = default);
+    Task<DatasetInfo> CreateEmptyDatasetAsync(string name, IReadOnlyList<DatasetColumnDef> columns, CancellationToken ct = default, string? category = null);
 
     /// <summary>Duplicate an existing dataset (schema + data).</summary>
     Task<DatasetInfo> DuplicateDatasetAsync(string sourceDatasetId, string newName, CancellationToken ct = default);
 
     /// <summary>Import a dataset from CSV/TSV content string (clipboard paste).</summary>
-    Task<DatasetInfo> ImportFromContentAsync(string content, string name, CancellationToken ct = default);
+    Task<DatasetInfo> ImportFromContentAsync(string content, string name, CancellationToken ct = default, string? category = null);
 
     // ── Row CRUD ────────────────────────────────────────────────────────
 
