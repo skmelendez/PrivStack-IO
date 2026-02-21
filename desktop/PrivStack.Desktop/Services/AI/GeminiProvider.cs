@@ -75,20 +75,60 @@ internal sealed class GeminiProvider : AiProviderBase
         using var doc = await PostJsonAsync(url, payload, new Dictionary<string, string>(), ct);
         var root = doc.RootElement;
 
-        var content = root
-            .GetProperty("candidates")[0]
-            .GetProperty("content")
-            .GetProperty("parts")[0]
-            .GetProperty("text")
-            .GetString();
+        // Handle error responses (quota exceeded, invalid key, etc.)
+        if (root.TryGetProperty("error", out var errorProp))
+        {
+            var errorMsg = errorProp.TryGetProperty("message", out var msgProp)
+                ? msgProp.GetString() : "Unknown API error";
+            return new AiResponse { Success = false, ErrorMessage = errorMsg, ProviderUsed = Id, ModelUsed = model };
+        }
+
+        // Handle missing or empty candidates (safety block, empty response)
+        if (!root.TryGetProperty("candidates", out var candidates)
+            || candidates.GetArrayLength() == 0)
+        {
+            var reason = "No candidates returned";
+            if (root.TryGetProperty("promptFeedback", out var feedback)
+                && feedback.TryGetProperty("blockReason", out var blockReason))
+                reason = $"Blocked: {blockReason.GetString()}";
+
+            return new AiResponse { Success = false, ErrorMessage = reason, ProviderUsed = Id, ModelUsed = model };
+        }
+
+        var candidate = candidates[0];
+        string? content = null;
+
+        if (candidate.TryGetProperty("content", out var contentProp)
+            && contentProp.TryGetProperty("parts", out var parts)
+            && parts.GetArrayLength() > 0
+            && parts[0].TryGetProperty("text", out var textProp))
+        {
+            content = textProp.GetString();
+        }
+
+        // Check for finish reason indicating blocked content
+        if (string.IsNullOrEmpty(content)
+            && candidate.TryGetProperty("finishReason", out var finishReason)
+            && finishReason.GetString() != "STOP")
+        {
+            return new AiResponse
+            {
+                Success = false,
+                ErrorMessage = $"Generation stopped: {finishReason.GetString()}",
+                ProviderUsed = Id,
+                ModelUsed = model,
+            };
+        }
 
         var tokensUsed = root.TryGetProperty("usageMetadata", out var usage)
-            ? usage.GetProperty("totalTokenCount").GetInt32() : 0;
+            && usage.TryGetProperty("totalTokenCount", out var tokenCount)
+            ? tokenCount.GetInt32() : 0;
 
         return new AiResponse
         {
-            Success = true,
+            Success = !string.IsNullOrEmpty(content),
             Content = content,
+            ErrorMessage = string.IsNullOrEmpty(content) ? "Empty response" : null,
             ProviderUsed = Id,
             ModelUsed = model,
             TokensUsed = tokensUsed
