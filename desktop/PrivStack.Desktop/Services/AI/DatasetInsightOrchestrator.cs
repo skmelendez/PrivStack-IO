@@ -25,6 +25,7 @@ internal sealed class DatasetInsightOrchestrator
     private readonly IPrivStackSdk _sdk;
     private readonly IToastService _toast;
     private readonly INavigationService _navigation;
+    private readonly ChartDatasetGenerator _chartGenerator;
 
     private readonly ConcurrentDictionary<string, DatasetInsightResult> _results = new();
 
@@ -33,13 +34,15 @@ internal sealed class DatasetInsightOrchestrator
         IAiSuggestionService suggestionService,
         IPrivStackSdk sdk,
         IToastService toast,
-        INavigationService navigation)
+        INavigationService navigation,
+        IDatasetService datasetService)
     {
         _aiService = aiService;
         _suggestionService = suggestionService;
         _sdk = sdk;
         _toast = toast;
         _navigation = navigation;
+        _chartGenerator = new ChartDatasetGenerator(datasetService);
 
         WeakReferenceMessenger.Default.Register<DatasetInsightRequestMessage>(this, OnInsightRequested);
         WeakReferenceMessenger.Default.Register<ContentSuggestionActionRequestedMessage>(this, OnActionRequested);
@@ -119,6 +122,7 @@ internal sealed class DatasetInsightOrchestrator
             msg.Columns.ToList(), msg.ColumnTypes.ToList())
         {
             ChartColumns = msg.ChartEligibleColumns?.ToList(),
+            SampleRows = msg.SampleRows,
         };
 
         _results[msg.SuggestionId] = result;
@@ -176,6 +180,35 @@ internal sealed class DatasetInsightOrchestrator
         var subPageTitle = $"{result.DatasetName} Insights — {DateTime.Now:yyyy-MM-dd}";
         var subPageId = Guid.NewGuid().ToString();
 
+        // First pass: collect all chart suggestions from the AI response
+        var allCharts = new List<ChartSuggestion>();
+        var contentSections = result.Sections.Count > 0
+            ? result.Sections.Select(s => s.Content).ToList()
+            : [result.RawContent];
+        foreach (var content in contentSections)
+            CollectChartSuggestions(content, result.Columns, allCharts);
+
+        // Generate datasets for each chart from sample data
+        var chartDatasetMap = new Dictionary<string, string>(); // chart key → generated dataset ID
+        if (result.SampleRows is { Count: > 0 } && allCharts.Count > 0)
+        {
+            foreach (var chart in allCharts)
+            {
+                var key = $"{chart.ChartType}:{chart.XColumn}:{chart.YColumn}:{chart.GroupBy}";
+                if (chartDatasetMap.ContainsKey(key)) continue;
+
+                var generatedId = await _chartGenerator.GenerateAsync(
+                    chart, result.Columns, result.SampleRows, result.DatasetName);
+                if (generatedId != null)
+                    chartDatasetMap[key] = generatedId;
+            }
+
+            if (chartDatasetMap.Count > 0)
+                Log.Information("Generated {Count} chart datasets for insight '{Name}'",
+                    chartDatasetMap.Count, result.DatasetName);
+        }
+
+        // Second pass: build page blocks, resolving charts to generated datasets
         var blocks = new List<JsonObject>
         {
             InsightPageBuilder.BuildParagraphBlock(
@@ -185,12 +218,12 @@ internal sealed class DatasetInsightOrchestrator
         foreach (var section in result.Sections)
         {
             blocks.Add(InsightPageBuilder.BuildHeadingBlock(2, section.Title));
-            BuildSectionBlocks(section.Content, result, blocks);
+            BuildSectionBlocks(section.Content, result, chartDatasetMap, blocks);
         }
 
         // If no parsed sections, add raw content as paragraphs
         if (result.Sections.Count == 0)
-            BuildSectionBlocks(result.RawContent, result, blocks);
+            BuildSectionBlocks(result.RawContent, result, chartDatasetMap, blocks);
 
         var payload = InsightPageBuilder.BuildCreatePayload(subPageId, subPageTitle, parentId, blocks);
 
@@ -230,11 +263,26 @@ internal sealed class DatasetInsightOrchestrator
     }
 
     /// <summary>
+    /// Collects all chart suggestions from section content (first pass — no block creation).
+    /// </summary>
+    private static void CollectChartSuggestions(
+        string content, IReadOnlyList<string> columns, List<ChartSuggestion> charts)
+    {
+        foreach (var line in content.Split('\n'))
+        {
+            var chart = TryParseChartMarker(line, columns);
+            if (chart != null)
+                charts.Add(chart);
+        }
+    }
+
+    /// <summary>
     /// Converts section content text into paragraph, chart, divider, and table blocks.
-    /// Recognizes [CHART:] markers, --- dividers, and markdown pipe tables.
+    /// Charts reference generated datasets from <paramref name="chartDatasetMap"/> when available.
     /// </summary>
     private static void BuildSectionBlocks(
-        string content, DatasetInsightResult result, List<JsonObject> blocks)
+        string content, DatasetInsightResult result,
+        Dictionary<string, string> chartDatasetMap, List<JsonObject> blocks)
     {
         var paragraph = new StringBuilder();
         var lines = content.Split('\n');
@@ -244,20 +292,32 @@ internal sealed class DatasetInsightOrchestrator
         {
             var line = lines[i];
 
-            // Chart marker — parse against analysis columns, then validate against chart-eligible columns
+            // Chart marker
             var chart = TryParseChartMarker(line, result.Columns);
             if (chart != null)
             {
                 FlushParagraph(paragraph, blocks);
-                // Only emit chart block if columns exist in the underlying dataset
-                if (IsChartValid(chart, result.EffectiveChartColumns))
+                var key = $"{chart.ChartType}:{chart.XColumn}:{chart.YColumn}:{chart.GroupBy}";
+
+                if (chartDatasetMap.TryGetValue(key, out var generatedId))
+                {
+                    // Use the generated dataset — chart columns match exactly
+                    blocks.Add(InsightPageBuilder.BuildChartBlock(chart, generatedId));
+                }
+                else if (IsChartValid(chart, result.EffectiveChartColumns))
+                {
+                    // Fallback: columns exist in the original dataset
                     blocks.Add(InsightPageBuilder.BuildChartBlock(chart, result.DatasetId));
+                }
                 else
-                    Log.Debug("Skipping chart '{Title}': columns not in underlying dataset", chart.Title);
+                {
+                    Log.Debug("Skipping chart '{Title}': no generated dataset and columns invalid", chart.Title);
+                }
+
                 i++;
                 continue;
             }
-            // Also strip unparsed chart markers (regex match but validation failed) to avoid raw text
+            // Strip unparsed chart markers to avoid raw text
             if (ChartMarkerRegex.IsMatch(line))
             {
                 i++;

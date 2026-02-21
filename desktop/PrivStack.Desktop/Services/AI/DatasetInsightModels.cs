@@ -21,6 +21,9 @@ internal sealed record DatasetInsightResult(
 
     /// <summary>Effective columns for chart marker validation.</summary>
     public IReadOnlyList<string> EffectiveChartColumns => ChartColumns ?? Columns;
+
+    /// <summary>Sample rows from the original query, used for generating chart datasets.</summary>
+    public IReadOnlyList<IReadOnlyList<object?>>? SampleRows { get; init; }
 }
 
 /// <summary>
