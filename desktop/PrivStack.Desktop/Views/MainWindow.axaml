@@ -625,10 +625,17 @@
                         <Button Grid.Column="2"
                                 Content="×"
                                 Command="{Binding ToggleIntentTrayCommand}"
-                                Background="Transparent"
-                                FontSize="{DynamicResource ThemeFontSizeXl}"
-                                Padding="8,2"
-                                VerticalAlignment="Center"/>
+                                Background="{DynamicResource ThemeSecondaryBrush}"
+                                Foreground="{DynamicResource ThemeTextBrush}"
+                                FontSize="{DynamicResource ThemeFontSizeMd}"
+                                FontWeight="Bold"
+                                CornerRadius="{DynamicResource ThemeRadiusSm}"
+                                Padding="8,4"
+                                MinWidth="28" MinHeight="28"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                VerticalAlignment="Center"
+                                Cursor="Hand"/>
                     </Grid>
                 </Border>
                 <views:IntentSuggestionTray Grid.Row="1" DataContext="{Binding IntentTrayVM}"/>
