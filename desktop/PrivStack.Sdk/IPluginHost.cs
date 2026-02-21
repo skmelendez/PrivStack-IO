@@ -92,6 +92,12 @@ public interface IPluginHost
     IIntentEngine? IntentEngine { get; }
 
     /// <summary>
+    /// Service for pushing content suggestion cards into the global AI tray.
+    /// Nullable for backward compatibility with hosts that don't support the unified tray.
+    /// </summary>
+    IAiSuggestionService? Suggestions { get; }
+
+    /// <summary>
     /// The active workspace data directory.
     /// Plugins should store all workspace-specific files under this path.
     /// </summary>
