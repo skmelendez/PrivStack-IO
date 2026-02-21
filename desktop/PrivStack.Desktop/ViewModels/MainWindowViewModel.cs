@@ -171,12 +171,18 @@ public partial class MainWindowViewModel : ViewModelBase
     public EmojiPickerViewModel EmojiPickerVM => _emojiPickerVM ??= new EmojiPickerViewModel(_ => { });
 
     private AiTray.AiSuggestionTrayViewModel? _aiTrayVM;
-    public AiTray.AiSuggestionTrayViewModel AiTrayVM => _aiTrayVM ??=
-        new AiTray.AiSuggestionTrayViewModel(
+    public AiTray.AiSuggestionTrayViewModel AiTrayVM => _aiTrayVM ??= CreateAiTrayVM();
+
+    private AiTray.AiSuggestionTrayViewModel CreateAiTrayVM()
+    {
+        var vm = new AiTray.AiSuggestionTrayViewModel(
             App.Services.GetRequiredService<IIntentEngine>(),
             App.Services.GetRequiredService<IUiDispatcher>(),
             App.Services.GetRequiredService<IAppSettingsService>(),
             App.Services.GetRequiredService<IAiService>());
+        vm.NavigateToLinkedItemFunc = NavigateToLinkedItemAsync;
+        return vm;
+    }
 
     private IntentSlotEditorViewModel? _intentSlotEditorVM;
     public IntentSlotEditorViewModel IntentSlotEditorVM => _intentSlotEditorVM ??=

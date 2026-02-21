@@ -70,4 +70,11 @@ public sealed record ContentSuggestionCard
 
     /// <summary>Available actions for this card (e.g., Replace, Insert Above, Dismiss).</summary>
     public IReadOnlyList<SuggestionAction> Actions { get; init; } = [];
+
+    /// <summary>
+    /// Human-readable label for the user request that triggered this suggestion
+    /// (e.g., "Summarize this block"). Used by the chat-style tray to render the user bubble.
+    /// When null, the shell falls back to synthesizing from <see cref="Title"/>.
+    /// </summary>
+    public string? UserPromptLabel { get; init; }
 }

@@ -13,6 +13,7 @@ public enum AiTrayCardType
 /// Common interface for all card view models displayed in the unified AI suggestion tray.
 /// Both intent suggestion cards and content suggestion cards implement this.
 /// </summary>
+[Obsolete("Replaced by AiChatMessageViewModel in the chat-style tray. Retained for backward compatibility.")]
 public interface IAiTrayCardViewModel
 {
     string CardId { get; }

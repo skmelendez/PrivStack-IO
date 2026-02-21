@@ -247,7 +247,7 @@
                                             BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
                                             BorderThickness="0,0,0,1">
                                         <Grid ColumnDefinitions="*,Auto,Auto">
-                                            <TextBlock Text="AI Suggestions"
+                                            <TextBlock Text="PrivStack AI"
                                                        FontWeight="SemiBold"
                                                        FontSize="{DynamicResource ThemeFontSizeMd}"
                                                        VerticalAlignment="Center"/>

@@ -11,6 +11,7 @@ namespace PrivStack.Desktop.ViewModels.AiTray;
 /// ViewModel for a single content suggestion card in the unified AI tray.
 /// Wraps a <see cref="ContentSuggestionCard"/> and sends action/dismiss messages back to the owning plugin.
 /// </summary>
+[Obsolete("Replaced by AiChatMessageViewModel in the chat-style tray. Retained for backward compatibility.")]
 public partial class ContentSuggestionCardViewModel : ViewModelBase, IAiTrayCardViewModel
 {
     private ContentSuggestionCard _card;

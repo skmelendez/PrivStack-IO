@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:PrivStack.Desktop.ViewModels"
              xmlns:tray="using:PrivStack.Desktop.ViewModels.AiTray"
              xmlns:sdk="using:PrivStack.Sdk.Capabilities"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -9,198 +8,84 @@
              x:Class="PrivStack.Desktop.Views.AiSuggestionTray"
              x:DataType="tray:AiSuggestionTrayViewModel">
 
-    <Grid RowDefinitions="Auto,*">
-        <!-- Scrollable card list -->
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Cards}" Margin="8">
-                <ItemsControl.DataTemplates>
+    <Grid RowDefinitions="*,Auto">
 
-                    <!-- ═══ Intent Card Template ═══ -->
-                    <DataTemplate DataType="vm:IntentSuggestionCardViewModel">
-                        <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                CornerRadius="{DynamicResource ThemeRadiusMd}"
-                                Padding="12,10"
-                                Margin="0,0,0,8"
-                                BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
-                                BorderThickness="1">
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto">
-                                <!-- Row 0: Icon + Intent Name + Confidence -->
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <PathIcon Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-                                             Width="16" Height="16"
-                                             Foreground="{DynamicResource ThemePrimaryBrush}"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding IntentDisplayName}"
-                                               FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                               VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <Border Grid.Column="2"
-                                            Background="{DynamicResource ThemePrimaryMutedBrush}"
-                                            CornerRadius="{DynamicResource ThemeRadiusXs}"
-                                            Padding="6,2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding ConfidenceText}"
-                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                   Foreground="{DynamicResource ThemePrimaryBrush}"/>
-                                    </Border>
-                                </Grid>
+        <!-- ═══ Message List ═══ -->
+        <ScrollViewer Grid.Row="0" Name="MessageScrollViewer"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Messages}" Margin="8">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="tray:AiChatMessageViewModel">
+                        <Panel Margin="0,0,0,8">
 
-                                <!-- Row 1: Summary -->
-                                <TextBlock Grid.Row="1" Text="{Binding Summary}"
-                                           FontSize="{DynamicResource ThemeFontSizeSm}"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,6,0,0"/>
-
-                                <!-- Row 2: Source context -->
-                                <TextBlock Grid.Row="2"
-                                           FontSize="{DynamicResource ThemeFontSizeXs}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           Margin="0,4,0,0">
-                                    <Run Text="From: "/><Run Text="{Binding SourcePluginId}"/>
-                                </TextBlock>
-
-                                <!-- Row 3: Action buttons -->
-                                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                                    <Button Command="{Binding AcceptCommand}"
-                                            IsEnabled="{Binding !IsExecuting}"
-                                            Background="{DynamicResource ThemePrimaryBrush}"
-                                            Foreground="{DynamicResource ThemeTextOnAccentBrush}"
-                                            Padding="12,5"
-                                            FontSize="{DynamicResource ThemeFontSizeSm}"
-                                            CornerRadius="{DynamicResource ThemeRadiusSm}"
-                                            Cursor="Hand">
-                                        <TextBlock Text="Execute" VerticalAlignment="Center"/>
+                            <!-- ═══ User Bubble (right-aligned) ═══ -->
+                            <Border IsVisible="{Binding IsUser}"
+                                    HorizontalAlignment="Right"
+                                    MaxWidth="320"
+                                    Background="{DynamicResource ThemePrimaryBrush}"
+                                    CornerRadius="12,12,4,12"
+                                    Padding="12,8">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding UserLabel}"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                               FontSize="{DynamicResource ThemeFontSizeSm}"/>
+                                    <!-- Source link -->
+                                    <Button IsVisible="{Binding HasSourceLink}"
+                                            Command="{Binding NavigateToSourceCommand}"
+                                            Background="Transparent" BorderThickness="0"
+                                            Padding="0" Cursor="Hand"
+                                            HorizontalAlignment="Left">
+                                        <TextBlock FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                   Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                                                   Opacity="0.8"
+                                                   TextDecorations="Underline">
+                                            <Run Text="{Binding SourceEntityTitle, FallbackValue='this item'}"/>
+                                        </TextBlock>
                                     </Button>
-                                    <Button Command="{Binding EditSlotsCommand}"
-                                            Background="{DynamicResource ThemeHoverBrush}"
-                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                            Padding="12,5"
-                                            FontSize="{DynamicResource ThemeFontSizeSm}"
-                                            CornerRadius="{DynamicResource ThemeRadiusSm}"
-                                            Cursor="Hand"
-                                            Content="Edit"/>
-                                    <Button Command="{Binding DismissCommand}"
-                                            Background="Transparent"
-                                            Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                            Padding="8,5"
-                                            FontSize="{DynamicResource ThemeFontSizeSm}"
-                                            Cursor="Hand"
-                                            Content="Dismiss"/>
                                 </StackPanel>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
+                            </Border>
 
-                    <!-- ═══ Content Suggestion Card Template ═══ -->
-                    <DataTemplate DataType="tray:ContentSuggestionCardViewModel">
-                        <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
-                                CornerRadius="{DynamicResource ThemeRadiusMd}"
-                                Padding="12,10"
-                                Margin="0,0,0,8"
-                                BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
-                                BorderThickness="1">
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                                <!-- Row 0: Title (clickable to expand) -->
-                                <Button Grid.Row="0"
-                                        Command="{Binding ToggleExpandedCommand}"
-                                        Background="Transparent" BorderThickness="0"
-                                        Padding="0" HorizontalContentAlignment="Left"
-                                        Cursor="Hand">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <PathIcon Data="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61z"
-                                                 Width="14" Height="14"
-                                                 Foreground="{DynamicResource ThemeWarningBrush}"
-                                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Title}"
-                                                   FontSize="{DynamicResource ThemeFontSizeSmMd}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                   VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding SourcePluginId}"
+                            <!-- ═══ Assistant Bubble (left-aligned) ═══ -->
+                            <Border IsVisible="{Binding IsAssistant}"
+                                    HorizontalAlignment="Left"
+                                    MaxWidth="340"
+                                    Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                                    CornerRadius="12,12,12,4"
+                                    Padding="12,8"
+                                    BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
+                                    BorderThickness="1">
+                                <StackPanel Spacing="6">
+                                    <!-- Loading state -->
+                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                IsVisible="{Binding IsLoading}">
+                                        <ProgressBar IsIndeterminate="True" Width="60" Height="3"/>
+                                        <TextBlock Text="Thinking..."
                                                    FontSize="{DynamicResource ThemeFontSizeXs}"
-                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Button>
+                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                    </StackPanel>
 
-                                <!-- Row 1: Preview text (when collapsed) -->
-                                <TextBlock Grid.Row="1"
-                                           Text="{Binding PreviewText}"
-                                           IsVisible="{Binding !IsExpanded}"
-                                           FontSize="{DynamicResource ThemeFontSizeSm}"
-                                           Foreground="{DynamicResource ThemeTextMutedBrush}"
-                                           TextTrimming="CharacterEllipsis"
-                                           Margin="0,4,0,0"/>
+                                    <!-- Error state -->
+                                    <Border IsVisible="{Binding IsError}"
+                                            Background="{DynamicResource ThemeDangerMutedBrush}"
+                                            CornerRadius="{DynamicResource ThemeRadiusSm}"
+                                            Padding="8,4">
+                                        <TextBlock Text="{Binding ErrorMessage}"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                   Foreground="{DynamicResource ThemeDangerBrush}"
+                                                   TextWrapping="Wrap"/>
+                                    </Border>
 
-                                <!-- Row 2: Loading spinner -->
-                                <StackPanel Grid.Row="2"
-                                            Orientation="Horizontal" Spacing="8"
-                                            IsVisible="{Binding IsLoading}"
-                                            Margin="0,8,0,0">
-                                    <ProgressBar IsIndeterminate="True" Width="60" Height="3"/>
-                                    <TextBlock Text="Generating..."
-                                               FontSize="{DynamicResource ThemeFontSizeXs}"
-                                               Foreground="{DynamicResource ThemeTextMutedBrush}"/>
-                                </StackPanel>
+                                    <!-- Content text -->
+                                    <TextBlock Text="{Binding Content}"
+                                               IsVisible="{Binding Content, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                               TextWrapping="Wrap"
+                                               FontSize="{DynamicResource ThemeFontSizeSm}"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
 
-                                <!-- Row 2 alt: Error message -->
-                                <Border Grid.Row="2"
-                                        IsVisible="{Binding IsError}"
-                                        Background="{DynamicResource ThemeDangerMutedBrush}"
-                                        CornerRadius="{DynamicResource ThemeRadiusSm}"
-                                        Padding="8,4" Margin="0,8,0,0">
-                                    <TextBlock Text="{Binding ErrorMessage}"
-                                               FontSize="{DynamicResource ThemeFontSizeXs}"
-                                               Foreground="{DynamicResource ThemeDangerBrush}"
-                                               TextWrapping="Wrap"/>
-                                </Border>
-
-                                <!-- Row 3: Full content (when expanded and ready/applied) -->
-                                <TextBlock Grid.Row="3"
-                                           Text="{Binding Content}"
-                                           IsVisible="{Binding IsExpanded}"
-                                           FontSize="{DynamicResource ThemeFontSizeSm}"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,8,0,0"/>
-
-                                <!-- Row 4: Action buttons -->
-                                <ItemsControl Grid.Row="4"
-                                              ItemsSource="{Binding Actions}"
-                                              IsVisible="{Binding IsReady}"
-                                              Margin="0,8,0,0">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" Spacing="6"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="sdk:SuggestionAction">
-                                            <Button Content="{Binding DisplayName}"
-                                                    Command="{Binding $parent[Border].((tray:ContentSuggestionCardViewModel)DataContext).ExecuteActionCommand}"
-                                                    CommandParameter="{Binding}"
-                                                    Padding="8,4"
-                                                    FontSize="{DynamicResource ThemeFontSizeSm}"
-                                                    CornerRadius="{DynamicResource ThemeRadiusSm}"
-                                                    Cursor="Hand"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-
-                                <!-- Applied state: show Undo + Dismiss -->
-                                <StackPanel Grid.Row="4"
-                                            Orientation="Horizontal" Spacing="6"
-                                            IsVisible="{Binding IsApplied}"
-                                            Margin="0,8,0,0">
-                                    <TextBlock Text="Applied"
-                                               FontSize="{DynamicResource ThemeFontSizeXs}"
-                                               Foreground="{DynamicResource ThemeSuccessBrush}"
-                                               VerticalAlignment="Center"/>
-                                    <ItemsControl ItemsSource="{Binding Actions}">
+                                    <!-- Action buttons (Ready state) -->
+                                    <ItemsControl ItemsSource="{Binding Actions}"
+                                                  IsVisible="{Binding IsReady}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <StackPanel Orientation="Horizontal" Spacing="6"/>
@@ -209,7 +94,7 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="sdk:SuggestionAction">
                                                 <Button Content="{Binding DisplayName}"
-                                                        Command="{Binding $parent[Border].((tray:ContentSuggestionCardViewModel)DataContext).ExecuteActionCommand}"
+                                                        Command="{Binding $parent[Border].((tray:AiChatMessageViewModel)DataContext).ExecuteActionCommand}"
                                                         CommandParameter="{Binding}"
                                                         Padding="8,4"
                                                         FontSize="{DynamicResource ThemeFontSizeSm}"
@@ -218,23 +103,89 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
 
-                </ItemsControl.DataTemplates>
+                                    <!-- Applied state -->
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                IsVisible="{Binding IsApplied}">
+                                        <TextBlock Text="Applied"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                   Foreground="{DynamicResource ThemeSuccessBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ItemsControl ItemsSource="{Binding Actions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="6"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="sdk:SuggestionAction">
+                                                    <Button Content="{Binding DisplayName}"
+                                                            Command="{Binding $parent[Border].((tray:AiChatMessageViewModel)DataContext).ExecuteActionCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            Padding="8,4"
+                                                            FontSize="{DynamicResource ThemeFontSizeSm}"
+                                                            CornerRadius="{DynamicResource ThemeRadiusSm}"
+                                                            Cursor="Hand"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <!-- Dismiss link for content cards -->
+                                    <Button IsVisible="{Binding SuggestionId, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                            Command="{Binding DismissCommand}"
+                                            Background="Transparent" BorderThickness="0"
+                                            Padding="0" Cursor="Hand"
+                                            HorizontalAlignment="Left">
+                                        <TextBlock Text="Dismiss"
+                                                   FontSize="{DynamicResource ThemeFontSizeXs}"
+                                                   Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+
+                        </Panel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
 
-        <!-- Empty state -->
+        <!-- ═══ Empty State ═══ -->
         <TextBlock Grid.Row="0"
-                   Text="No suggestions yet"
+                   Text="Start a conversation..."
                    IsVisible="{Binding !HasCards}"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    Margin="0,40"
                    FontSize="{DynamicResource ThemeFontSizeSm}"
                    Foreground="{DynamicResource ThemeTextMutedBrush}"/>
+
+        <!-- ═══ Chat Input Bar ═══ -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="8">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Name="ChatInputBox"
+                         Text="{Binding ChatInputText, Mode=TwoWay}"
+                         Watermark="Ask PrivStack..."
+                         FontSize="{DynamicResource ThemeFontSizeSm}"
+                         CornerRadius="{DynamicResource ThemeRadiusSm}"
+                         Padding="8,6"
+                         VerticalAlignment="Center"/>
+                <Button Grid.Column="1"
+                        Content="Send"
+                        Command="{Binding SendChatMessageCommand}"
+                        Background="{DynamicResource ThemePrimaryBrush}"
+                        Foreground="{DynamicResource ThemeTextOnAccentBrush}"
+                        Padding="12,6"
+                        Margin="6,0,0,0"
+                        FontSize="{DynamicResource ThemeFontSizeSm}"
+                        CornerRadius="{DynamicResource ThemeRadiusSm}"
+                        VerticalAlignment="Center"
+                        Cursor="Hand"/>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
