@@ -139,6 +139,15 @@ public partial class AiSuggestionTrayViewModel
         });
     }
 
+    public void Receive(ContentSuggestionDismissedMessage message)
+    {
+        _dispatcher.Post(() =>
+        {
+            RemoveMessageBySuggestionId(message.SuggestionId);
+            UpdateCounts();
+        });
+    }
+
     private void RemoveMessageBySuggestionId(string suggestionId)
     {
         if (_suggestionToUserMsgId.TryGetValue(suggestionId, out var userMsgId))

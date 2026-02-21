@@ -24,6 +24,7 @@ internal sealed class DatasetInsightOrchestrator
     private readonly IAiSuggestionService _suggestionService;
     private readonly IPrivStackSdk _sdk;
     private readonly IToastService _toast;
+    private readonly INavigationService _navigation;
 
     private readonly ConcurrentDictionary<string, DatasetInsightResult> _results = new();
 
@@ -31,12 +32,14 @@ internal sealed class DatasetInsightOrchestrator
         AiService aiService,
         IAiSuggestionService suggestionService,
         IPrivStackSdk sdk,
-        IToastService toast)
+        IToastService toast,
+        INavigationService navigation)
     {
         _aiService = aiService;
         _suggestionService = suggestionService;
         _sdk = sdk;
         _toast = toast;
+        _navigation = navigation;
 
         WeakReferenceMessenger.Default.Register<DatasetInsightRequestMessage>(this, OnInsightRequested);
         WeakReferenceMessenger.Default.Register<ContentSuggestionActionRequestedMessage>(this, OnActionRequested);
@@ -142,19 +145,26 @@ internal sealed class DatasetInsightOrchestrator
 
     private async void OnActionRequested(object recipient, ContentSuggestionActionRequestedMessage msg)
     {
-        if (msg.ActionId != "save_insight_notes") return;
-        if (!_results.TryGetValue(msg.SuggestionId, out var result)) return;
+        if (msg.ActionId == "save_insight_notes")
+        {
+            if (!_results.TryGetValue(msg.SuggestionId, out var result)) return;
 
-        try
-        {
-            await CreateInsightNotesAsync(result);
+            try
+            {
+                await CreateInsightNotesAsync(result);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to save insight notes for {DatasetId}", result.DatasetId);
+                _suggestionService.Update(msg.SuggestionId, "privstack.data",
+                    newState: ContentSuggestionState.Error,
+                    errorMessage: $"Failed to save notes: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        else if (msg.ActionId.StartsWith("view_page:", StringComparison.Ordinal))
         {
-            Log.Error(ex, "Failed to save insight notes for {DatasetId}", result.DatasetId);
-            _suggestionService.Update(msg.SuggestionId, "privstack.data",
-                newState: ContentSuggestionState.Error,
-                errorMessage: $"Failed to save notes: {ex.Message}");
+            var pageId = msg.ActionId[10..];
+            await _navigation.NavigateToItemAsync("page", pageId);
         }
     }
 
@@ -204,7 +214,16 @@ internal sealed class DatasetInsightOrchestrator
 
         _suggestionService.Update(result.SuggestionId, "privstack.data",
             newState: ContentSuggestionState.Applied,
-            newContent: $"Insights saved to \"{subPageTitle}\"");
+            newContent: $"Insights saved to \"{subPageTitle}\"",
+            newActions:
+            [
+                new SuggestionAction
+                {
+                    ActionId = $"view_page:{subPageId}",
+                    DisplayName = "View in Notes",
+                    IsPrimary = true,
+                },
+            ]);
 
         _toast.Show($"Insights saved to \"{subPageTitle}\"", ToastType.Success);
         _results.TryRemove(result.SuggestionId, out _);
