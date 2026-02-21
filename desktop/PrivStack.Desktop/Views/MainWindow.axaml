@@ -54,7 +54,7 @@
             <Setter Property="Width" Value="56"/>
         </Style>
 
-        <!-- AI Companion speech balloon fade -->
+        <!-- Hugo speech balloon fade -->
         <Style Selector="Border#AiBalloon">
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="RenderTransform" Value="translate(0px, 8px)"/>
@@ -247,7 +247,7 @@
                                             BorderBrush="{DynamicResource ThemeBorderSubtleBrush}"
                                             BorderThickness="0,0,0,1">
                                         <Grid ColumnDefinitions="*,Auto,Auto">
-                                            <TextBlock Text="PrivStack AI"
+                                            <TextBlock Text="Hugo"
                                                        FontWeight="SemiBold"
                                                        FontSize="{DynamicResource ThemeFontSizeMd}"
                                                        VerticalAlignment="Center"/>
@@ -466,7 +466,7 @@
 
                             <!-- Right side: Intent Tray + Update status + Subscription + Storage -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
-                                <!-- AI Suggestions Button -->
+                                <!-- Hugo AI Button -->
                                 <Button Command="{Binding ToggleAiTrayCommand}"
                                         IsVisible="{Binding AiTrayVM.IsEnabled}"
                                         Background="Transparent" BorderThickness="0"
@@ -474,7 +474,7 @@
                                         MinHeight="0" MinWidth="0"
                                         Cursor="Hand"
                                         VerticalAlignment="Center"
-                                        ToolTip.Tip="AI Suggestions">
+                                        ToolTip.Tip="Hugo">
                                     <Button.Styles>
                                         <Style Selector="Button:pointerover /template/ ContentPresenter">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -569,7 +569,7 @@
             </Grid>
         </Grid>
 
-        <!-- AI Companion Speech Balloon (anchored bottom-right, above status bar near star icon) -->
+        <!-- Hugo Speech Balloon (anchored bottom-right, above status bar near star icon) -->
         <Border x:Name="AiBalloon"
                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
                 Margin="0,0,120,48" ZIndex="998"
@@ -591,7 +591,7 @@
                             Padding="14,10" BoxShadow="0 4 16 0 #30000000"
                             MaxWidth="320">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="PrivStack AI Companion" FontWeight="Bold"
+                            <TextBlock Text="Hugo" FontWeight="Bold"
                                        FontSize="{DynamicResource ThemeFontSizeXsSm}"
                                        Foreground="{DynamicResource ThemePrimaryBrush}"/>
                             <TextBlock Text="{Binding AiTrayVM.BalloonMessage}" TextWrapping="Wrap"

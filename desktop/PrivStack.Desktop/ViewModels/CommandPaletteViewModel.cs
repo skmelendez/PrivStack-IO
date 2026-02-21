@@ -289,6 +289,16 @@ public partial class CommandPaletteViewModel : ViewModelBase
             }),
             new CommandItem("Start Sync", "Start P2P sync", "sync start", "Sync", () => _mainVm.SyncVM.StartSyncCommand.Execute(null)),
             new CommandItem("Stop Sync", "Stop P2P sync", "sync stop", "Sync", () => _mainVm.SyncVM.StopSyncCommand.Execute(null)),
+
+            // Hugo AI
+            new CommandItem("Open Hugo", "Open the Hugo AI assistant", "ai hugo chat assistant", "AI", () => {
+                if (!_mainVm.IsAiTrayOpen)
+                    _mainVm.ToggleAiTrayCommand.Execute(null);
+            }),
+            new CommandItem("Close Hugo", "Close the Hugo AI assistant", "ai hugo chat close", "AI", () => {
+                if (_mainVm.IsAiTrayOpen)
+                    _mainVm.ToggleAiTrayCommand.Execute(null);
+            }),
         ];
 
         InvalidateCache();

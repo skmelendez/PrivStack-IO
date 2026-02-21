@@ -190,7 +190,7 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
             var card = message.Card;
 
             // Create user bubble
-            var userLabel = card.UserPromptLabel ?? $"Hey PrivStack, {card.Title}";
+            var userLabel = card.UserPromptLabel ?? $"Hey Hugo, {card.Title}";
             var userMsg = new AiChatMessageViewModel(ChatMessageRole.User)
             {
                 SuggestionId = card.SuggestionId,

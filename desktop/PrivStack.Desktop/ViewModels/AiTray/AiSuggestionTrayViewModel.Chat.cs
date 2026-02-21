@@ -45,7 +45,7 @@ public partial class AiSuggestionTrayViewModel
         {
             var request = new AiRequest
             {
-                SystemPrompt = "You are PrivStack AI, a helpful assistant embedded in a productivity app. " +
+                SystemPrompt = "You are Hugo, a helpful AI assistant embedded in PrivStack, a productivity app. " +
                                "Be concise and direct. Answer in plain text without markdown formatting.",
                 UserPrompt = text,
                 MaxTokens = 1024,

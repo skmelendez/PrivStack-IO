@@ -169,7 +169,7 @@
             <Grid ColumnDefinitions="*,Auto">
                 <TextBox Name="ChatInputBox"
                          Text="{Binding ChatInputText, Mode=TwoWay}"
-                         Watermark="Ask PrivStack..."
+                         Watermark="Ask Hugo..."
                          FontSize="{DynamicResource ThemeFontSizeSm}"
                          CornerRadius="{DynamicResource ThemeRadiusSm}"
                          Padding="8,6"
