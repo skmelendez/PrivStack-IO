@@ -45,6 +45,8 @@ public static class ThemeColorKeys
             new("ThemeSurface", "Surface"),
             new("ThemeSurfaceElevated", "Surface Elevated"),
             new("ThemeSurfaceGlass", "Surface Glass"),
+            new("ThemeInputBackground", "Input Background"),
+            new("ThemeSurfaceRecessed", "Surface Recessed"),
         ]),
         new("Border", [
             new("ThemeBorder", "Border"),
