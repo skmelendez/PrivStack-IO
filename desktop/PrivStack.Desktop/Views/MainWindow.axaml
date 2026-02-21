@@ -232,7 +232,6 @@
                                     VerticalAlignment="Stretch"
                                     Margin="0,0,0,0"
                                     ZIndex="12"
-                                    IsHitTestVisible="False"
                                     IsVisible="{Binding AiTrayVM.IsEnabled}"
                                     Classes.open="{Binding IsAiTrayOpen}">
                             <Border CornerRadius="8,0,0,8"
