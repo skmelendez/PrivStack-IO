@@ -45,11 +45,12 @@ public partial class AiSuggestionTrayViewModel
 
         try
         {
+            var tier = AiPersona.Classify(text);
             var request = new AiRequest
             {
-                SystemPrompt = AiPersona.SystemPrompt,
+                SystemPrompt = AiPersona.GetSystemPrompt(tier),
                 UserPrompt = text,
-                MaxTokens = 200,
+                MaxTokens = AiPersona.MaxTokensFor(tier),
                 Temperature = 0.4,
                 FeatureId = "tray.chat"
             };
