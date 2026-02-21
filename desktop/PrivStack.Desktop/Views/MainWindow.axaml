@@ -54,6 +54,22 @@
             <Setter Property="Width" Value="56"/>
         </Style>
 
+        <!-- AI Companion speech balloon fade -->
+        <Style Selector="Border#AiBalloon">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="RenderTransform" Value="translate(0px, 8px)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border#AiBalloon.balloon-visible">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="RenderTransform" Value="translate(0px, 0px)"/>
+        </Style>
+
         <!-- AI Tray slide drawer animation -->
         <Style Selector="StackPanel#AiTrayDrawer">
             <Setter Property="RenderTransform" Value="translate(420px, 0px)"/>
@@ -466,33 +482,9 @@
                                         </Style>
                                     </Button.Styles>
                                     <Grid>
-                                        <PathIcon Data="M12 0 L14.5 9.5 L24 12 L14.5 14.5 L12 24 L9.5 14.5 L0 12 L9.5 9.5 Z"
+                                        <PathIcon Data="M12,0 L14.5,9.5 L24,12 L14.5,14.5 L12,24 L9.5,14.5 L0,12 L9.5,9.5 Z"
                                                  Width="14" Height="14"
-                                                 RenderTransformOrigin="0.5,0.5"
-                                                 Classes.notifying="{Binding AiTrayVM.HasActiveNotification}"
-                                                 Foreground="{DynamicResource ThemePrimaryBrush}">
-                                            <PathIcon.RenderTransform>
-                                                <RotateTransform Angle="0"/>
-                                            </PathIcon.RenderTransform>
-                                            <PathIcon.Styles>
-                                                <Style Selector="PathIcon.notifying">
-                                                    <Setter Property="Foreground" Value="#FFD700"/>
-                                                    <Style.Animations>
-                                                        <Animation Duration="0:0:1"
-                                                                   IterationCount="1"
-                                                                   FillMode="Forward"
-                                                                   Easing="CubicEaseInOut">
-                                                            <KeyFrame Cue="0%">
-                                                                <Setter Property="RotateTransform.Angle" Value="0"/>
-                                                            </KeyFrame>
-                                                            <KeyFrame Cue="100%">
-                                                                <Setter Property="RotateTransform.Angle" Value="720"/>
-                                                            </KeyFrame>
-                                                        </Animation>
-                                                    </Style.Animations>
-                                                </Style>
-                                            </PathIcon.Styles>
-                                        </PathIcon>
+                                                 Foreground="{DynamicResource ThemePrimaryBrush}"/>
                                         <!-- Badge count -->
                                         <Border IsVisible="{Binding AiTrayVM.HasCards}"
                                                 Background="{DynamicResource ThemePrimaryBrush}"
@@ -577,6 +569,46 @@
                 </Grid>
             </Grid>
         </Grid>
+
+        <!-- AI Companion Speech Balloon (anchored bottom-right, above status bar near star icon) -->
+        <Border x:Name="AiBalloon"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,120,48" ZIndex="998"
+                IsHitTestVisible="{Binding AiTrayVM.HasBalloonMessage}"
+                Classes.balloon-visible="{Binding AiTrayVM.HasBalloonMessage}">
+            <Button Command="{Binding AiTrayVM.DismissBalloonCommand}"
+                    Background="Transparent" BorderThickness="0" Padding="0"
+                    Cursor="Hand" MinHeight="0" MinWidth="0">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover /template/ ContentPresenter">
+                        <Setter Property="Background" Value="Transparent"/>
+                    </Style>
+                </Button.Styles>
+                <StackPanel>
+                    <!-- Balloon body -->
+                    <Border Background="{DynamicResource ThemeSurfaceElevatedBrush}"
+                            BorderBrush="{DynamicResource ThemePrimaryBrush}"
+                            BorderThickness="1.5" CornerRadius="12"
+                            Padding="14,10" BoxShadow="0 4 16 0 #30000000"
+                            MaxWidth="320">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="PrivStack AI Companion" FontWeight="Bold"
+                                       FontSize="{DynamicResource ThemeFontSizeXsSm}"
+                                       Foreground="{DynamicResource ThemePrimaryBrush}"/>
+                            <TextBlock Text="{Binding AiTrayVM.BalloonMessage}" TextWrapping="Wrap"
+                                       FontSize="{DynamicResource ThemeFontSizeSmMd}"
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <!-- Triangle tail pointing down toward star -->
+                    <Path Data="M0,0 L8,8 L16,0 Z"
+                          Fill="{DynamicResource ThemeSurfaceElevatedBrush}"
+                          Stroke="{DynamicResource ThemePrimaryBrush}"
+                          StrokeThickness="1.5"
+                          HorizontalAlignment="Right" Margin="0,-1,24,0"/>
+                </StackPanel>
+            </Button>
+        </Border>
 
         <!-- Toast Notification Container (top-center, above all content) -->
         <toast:ToastContainer ZIndex="1100"

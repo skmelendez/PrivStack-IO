@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Sdk.Capabilities;
 using PrivStack.Sdk.Messaging;
 using PrivStack.Sdk.Services;
 using Serilog;
@@ -71,10 +72,16 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     private bool _isOpen;
 
     /// <summary>
-    /// True when there are active suggestion cards — drives the gold spin animation on the status bar icon.
+    /// Speech balloon message shown near the AI star icon.
+    /// Null or empty when no balloon is visible.
     /// </summary>
     [ObservableProperty]
-    private bool _hasActiveNotification;
+    [NotifyPropertyChangedFor(nameof(HasBalloonMessage))]
+    private string? _balloonMessage;
+
+    public bool HasBalloonMessage => !string.IsNullOrEmpty(BalloonMessage);
+
+    private CancellationTokenSource? _balloonDismissCts;
 
     /// <summary>
     /// The tray is visible when any AI feature is enabled (not just intents).
@@ -84,7 +91,14 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     // ── Commands ─────────────────────────────────────────────────────
 
     [RelayCommand]
-    private void Toggle() => IsOpen = !IsOpen;
+    private void Toggle()
+    {
+        IsOpen = !IsOpen;
+        if (IsOpen) BalloonMessage = null;
+    }
+
+    [RelayCommand]
+    private void DismissBalloon() => BalloonMessage = null;
 
     [RelayCommand]
     private void ClearAll()
@@ -107,6 +121,7 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
         {
             Cards.Insert(0, new IntentSuggestionCardViewModel(suggestion, _intentEngine));
             UpdateCounts();
+            ShowBalloon($"I noticed something: {suggestion.Summary}");
         });
     }
 
@@ -149,6 +164,9 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
             };
             Cards.Insert(0, vm);
             UpdateCounts();
+
+            if (message.Card.State == ContentSuggestionState.Loading)
+                ShowBalloon($"Working on your {message.Card.Title}...");
         });
     }
 
@@ -159,7 +177,11 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
             var card = Cards
                 .OfType<ContentSuggestionCardViewModel>()
                 .FirstOrDefault(c => c.CardId == message.SuggestionId);
-            card?.ApplyUpdate(message);
+            if (card == null) return;
+            card.ApplyUpdate(message);
+
+            if (message.NewState == ContentSuggestionState.Ready)
+                ShowBalloon($"Hey, I've generated your {card.Title}!");
         });
     }
 
@@ -178,6 +200,19 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     private void UpdateCounts()
     {
         PendingCount = Cards.Count;
-        HasActiveNotification = Cards.Count > 0;
+    }
+
+    private void ShowBalloon(string message)
+    {
+        _balloonDismissCts?.Cancel();
+        BalloonMessage = message;
+
+        var cts = new CancellationTokenSource();
+        _balloonDismissCts = cts;
+
+        _ = Task.Delay(TimeSpan.FromSeconds(6), cts.Token).ContinueWith(_ =>
+        {
+            _dispatcher.Post(() => BalloonMessage = null);
+        }, TaskContinuationOptions.OnlyOnRanToCompletion);
     }
 }

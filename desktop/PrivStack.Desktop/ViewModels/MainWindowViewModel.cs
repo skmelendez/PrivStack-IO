@@ -856,6 +856,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsSyncPanelOpen = false;
             IsSettingsPanelOpen = false;
+            AiTrayVM.BalloonMessage = null;
         }
     }
 
