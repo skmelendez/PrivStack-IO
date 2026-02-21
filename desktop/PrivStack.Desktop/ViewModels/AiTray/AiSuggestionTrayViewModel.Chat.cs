@@ -139,7 +139,8 @@ public partial class AiSuggestionTrayViewModel
     private IReadOnlyList<AiChatMessage>? BuildConversationHistory()
     {
         var chatMessages = Messages
-            .Where(m => m.SuggestionId == null && m.State != ChatMessageState.Loading)
+            .Where(m => m.SuggestionId == null
+                && !(m.Role == ChatMessageRole.Assistant && m.State == ChatMessageState.Loading))
             .TakeLast(MaxHistoryMessages)
             .ToList();
 
