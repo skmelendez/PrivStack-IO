@@ -244,12 +244,22 @@ internal sealed class DatasetInsightOrchestrator
         {
             var line = lines[i];
 
-            // Chart marker — validate against analysis columns (prompt guides AI toward chart-eligible ones)
+            // Chart marker — parse against analysis columns, then validate against chart-eligible columns
             var chart = TryParseChartMarker(line, result.Columns);
             if (chart != null)
             {
                 FlushParagraph(paragraph, blocks);
-                blocks.Add(InsightPageBuilder.BuildChartBlock(chart, result.DatasetId));
+                // Only emit chart block if columns exist in the underlying dataset
+                if (IsChartValid(chart, result.EffectiveChartColumns))
+                    blocks.Add(InsightPageBuilder.BuildChartBlock(chart, result.DatasetId));
+                else
+                    Log.Debug("Skipping chart '{Title}': columns not in underlying dataset", chart.Title);
+                i++;
+                continue;
+            }
+            // Also strip unparsed chart markers (regex match but validation failed) to avoid raw text
+            if (ChartMarkerRegex.IsMatch(line))
+            {
                 i++;
                 continue;
             }
@@ -653,6 +663,21 @@ internal sealed class DatasetInsightOrchestrator
             chartType.ToLowerInvariant(),
             title ?? $"{yCol} by {xCol}",
             xCol, yCol, agg, groupBy);
+    }
+
+    /// <summary>
+    /// Validates that a chart's x, y, and group columns exist in the chart-eligible column set.
+    /// When insights come from a view, the AI may reference computed columns that don't exist
+    /// in the underlying dataset — those charts would fail at render time.
+    /// </summary>
+    private static bool IsChartValid(ChartSuggestion chart, IReadOnlyList<string> chartColumns)
+    {
+        var colSet = new HashSet<string>(chartColumns, StringComparer.OrdinalIgnoreCase);
+        if (!colSet.Contains(chart.XColumn) || !colSet.Contains(chart.YColumn))
+            return false;
+        if (chart.GroupBy != null && !colSet.Contains(chart.GroupBy))
+            return false;
+        return true;
     }
 
     private const string ChartTypeList = "bar, line, pie, donut, area, scatter, stacked_bar, grouped_bar, horizontal_bar";
