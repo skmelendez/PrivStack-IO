@@ -237,6 +237,68 @@ impl DatasetStore {
         Ok(rows)
     }
 
+    /// Execute a grouped aggregate query for multi-series charts.
+    /// Returns (x_value, group_value, y_value) triples.
+    pub fn aggregate_query_grouped(
+        &self,
+        dataset_id: &DatasetId,
+        x_column: &str,
+        y_column: &str,
+        group_column: &str,
+        aggregation: Option<&str>,
+        filter_text: Option<&str>,
+    ) -> DatasetResult<Vec<(serde_json::Value, serde_json::Value, serde_json::Value)>> {
+        let table = dataset_table_name(dataset_id);
+        let conn = self.lock_conn();
+        let columns = introspect_columns(&conn, &table)?;
+        let where_clause = build_filter_clause(&columns, filter_text);
+
+        let x_col = sanitize_identifier(x_column);
+        let y_col = sanitize_identifier(y_column);
+        let grp_col = sanitize_identifier(group_column);
+
+        // Cast temporal columns to VARCHAR for display
+        let x_type = columns.iter().find(|c| c.name == x_column).map(|c| &c.column_type);
+        let x_is_temporal = matches!(x_type, Some(DatasetColumnType::Date) | Some(DatasetColumnType::Timestamp));
+        let x_expr = if x_is_temporal {
+            format!("CAST(\"{x_col}\" AS VARCHAR)")
+        } else {
+            format!("\"{x_col}\"")
+        };
+
+        let grp_type = columns.iter().find(|c| c.name == group_column).map(|c| &c.column_type);
+        let grp_is_temporal = matches!(grp_type, Some(DatasetColumnType::Date) | Some(DatasetColumnType::Timestamp));
+        let grp_expr = if grp_is_temporal {
+            format!("CAST(\"{grp_col}\" AS VARCHAR)")
+        } else {
+            format!("\"{grp_col}\"")
+        };
+
+        let agg_expr = match aggregation {
+            Some(agg) => format!("{agg}(\"{y_col}\")"),
+            None => format!("\"{y_col}\""),
+        };
+
+        let sql = format!(
+            "SELECT {x_expr}, {grp_expr}, {agg_expr} FROM {table}{where_clause} \
+             GROUP BY \"{x_col}\", \"{grp_col}\" ORDER BY \"{x_col}\", \"{grp_col}\""
+        );
+
+        let mut stmt = conn.prepare(&sql)?;
+        let rows: Vec<(serde_json::Value, serde_json::Value, serde_json::Value)> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row_value_to_json(row, 0),
+                    row_value_to_json(row, 1),
+                    row_value_to_json(row, 2),
+                ))
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(rows)
+    }
+
     /// Unified SQL entry point: routes through preprocessor, then to read or mutation path.
     pub fn execute_sql_v2(
         &self,

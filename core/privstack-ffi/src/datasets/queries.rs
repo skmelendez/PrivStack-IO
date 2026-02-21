@@ -1,8 +1,9 @@
 //! FFI: Aggregation, raw SQL, SQL v2, and saved queries.
 
 use super::{
-    AggregateQueryRequest,
-    AggregateQueryResponse, RawSqlRequest, SavedQueryRequest, SqlV2Request,
+    AggregateQueryRequest, AggregateQueryResponse, AggregateSeriesData,
+    GroupedAggregateQueryRequest, GroupedAggregateQueryResponse, RawSqlRequest, SavedQueryRequest,
+    SqlV2Request,
 };
 use crate::{to_c_string, PrivStackError};
 use std::ffi::{c_char, CStr};
@@ -50,6 +51,92 @@ pub unsafe extern "C" fn privstack_dataset_aggregate(
                 }
                 Err(e) => {
                     eprintln!("[FFI DATASET] aggregate failed: {e:?}");
+                    to_c_string(&super::error_json(&e.to_string()))
+                }
+            }
+        })
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn privstack_dataset_aggregate_grouped(
+    request_json: *const c_char,
+) -> *mut c_char {
+    unsafe {
+        let req = parse_json_request!(request_json, GroupedAggregateQueryRequest);
+
+        with_store_json!(r#"{"error":"not initialized"}"#, |store| {
+            let dataset_id = match uuid::Uuid::parse_str(&req.dataset_id) {
+                Ok(u) => privstack_datasets::DatasetId(u),
+                Err(_) => return to_c_string(r#"{"error":"invalid dataset id"}"#),
+            };
+
+            match store.aggregate_query_grouped(
+                &dataset_id,
+                &req.x_column,
+                &req.y_column,
+                &req.group_column,
+                req.aggregation.as_deref(),
+                req.filter_text.as_deref(),
+            ) {
+                Ok(triples) => {
+                    // Pivot (x, group, y) triples into per-series arrays
+                    let mut x_labels_set: Vec<String> = Vec::new();
+                    let mut series_map: std::collections::BTreeMap<String, Vec<(String, f64)>> =
+                        std::collections::BTreeMap::new();
+
+                    for (x_val, grp_val, y_val) in &triples {
+                        let x_str = match x_val {
+                            serde_json::Value::String(s) => s.clone(),
+                            other => other.to_string(),
+                        };
+                        let grp_str = match grp_val {
+                            serde_json::Value::String(s) => s.clone(),
+                            other => other.to_string(),
+                        };
+                        let y_num = match y_val {
+                            serde_json::Value::Number(n) => n.as_f64().unwrap_or(0.0),
+                            _ => 0.0,
+                        };
+
+                        if !x_labels_set.contains(&x_str) {
+                            x_labels_set.push(x_str.clone());
+                        }
+
+                        series_map
+                            .entry(grp_str)
+                            .or_default()
+                            .push((x_str, y_num));
+                    }
+
+                    // Build per-series data aligned to x_labels
+                    let series: Vec<AggregateSeriesData> = series_map
+                        .into_iter()
+                        .map(|(name, pairs)| {
+                            let pair_map: std::collections::HashMap<&str, f64> =
+                                pairs.iter().map(|(k, v)| (k.as_str(), *v)).collect();
+                            let values: Vec<f64> = x_labels_set
+                                .iter()
+                                .map(|x| *pair_map.get(x.as_str()).unwrap_or(&0.0))
+                                .collect();
+                            AggregateSeriesData {
+                                series_name: name,
+                                labels: x_labels_set.clone(),
+                                values,
+                            }
+                        })
+                        .collect();
+
+                    let resp = GroupedAggregateQueryResponse {
+                        x_labels: x_labels_set,
+                        series,
+                    };
+                    let json =
+                        serde_json::to_string(&resp).unwrap_or_else(|_| "{}".to_string());
+                    to_c_string(&json)
+                }
+                Err(e) => {
+                    eprintln!("[FFI DATASET] aggregate_grouped failed: {e:?}");
                     to_c_string(&super::error_json(&e.to_string()))
                 }
             }

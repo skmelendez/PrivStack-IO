@@ -125,6 +125,29 @@ pub(crate) struct AggregateQueryResponse {
 }
 
 #[derive(Deserialize)]
+pub(crate) struct GroupedAggregateQueryRequest {
+    pub dataset_id: String,
+    pub x_column: String,
+    pub y_column: String,
+    pub group_column: String,
+    pub aggregation: Option<String>,
+    pub filter_text: Option<String>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct AggregateSeriesData {
+    pub series_name: String,
+    pub labels: Vec<String>,
+    pub values: Vec<f64>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct GroupedAggregateQueryResponse {
+    pub x_labels: Vec<String>,
+    pub series: Vec<AggregateSeriesData>,
+}
+
+#[derive(Deserialize)]
 pub(crate) struct RawSqlRequest {
     pub sql: String,
     pub page: Option<i64>,
