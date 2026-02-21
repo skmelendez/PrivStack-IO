@@ -71,9 +71,17 @@ internal sealed class DatasetInsightOrchestrator
         var columnList = string.Join(", ", msg.Columns.Select((c, i) =>
             i < msg.ColumnTypes.Count ? $"{c} ({msg.ColumnTypes[i]})" : c));
 
+        // When insights come from a SQL view, charts must reference the underlying dataset columns
+        var chartColumns = msg.ChartEligibleColumns ?? msg.Columns;
+        var chartColumnTypes = msg.ChartEligibleColumnTypes ?? msg.ColumnTypes;
+        var chartColumnList = ReferenceEquals(chartColumns, msg.Columns)
+            ? columnList
+            : string.Join(", ", chartColumns.Select((c, i) =>
+                i < chartColumnTypes.Count ? $"{c} ({chartColumnTypes[i]})" : c));
+
         var systemPrompt = isLargeContext
-            ? BuildCloudSystemPrompt(columnList)
-            : BuildLocalSystemPrompt(columnList);
+            ? BuildCloudSystemPrompt(columnList, chartColumnList)
+            : BuildLocalSystemPrompt(columnList, chartColumnList);
 
         var request = new AiRequest
         {
@@ -105,7 +113,10 @@ internal sealed class DatasetInsightOrchestrator
         var result = new DatasetInsightResult(
             msg.DatasetId, msg.DatasetName, msg.SuggestionId,
             response.Content, sections,
-            msg.Columns.ToList(), msg.ColumnTypes.ToList());
+            msg.Columns.ToList(), msg.ColumnTypes.ToList())
+        {
+            ChartColumns = msg.ChartEligibleColumns?.ToList(),
+        };
 
         _results[msg.SuggestionId] = result;
 
@@ -214,8 +225,8 @@ internal sealed class DatasetInsightOrchestrator
         {
             var line = lines[i];
 
-            // Chart marker
-            var chart = TryParseChartMarker(line, result.Columns);
+            // Chart marker — validate against chart-eligible columns (underlying dataset)
+            var chart = TryParseChartMarker(line, result.EffectiveChartColumns);
             if (chart != null)
             {
                 FlushParagraph(paragraph, blocks);
@@ -370,7 +381,7 @@ internal sealed class DatasetInsightOrchestrator
     /// Full-featured prompt for cloud models with large context windows.
     /// Includes all chart types, formatting instructions, and detailed guidance.
     /// </summary>
-    private static string BuildCloudSystemPrompt(string columnList) => $"""
+    private static string BuildCloudSystemPrompt(string columnList, string chartColumnList) => $"""
         You are a data analyst. Analyze the dataset below and provide structured insights.
         Organize your response into sections using ## headers.
         Include: data quality observations, key statistics, patterns, anomalies, and actionable recommendations.
@@ -394,7 +405,8 @@ internal sealed class DatasetInsightOrchestrator
 
         Rules for chart markers:
         - type must be one of: {ChartTypeList}
-        - x and y must be exact column names from: {columnList}
+        - IMPORTANT: x, y, and group in chart markers must be from these CHART-ELIGIBLE columns ONLY: {chartColumnList}
+        - The analysis columns ({columnList}) may include computed/derived columns that cannot be used in charts
         - agg is optional (use when y needs aggregation, e.g., sum of budget grouped by status)
         - group is required for stacked_bar and grouped_bar (categorical column to split series)
         - group is optional for bar and line (creates multi-series version)
@@ -417,14 +429,14 @@ internal sealed class DatasetInsightOrchestrator
     /// Compact prompt for local models with limited context windows.
     /// Strips advanced chart types and formatting to stay within budget.
     /// </summary>
-    private static string BuildLocalSystemPrompt(string columnList) => $"""
+    private static string BuildLocalSystemPrompt(string columnList, string chartColumnList) => $"""
         You are a data analyst. Analyze the dataset and provide insights using ## headers.
         Include: data quality, key statistics, patterns, and recommendations.
         Reference actual column names.
 
         CHARTS (optional — include on own line):
         [CHART: type=TYPE | title=Title | x=column | y=column | agg=sum/count/avg]
-        Types: bar, line, pie. Columns must be from: {columnList}
+        Types: bar, line, pie. Chart columns must be from: {chartColumnList}
         """;
 
     // ── Parsing helpers ─────────────────────────────────────────────────

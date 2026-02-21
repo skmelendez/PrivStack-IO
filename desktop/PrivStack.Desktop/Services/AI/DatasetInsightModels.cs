@@ -10,7 +10,18 @@ internal sealed record DatasetInsightResult(
     string RawContent,
     IReadOnlyList<InsightSection> Sections,
     IReadOnlyList<string> Columns,
-    IReadOnlyList<string> ColumnTypes);
+    IReadOnlyList<string> ColumnTypes)
+{
+    /// <summary>
+    /// Columns valid for chart aggregation queries. When insights come from a SQL view,
+    /// the view may produce computed columns that don't exist in the underlying dataset.
+    /// Falls back to <see cref="Columns"/> when null.
+    /// </summary>
+    public IReadOnlyList<string>? ChartColumns { get; init; }
+
+    /// <summary>Effective columns for chart marker validation.</summary>
+    public IReadOnlyList<string> EffectiveChartColumns => ChartColumns ?? Columns;
+}
 
 /// <summary>
 /// A single section extracted from the AI's structured response (split on ## headers).

@@ -26,4 +26,17 @@ public sealed record DatasetInsightRequestMessage
 
     /// <summary>Total row count in the full dataset.</summary>
     public required long TotalRowCount { get; init; }
+
+    /// <summary>
+    /// Column names valid for chart aggregation queries. When insights are generated
+    /// from a SQL view, the view may produce computed columns that don't exist in the
+    /// underlying dataset. Charts must reference only these columns. Null means all
+    /// <see cref="Columns"/> are valid for charts (regular dataset case).
+    /// </summary>
+    public IReadOnlyList<string>? ChartEligibleColumns { get; init; }
+
+    /// <summary>
+    /// Column types for chart-eligible columns, parallel to <see cref="ChartEligibleColumns"/>.
+    /// </summary>
+    public IReadOnlyList<string>? ChartEligibleColumnTypes { get; init; }
 }
