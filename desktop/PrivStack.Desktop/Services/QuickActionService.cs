@@ -90,6 +90,13 @@ public sealed class QuickActionService : ICommandProvider
                 var content = entry.Provider.CreateQuickActionContent(entry.Descriptor.ActionId);
                 if (content != null)
                 {
+                    // Subscribe to CloseRequested so the shell handles closing — no reflection needed in plugins
+                    if (content is IQuickActionForm form)
+                    {
+                        form.CloseRequested += () =>
+                            Avalonia.Threading.Dispatcher.UIThread.Post(mainVm.CloseQuickActionOverlay);
+                    }
+
                     mainVm.ShowQuickActionOverlay(entry.Descriptor.DisplayName, content);
                 }
             }

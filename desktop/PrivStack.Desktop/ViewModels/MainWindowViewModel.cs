@@ -248,9 +248,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void ShowQuickActionOverlay(string title, object content)
     {
-        QuickActionOverlayTitle = title;
-        QuickActionOverlayContent = content;
-        IsQuickActionOverlayOpen = true;
+        // Reset stale state before showing new content
+        if (IsQuickActionOverlayOpen)
+        {
+            IsQuickActionOverlayOpen = false;
+            QuickActionOverlayContent = null;
+        }
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            QuickActionOverlayTitle = title;
+            QuickActionOverlayContent = content;
+            IsQuickActionOverlayOpen = true;
+        });
     }
 
     [RelayCommand]
