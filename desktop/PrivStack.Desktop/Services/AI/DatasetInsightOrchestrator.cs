@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.Messaging;
 using PrivStack.Sdk;
 using PrivStack.Sdk.Capabilities;
@@ -13,7 +14,7 @@ namespace PrivStack.Desktop.Services.AI;
 
 /// <summary>
 /// Shell-side orchestrator that receives dataset insight requests from the Data plugin,
-/// runs AI analysis, and saves results as structured Notes pages.
+/// runs AI analysis, and saves results as structured Notes pages with charts.
 /// </summary>
 internal sealed class DatasetInsightOrchestrator
 {
@@ -58,19 +59,35 @@ internal sealed class DatasetInsightOrchestrator
 
     private async Task GenerateInsightsAsync(DatasetInsightRequestMessage msg)
     {
-        var tabularText = BuildTabularText(msg.Columns, msg.ColumnTypes, msg.SampleRows, msg.TotalRowCount);
+        var tabularText = BuildTabularText(msg.Columns, msg.ColumnTypes, msg.SampleRows);
+        var columnList = string.Join(", ", msg.Columns.Select((c, i) =>
+            i < msg.ColumnTypes.Count ? $"{c} ({msg.ColumnTypes[i]})" : c));
 
         var request = new AiRequest
         {
-            SystemPrompt = """
+            SystemPrompt = $"""
                 You are a data analyst. Analyze the dataset below and provide structured insights.
                 Organize your response into sections using ## headers.
                 Include: data quality observations, key statistics, patterns, anomalies, and actionable recommendations.
                 Be specific and reference actual column names and values from the data.
+
+                CHART SUGGESTIONS:
+                Where a chart would help visualize an insight, include a chart marker on its own line:
+                [CHART: type={ChartTypeList} | title=Chart Title | x=column_name | y=column_name | agg=sum/count/avg/min/max | group=column_name]
+
+                Rules for chart markers:
+                - type must be one of: bar, line, pie
+                - x and y must be exact column names from: {columnList}
+                - agg is optional (use when y needs aggregation, e.g., sum of budget grouped by status)
+                - group is optional (use to group data by a categorical column)
+                - For pie charts: x is the category/label column, y is the value column
+                - Place the chart marker right after the paragraph that describes the insight it visualizes
+                - Only suggest charts where they genuinely add clarity — not every section needs one
                 """,
             UserPrompt = $"""
                 Dataset: "{msg.DatasetName}"
                 Total rows: {msg.TotalRowCount:N0}
+                Columns: {columnList}
                 Sample ({Math.Min(msg.SampleRows.Count, 100)} rows shown):
 
                 {tabularText}
@@ -93,7 +110,8 @@ internal sealed class DatasetInsightOrchestrator
         var sections = ParseSections(response.Content);
         var result = new DatasetInsightResult(
             msg.DatasetId, msg.DatasetName, msg.SuggestionId,
-            response.Content, sections);
+            response.Content, sections,
+            msg.Columns.ToList(), msg.ColumnTypes.ToList());
 
         _results[msg.SuggestionId] = result;
 
@@ -114,6 +132,8 @@ internal sealed class DatasetInsightOrchestrator
                 },
             ]);
     }
+
+    // ── Action handling ─────────────────────────────────────────────────
 
     private async void OnActionRequested(object recipient, ContentSuggestionActionRequestedMessage msg)
     {
@@ -143,7 +163,6 @@ internal sealed class DatasetInsightOrchestrator
 
         var blocks = new List<JsonObject>
         {
-            InsightPageBuilder.BuildHeadingBlock(1, subPageTitle),
             InsightPageBuilder.BuildParagraphBlock(
                 $"Auto-generated insights for dataset \"{result.DatasetName}\" on {DateTime.Now:MMMM d, yyyy}."),
         };
@@ -151,21 +170,12 @@ internal sealed class DatasetInsightOrchestrator
         foreach (var section in result.Sections)
         {
             blocks.Add(InsightPageBuilder.BuildHeadingBlock(2, section.Title));
-
-            foreach (var paragraph in section.Content.Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
-            {
-                blocks.Add(InsightPageBuilder.BuildParagraphBlock(paragraph.Trim()));
-            }
+            BuildSectionBlocks(section.Content, result, blocks);
         }
 
         // If no parsed sections, add raw content as paragraphs
         if (result.Sections.Count == 0)
-        {
-            foreach (var paragraph in result.RawContent.Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
-            {
-                blocks.Add(InsightPageBuilder.BuildParagraphBlock(paragraph.Trim()));
-            }
-        }
+            BuildSectionBlocks(result.RawContent, result, blocks);
 
         var payload = InsightPageBuilder.BuildCreatePayload(subPageId, subPageTitle, parentId, blocks);
 
@@ -195,9 +205,45 @@ internal sealed class DatasetInsightOrchestrator
         _results.TryRemove(result.SuggestionId, out _);
     }
 
+    /// <summary>
+    /// Converts section content text into paragraph and chart blocks.
+    /// Lines matching [CHART: ...] are converted to dataset-backed chart blocks.
+    /// </summary>
+    private static void BuildSectionBlocks(
+        string content, DatasetInsightResult result, List<JsonObject> blocks)
+    {
+        var paragraph = new StringBuilder();
+
+        foreach (var line in content.Split('\n'))
+        {
+            var chart = TryParseChartMarker(line, result.Columns);
+            if (chart != null)
+            {
+                // Flush accumulated paragraph text before the chart
+                FlushParagraph(paragraph, blocks);
+                blocks.Add(InsightPageBuilder.BuildChartBlock(chart, result.DatasetId));
+            }
+            else
+            {
+                paragraph.AppendLine(line);
+            }
+        }
+
+        FlushParagraph(paragraph, blocks);
+    }
+
+    private static void FlushParagraph(StringBuilder sb, List<JsonObject> blocks)
+    {
+        var text = sb.ToString().Trim();
+        if (text.Length > 0)
+            blocks.Add(InsightPageBuilder.BuildParagraphBlock(text));
+        sb.Clear();
+    }
+
+    // ── Parent page management ──────────────────────────────────────────
+
     private async Task<string> FindOrCreateParentPageAsync(string parentTitle)
     {
-        // Search existing pages for the parent
         var listResponse = await _sdk.SendAsync<List<JsonElement>>(new SdkMessage
         {
             PluginId = "privstack.notes",
@@ -213,7 +259,6 @@ internal sealed class DatasetInsightOrchestrator
                     titleProp.GetString() == parentTitle &&
                     el.TryGetProperty("id", out var idProp))
                 {
-                    // Ensure it's not trashed or archived
                     var isTrashed = el.TryGetProperty("is_trashed", out var t) && t.GetBoolean();
                     var isArchived = el.TryGetProperty("is_archived", out var a) && a.GetBoolean();
                     if (!isTrashed && !isArchived)
@@ -222,11 +267,9 @@ internal sealed class DatasetInsightOrchestrator
             }
         }
 
-        // Create parent page with table of contents
         var parentId = Guid.NewGuid().ToString();
         var tocBlocks = new List<JsonObject>
         {
-            InsightPageBuilder.BuildHeadingBlock(1, parentTitle),
             InsightPageBuilder.BuildParagraphBlock(
                 "This page collects AI-generated dataset insights. Sub-pages are created automatically."),
             InsightPageBuilder.BuildTocBlock(),
@@ -249,22 +292,19 @@ internal sealed class DatasetInsightOrchestrator
         return parentId;
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
+    // ── Parsing helpers ─────────────────────────────────────────────────
 
     private static string BuildTabularText(
         IReadOnlyList<string> columns,
         IReadOnlyList<string> columnTypes,
-        IReadOnlyList<IReadOnlyList<object?>> rows,
-        long totalRows)
+        IReadOnlyList<IReadOnlyList<object?>> rows)
     {
         var sb = new StringBuilder();
 
-        // Header with types
         sb.AppendLine(string.Join(" | ", columns.Select((c, i) =>
             i < columnTypes.Count ? $"{c} ({columnTypes[i]})" : c)));
         sb.AppendLine(new string('-', Math.Min(sb.Length, 120)));
 
-        // Rows (cap output at ~6000 chars)
         foreach (var row in rows)
         {
             var line = string.Join(" | ", row.Select(v => v?.ToString() ?? "NULL"));
@@ -304,4 +344,66 @@ internal sealed class DatasetInsightOrchestrator
 
         return sections;
     }
+
+    private static readonly Regex ChartMarkerRegex = new(
+        @"^\s*\[CHART:\s*(.+?)\]\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly string[] ValidChartTypes = ["bar", "line", "pie"];
+    private static readonly string[] ValidAggregations = ["count", "sum", "avg", "min", "max"];
+
+    /// <summary>
+    /// Parses a [CHART: type=bar | x=col | y=col | ...] marker line.
+    /// Returns null if the line isn't a chart marker or has invalid columns.
+    /// </summary>
+    private static ChartSuggestion? TryParseChartMarker(string line, IReadOnlyList<string> validColumns)
+    {
+        var match = ChartMarkerRegex.Match(line);
+        if (!match.Success) return null;
+
+        var props = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in match.Groups[1].Value.Split('|'))
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length == 2)
+                props[kv[0].Trim()] = kv[1].Trim();
+        }
+
+        if (!props.TryGetValue("type", out var chartType) ||
+            !ValidChartTypes.Contains(chartType.ToLowerInvariant()))
+            return null;
+
+        if (!props.TryGetValue("x", out var xCol) || !props.TryGetValue("y", out var yCol))
+            return null;
+
+        // Validate column names against actual dataset columns (case-insensitive)
+        var colSet = new HashSet<string>(validColumns, StringComparer.OrdinalIgnoreCase);
+        if (!colSet.Contains(xCol) || !colSet.Contains(yCol))
+        {
+            Log.Debug("Chart marker references unknown columns: x={X}, y={Y}", xCol, yCol);
+            return null;
+        }
+
+        // Normalize to exact column names
+        xCol = validColumns.First(c => c.Equals(xCol, StringComparison.OrdinalIgnoreCase));
+        yCol = validColumns.First(c => c.Equals(yCol, StringComparison.OrdinalIgnoreCase));
+
+        props.TryGetValue("title", out var title);
+        props.TryGetValue("agg", out var agg);
+        props.TryGetValue("group", out var groupBy);
+
+        if (agg != null && !ValidAggregations.Contains(agg.ToLowerInvariant()))
+            agg = null;
+
+        if (groupBy != null && !colSet.Contains(groupBy))
+            groupBy = null;
+        else if (groupBy != null)
+            groupBy = validColumns.First(c => c.Equals(groupBy, StringComparison.OrdinalIgnoreCase));
+
+        return new ChartSuggestion(
+            chartType.ToLowerInvariant(),
+            title ?? $"{yCol} by {xCol}",
+            xCol, yCol, agg, groupBy);
+    }
+
+    private const string ChartTypeList = "bar, line, pie";
 }

@@ -71,4 +71,32 @@ internal static class InsightPageBuilder
             ["text"] = text,
         };
     }
+
+    /// <summary>
+    /// Builds a dataset-backed chart block.
+    /// </summary>
+    public static JsonObject BuildChartBlock(ChartSuggestion chart, string datasetId)
+    {
+        var block = new JsonObject
+        {
+            ["id"] = Guid.NewGuid().ToString(),
+            ["type"] = "chart",
+            ["dataset_id"] = datasetId,
+            ["chart_type"] = chart.ChartType,
+            ["x_column"] = chart.XColumn,
+            ["y_column"] = chart.YColumn,
+            ["title"] = chart.Title,
+            ["width"] = 600,
+            ["height"] = 400,
+            ["show_legend"] = chart.ChartType == "pie",
+        };
+
+        if (chart.Aggregation != null)
+            block["aggregation"] = chart.Aggregation;
+
+        if (chart.GroupBy != null)
+            block["group_by"] = chart.GroupBy;
+
+        return block;
+    }
 }
