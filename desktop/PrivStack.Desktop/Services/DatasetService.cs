@@ -350,6 +350,30 @@ public sealed partial class DatasetService : IDatasetService
         }
     }
 
+    public Task<GroupedAggregateResult> AggregateGroupedAsync(GroupedAggregateQuery query, CancellationToken ct)
+    {
+        var queryJson = JsonSerializer.Serialize(query, JsonOptions);
+        var ptr = DatasetNative.AggregateGrouped(queryJson);
+        try
+        {
+            var json = MarshalAndFree(ptr);
+            if (json.Contains("\"error\""))
+            {
+                Log.Warning("AggregateGroupedAsync error: {Json}", json);
+                return Task.FromResult(new GroupedAggregateResult());
+            }
+
+            var result = JsonSerializer.Deserialize<GroupedAggregateResult>(json, JsonOptions)
+                         ?? new GroupedAggregateResult();
+            return Task.FromResult(result);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "AggregateGroupedAsync failed");
+            return Task.FromResult(new GroupedAggregateResult());
+        }
+    }
+
     // ── Phase 10: Raw SQL & Saved Queries ───────────────────────────────
 
     public Task<DatasetQueryResult> ExecuteSqlAsync(string sql, int page, int pageSize, CancellationToken ct)

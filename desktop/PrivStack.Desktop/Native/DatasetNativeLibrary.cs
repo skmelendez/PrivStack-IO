@@ -77,6 +77,9 @@ internal static partial class DatasetNativeLibrary
     [LibraryImport(LibraryName, EntryPoint = "privstack_dataset_aggregate", StringMarshalling = StringMarshalling.Utf8)]
     public static partial nint Aggregate(string requestJson);
 
+    [LibraryImport(LibraryName, EntryPoint = "privstack_dataset_aggregate_grouped", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial nint AggregateGrouped(string requestJson);
+
     // ── Phase 10: Raw SQL & Saved Queries ───────────────────────────────
 
     [LibraryImport(LibraryName, EntryPoint = "privstack_dataset_execute_sql", StringMarshalling = StringMarshalling.Utf8)]
