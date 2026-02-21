@@ -88,6 +88,8 @@ public static class ServiceRegistration
         services.AddSingleton<AiModelManager>();
         services.AddSingleton<AiService>();
         services.AddSingleton<IAiService>(sp => sp.GetRequiredService<AiService>());
+        services.AddSingleton<AiMemoryService>();
+        services.AddSingleton<AiMemoryExtractor>();
         services.AddSingleton<IntentEngine>();
         services.AddSingleton<IIntentEngine>(sp => sp.GetRequiredService<IntentEngine>());
         services.AddSingleton<IAiSuggestionService, AiSuggestionServiceImpl>();

@@ -24,13 +24,22 @@ public static partial class AiPersona
         Long,
     }
 
-    /// <summary>Token budget per tier.</summary>
+    /// <summary>Token budget per tier (local models).</summary>
     public static int MaxTokensFor(ResponseTier tier) => tier switch
     {
         ResponseTier.Short  => 60,
         ResponseTier.Medium => 250,
         ResponseTier.Long   => 800,
         _ => 150,
+    };
+
+    /// <summary>Token budget per tier for cloud models (larger budgets).</summary>
+    public static int CloudMaxTokensFor(ResponseTier tier) => tier switch
+    {
+        ResponseTier.Short  => 200,
+        ResponseTier.Medium => 800,
+        ResponseTier.Long   => 2000,
+        _ => 400,
     };
 
     /// <summary>Max sentences to keep per tier during post-processing truncation.</summary>
@@ -98,6 +107,31 @@ public static partial class AiPersona
             return ResponseTier.Short;
 
         return ResponseTier.Medium;
+    }
+
+    /// <summary>
+    /// Builds a richer system prompt for cloud models (Anthropic, OpenAI, Gemini).
+    /// Includes persona detail, memory context, and relaxed formatting constraints.
+    /// </summary>
+    public static string GetCloudSystemPrompt(ResponseTier tier, string userName, string? memoryContext)
+    {
+        var brevity = tier switch
+        {
+            ResponseTier.Short  => "Keep your answer to 1-2 sentences.",
+            ResponseTier.Medium => "Answer in a few sentences, up to a short paragraph.",
+            ResponseTier.Long   => "Give a thorough, detailed answer. Use paragraphs if helpful.",
+            _ => "Be concise.",
+        };
+
+        var memoryBlock = string.IsNullOrEmpty(memoryContext)
+            ? ""
+            : $"\n\n{memoryContext}";
+
+        return $"""
+            You are {Name}, a knowledgeable personal assistant built into PrivStack (a privacy-first productivity app). The user is {userName}. {brevity}
+
+            You have personality — you're friendly, direct, and occasionally witty. You remember things about the user across conversations. Never mention being an AI or a language model. You are {Name}.{memoryBlock}
+            """;
     }
 
     /// <summary>

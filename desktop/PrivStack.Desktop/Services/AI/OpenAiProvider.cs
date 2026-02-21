@@ -55,14 +55,11 @@ internal sealed class OpenAiProvider : AiProviderBase
             ?? throw new InvalidOperationException("OpenAI API key not configured");
 
         var model = modelOverride ?? DefaultModel;
+        var messages = BuildMessages(request);
         var payload = new
         {
             model,
-            messages = new object[]
-            {
-                new { role = "system", content = request.SystemPrompt },
-                new { role = "user", content = request.UserPrompt }
-            },
+            messages,
             max_tokens = request.MaxTokens,
             temperature = request.Temperature
         };
@@ -118,4 +115,21 @@ internal sealed class OpenAiProvider : AiProviderBase
     }
 
     public void ClearCachedKey() => _cachedApiKey = null;
+
+    private static List<object> BuildMessages(AiRequest request)
+    {
+        var messages = new List<object>
+        {
+            new { role = "system", content = request.SystemPrompt }
+        };
+
+        if (request.ConversationHistory is { Count: > 0 })
+        {
+            foreach (var msg in request.ConversationHistory)
+                messages.Add(new { role = msg.Role, content = msg.Content });
+        }
+
+        messages.Add(new { role = "user", content = request.UserPrompt });
+        return messages;
+    }
 }

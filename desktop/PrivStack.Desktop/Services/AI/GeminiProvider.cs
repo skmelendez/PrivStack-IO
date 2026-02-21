@@ -56,19 +56,14 @@ internal sealed class GeminiProvider : AiProviderBase
         var model = modelOverride ?? DefaultModel;
         var url = $"{ApiBase}/{model}:generateContent?key={apiKey}";
 
+        var contents = BuildContents(request);
         var payload = new
         {
             system_instruction = new
             {
                 parts = new[] { new { text = request.SystemPrompt } }
             },
-            contents = new[]
-            {
-                new
-                {
-                    parts = new[] { new { text = request.UserPrompt } }
-                }
-            },
+            contents,
             generationConfig = new
             {
                 maxOutputTokens = request.MaxTokens,
@@ -129,4 +124,31 @@ internal sealed class GeminiProvider : AiProviderBase
     }
 
     public void ClearCachedKey() => _cachedApiKey = null;
+
+    private static List<object> BuildContents(AiRequest request)
+    {
+        var contents = new List<object>();
+
+        if (request.ConversationHistory is { Count: > 0 })
+        {
+            foreach (var msg in request.ConversationHistory)
+            {
+                // Gemini uses "model" instead of "assistant"
+                var role = msg.Role == "assistant" ? "model" : msg.Role;
+                contents.Add(new
+                {
+                    role,
+                    parts = new[] { new { text = msg.Content } }
+                });
+            }
+        }
+
+        contents.Add(new
+        {
+            role = "user",
+            parts = new[] { new { text = request.UserPrompt } }
+        });
+
+        return contents;
+    }
 }

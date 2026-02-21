@@ -179,7 +179,9 @@ public partial class MainWindowViewModel : ViewModelBase
             App.Services.GetRequiredService<IIntentEngine>(),
             App.Services.GetRequiredService<IUiDispatcher>(),
             App.Services.GetRequiredService<IAppSettingsService>(),
-            App.Services.GetRequiredService<IAiService>());
+            App.Services.GetRequiredService<IAiService>(),
+            App.Services.GetRequiredService<Services.AI.AiMemoryService>(),
+            App.Services.GetRequiredService<Services.AI.AiMemoryExtractor>());
         vm.NavigateToLinkedItemFunc = NavigateToLinkedItemAsync;
         return vm;
     }

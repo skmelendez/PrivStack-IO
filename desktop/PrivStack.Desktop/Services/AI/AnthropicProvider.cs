@@ -64,14 +64,30 @@ internal sealed class AnthropicProvider : AiProviderBase
             ?? throw new InvalidOperationException("Anthropic API key not configured");
 
         var model = modelOverride ?? DefaultModel;
-        var payload = new
-        {
-            model,
-            system = request.SystemPrompt,
-            messages = new[] { new { role = "user", content = request.UserPrompt } },
-            max_tokens = request.MaxTokens,
-            temperature = request.Temperature
-        };
+        var messages = BuildMessages(request);
+        var hasHistory = request.ConversationHistory is { Count: > 0 };
+
+        // Use automatic prompt caching for multi-turn conversations.
+        // Anthropic caches the full prefix up to the last cacheable block,
+        // reducing cost to 10% on cache hits for subsequent turns.
+        object payload = hasHistory
+            ? new
+            {
+                model,
+                system = request.SystemPrompt,
+                messages,
+                max_tokens = request.MaxTokens,
+                temperature = request.Temperature,
+                cache_control = new { type = "ephemeral" }
+            }
+            : new
+            {
+                model,
+                system = request.SystemPrompt,
+                messages,
+                max_tokens = request.MaxTokens,
+                temperature = request.Temperature
+            };
 
         var headers = new Dictionary<string, string>
         {
@@ -131,4 +147,18 @@ internal sealed class AnthropicProvider : AiProviderBase
     }
 
     public void ClearCachedKey() => _cachedApiKey = null;
+
+    private static List<object> BuildMessages(AiRequest request)
+    {
+        var messages = new List<object>();
+
+        if (request.ConversationHistory is { Count: > 0 })
+        {
+            foreach (var msg in request.ConversationHistory)
+                messages.Add(new { role = msg.Role, content = msg.Content });
+        }
+
+        messages.Add(new { role = "user", content = request.UserPrompt });
+        return messages;
+    }
 }

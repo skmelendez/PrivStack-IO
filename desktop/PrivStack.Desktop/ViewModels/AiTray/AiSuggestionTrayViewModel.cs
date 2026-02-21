@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using PrivStack.Desktop.Services.Abstractions;
+using PrivStack.Desktop.Services.AI;
 using PrivStack.Sdk.Capabilities;
 using PrivStack.Sdk.Messaging;
 using PrivStack.Sdk.Services;
@@ -27,6 +28,8 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     private readonly IUiDispatcher _dispatcher;
     private readonly IAppSettingsService _appSettings;
     internal readonly IAiService _aiService;
+    private readonly AiMemoryService _memoryService;
+    private readonly AiMemoryExtractor _memoryExtractor;
 
     /// <summary>Maps SuggestionId → Assistant MessageId for update routing.</summary>
     private readonly Dictionary<string, string> _suggestionToAssistantId = new();
@@ -39,16 +42,20 @@ public partial class AiSuggestionTrayViewModel : ViewModelBase,
     /// </summary>
     public Func<string, string, Task>? NavigateToLinkedItemFunc { get; set; }
 
-    public AiSuggestionTrayViewModel(
+    internal AiSuggestionTrayViewModel(
         IIntentEngine intentEngine,
         IUiDispatcher dispatcher,
         IAppSettingsService appSettings,
-        IAiService aiService)
+        IAiService aiService,
+        AiMemoryService memoryService,
+        AiMemoryExtractor memoryExtractor)
     {
         _intentEngine = intentEngine;
         _dispatcher = dispatcher;
         _appSettings = appSettings;
         _aiService = aiService;
+        _memoryService = memoryService;
+        _memoryExtractor = memoryExtractor;
 
         // Subscribe to IntentEngine events
         _intentEngine.SuggestionAdded += OnIntentSuggestionAdded;
